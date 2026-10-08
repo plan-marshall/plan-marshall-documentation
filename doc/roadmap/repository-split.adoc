@@ -348,7 +348,9 @@ Every new repository gets the structure of `cuioss/cuioss-organization`, the sam
 . A first pull request proves the setup: required checks run, SonarCloud analyses, the review bots answer.
 
 The documentation repository gets the same setup without Maven, SonarCloud, CodeRabbit, and Sourcery: its only reviewer
-is `cuioss-review-bot`, and its required check is that review.
+is `cuioss-review-bot`. Its required check is not that review, which runs for pull requests only and so cannot serve
+the merge queue, but the workflow `links.yml`: the link and traceability check of the `doc-review` skill
+(`BROKEN LINKS 0`, no undefined requirement or watch identifier), for pull requests and for the merge queue.
 
 [#step-clients]
 === Step 6: Repository `pm-mcp-clients`
@@ -426,7 +428,14 @@ Roadmap: tick the `pm-mcp-core` and the "reduce `plan-marshall-mcp`" items of Mi
 . Remove `doc/` from `plan-marshall-mcp` and point `README.md` and `CLAUDE.md` to the new repository. This plan is in
   `doc/roadmap/` and moves with it.
 
-Roadmap: tick the two documentation items of Milestone 1.
+Done, with these particulars: the fresh clone kept `doc/` and the two skills (`.claude/skills/traced-implementation`,
+`.claude/skills/doc-review`) with their history. Thirteen links left `doc/`: the breadcrumb to `README.md` now
+reaches the README of this repository, the others are absolute links into `plan-marshall-mcp`. The pointer skills
+and the removal of `doc/` are the pull request in `plan-marshall-mcp` that this step's pull request here names;
+`pm-mcp-clients` and `pm-mcp-core` name this repository in their `CLAUDE.md` and get no skill of their own until
+work in them needs one.
+
+Roadmap: tick the two documentation items of Milestone 1 (the second in part: no generated document exists yet).
 
 [#step-propagation]
 === Step 9: Propagation
