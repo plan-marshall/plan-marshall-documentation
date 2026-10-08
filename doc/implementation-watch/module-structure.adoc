@@ -60,10 +60,29 @@ readable by every GitHub account. Undecided: the `GITHUB_TOKEN` of a consumer's 
 private repository, and which token the CI of the consumers uses from then on is open: a personal token of a member
 as a secret, or the token of a GitHub App installed on the publishing repository with package read permission, which
 is unverified.
++
+The same holds for resolution: a public repository that is asked for a coordinate of the product learns the
+coordinate, and one that answers, with a `SNAPSHOT` of a newer timestamp for example, is preferred. The cui parent
+declares the Sonatype snapshot repository, and Maven asked it for the `SNAPSHOT` metadata of every `de.planmarshall`
+module (21 requests in one build, measured) and Maven Central for the parent POM before the registry. What is
+guaranteed since `pm-mcp-parent` 0.1.1: the organisation registry is asked for `de.planmarshall` only (Maven's group
+id filter); the Sonatype snapshot repository is switched off for the modules of the product and filtered to
+`de.cuioss`; the registry is listed before Maven Central, so a coordinate the registry has is never asked of Central.
+What is not guaranteed: Maven Central is asked for a `de.planmarshall` coordinate when the registry does not have it
+(a mistyped or not yet deployed version). The group id filter of the wrapper's Maven is an allow-list and cannot
+exclude one group from Central (link:../later-improvements.adoc#_l_15_exclusion_filter_for_the_products_coordinates_on_maven_central[Later Improvements, L-15]). The domain
+`planmarshall.de` of the group id must therefore stay registered by the organisation: whoever controls it can claim
+the namespace `de.planmarshall` on Maven Central.
 Guard:: No workflow of any repository receives a credential of another registry, and no repository overrides the
-deployment configuration or the build check it inherits from `pm-mcp-parent`. Before the first publishing repository is switched to
+deployment configuration or the build checks it inherits from `pm-mcp-parent`. The build check
+`product-coordinates-from-the-organisation-registry` of the parent fails in every repository whose `.mvn/settings.xml`
+does not list the organisation registry before Maven Central, whose `.mvn/rrf/groupId-plan-marshall.txt` is missing
+or allows a group other than `de.planmarshall`, or whose `.mvn/maven.config` does not switch the filter on; control:
+a fixture project whose own `.mvn/settings.xml` lists Maven Central first fails in that execution (`BuildGuardsIT` of
+`pm-mcp-clients` and `pm-mcp-core`). No repository or plugin repository other than Maven Central and the organisation
+registry is added to a POM or to `.mvn/settings.xml`. Before the first publishing repository is switched to
 private, the plan that switches it decides the token of the consumers' CI, proves it on the real registry, and
-records it in the specification.
+records it in the specification. The registration of `planmarshall.de` is checked before every release.
 Source:: design review.
 
 [#PM-WATCH-MOD-6]
