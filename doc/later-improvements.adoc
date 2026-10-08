@@ -152,3 +152,15 @@ _Accepted limitation:_ a profile an operator verified for a harness or a harness
 * [ ] Treat a submitted profile as a draft only: the intake validates it with the rules of link:specification/client-profiles/01-profile-schema.adoc#profile-hardening[Client Profiles Specification § A Profile Is Untrusted Input], a person reviews its launch arguments, and the release verifies it again on its reference machines with the same harness build before it ships; no claim of a submitted record is taken over
 * [ ] Match submissions by the tracked identities of the record (release and commit of the runtime, executable name, exact version and digest of the harness, platform), so that records of the same harness build can be compared and a record of an unknown build is recognisable as such
 
+== Repositories & Build
+
+=== L-14: Immediate Downstream Builds at an Upstream Merge
+
+_Deferred because:_ starting a workflow in another repository needs a credential that can act there. The `GITHUB_TOKEN` of a run cannot, so the trigger needs the credentials of the release App `plan-marshall-release-bot` as secrets of the organisation, which the repositories do not hold today, and a dispatch step in the library repositories.
+
+_Accepted limitation:_ a change merged in `pm-mcp-clients` or `pm-mcp-core` that breaks a consumer shows in the consumer's nightly run, or in its next pull request, not at the upstream merge; the upstream commit carries no report of it. Until then the author of an upstream change builds the consumers locally against an installed `SNAPSHOT` when the change touches what they use.
+
+* [ ] Store the App id and the private key of `plan-marshall-release-bot` as organisation secrets, available to `pm-mcp-clients` and `pm-mcp-core` only
+* [ ] After the `SNAPSHOT` deploy on `main`, send a `repository_dispatch` to each consumer (`pm-mcp-clients` to `pm-mcp-core` and `plan-marshall-mcp`, `pm-mcp-core` to `plan-marshall-mcp`) with a token of the App minted for those repositories
+* [ ] Let the build and integration-test workflows of the consumers start on that event, and report a failed downstream run on the upstream commit
+
