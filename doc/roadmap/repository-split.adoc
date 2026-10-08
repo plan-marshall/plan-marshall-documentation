@@ -146,8 +146,8 @@ values) available to it, if they are restricted to selected repositories.
 
 |<<step-propagation>>
 |Merge the pull requests in `cuioss/cuioss-organization` and `cuioss/cuioss-parent-pom` that enter the new repositories
-as consumers.
-|Merges in `cuioss` are the operator's.
+as consumers, and create the organisation Dependabot secret `PLAN_MARSHALL_PACKAGES_TOKEN`.
+|Merges in `cuioss` and organisation secrets are the operator's.
 |===
 
 == Steps
@@ -445,14 +445,19 @@ Roadmap: tick the two documentation items of Milestone 1 (the second in part: no
   `plan-marshall/pm-mcp-parent:cui-quarkus-parent` in `cuioss/cuioss-parent-pom`) and remove the entry of
   `plan-marshall-mcp` there, which no longer inherits it directly. Open the pull requests in `cuioss`; the operator
   merges them.
-. `pm-mcp-parent` lists `pm-mcp-clients`, `pm-mcp-core`, and `plan-marshall-mcp` as its consumers, so that its release
-  opens their update pull request through `plan-marshall-release-bot`.
-. A merge to `main` of `pm-mcp-clients` starts the build of `pm-mcp-core` and `plan-marshall-mcp`, and one of
-  `pm-mcp-core` the build of `plan-marshall-mcp` (`repository_dispatch` sent with a token of
-  `plan-marshall-release-bot`, received by a `workflow_dispatch`-able build). A failed downstream build is reported on
-  the upstream commit.
+. A release of `pm-mcp-parent` reaches `pm-mcp-clients`, `pm-mcp-core`, and `plan-marshall-mcp` through Dependabot:
+  the `dependabot.yml` of each names the organisation registry as a `maven-repository`, read with the organisation
+  Dependabot secret `PLAN_MARSHALL_PACKAGES_TOKEN`. The release workflow of the parent has no propagation step: the
+  reusable release of `cuioss-organization`, which has one, mints its token for the organisation `cuioss` and cannot
+  run here.
+. A merge to `main` of `pm-mcp-clients` or `pm-mcp-core` starts no build elsewhere. Every build of a consumer
+  resolves the newest `SNAPSHOT`, and the plain workflow `nightly.yml` of `pm-mcp-core` (against `pm-mcp-clients`)
+  and of `plan-marshall-mcp` (against both) builds and runs the integration tests every night, so that a break shows
+  by the next morning without a pull request. No `repository_dispatch` and no App key; the immediate trigger is
+  link:../later-improvements.adoc#_l_14_immediate_downstream_builds_at_an_upstream_merge[Later Improvements L-14].
 
-Check: a no-op release of `pm-mcp-parent` opens three pull requests; a merge in `pm-mcp-clients` starts two builds.
+Check: a release of `pm-mcp-parent` opens a Dependabot pull request in each of the three consumers; a manual start of
+`nightly.yml` in `pm-mcp-core` and in `plan-marshall-mcp` is green and lists the upstream `SNAPSHOT` builds it used.
 
 Roadmap: tick the setup and propagation items of Milestone 1.
 
