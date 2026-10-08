@@ -6,7 +6,7 @@
 :source-highlighter: highlight.js
 :nofooter:
 
-link:../../README.md[plan-marshall-mcp] » link:../roadmap.adoc[Roadmap] » Publishing and Licensing State
+link:../../README.md[plan-marshall documentation] » link:../roadmap.adoc[Roadmap] » Publishing and Licensing State
 
 == Purpose
 
@@ -18,11 +18,11 @@ records what was switched off, where, and what still runs, so that no other publ
 
 == Licensing
 
-* The code is proprietary, all rights reserved (link:../../LICENSE.md[LICENSE.md]); source headers carry
+* The code is proprietary, all rights reserved (https://github.com/plan-marshall/plan-marshall-mcp/blob/main/LICENSE.md[LICENSE.md]); source headers carry
   `SPDX-License-Identifier: LicenseRef-Proprietary`.
 * The last state published under FSL-1.1-ALv2 is the tag `fsl-final` (`47c9cfc`). Release 0.1.0 on Maven Central and
   every commit up to that tag stay FSL-1.1-ALv2; the grant cannot be revoked.
-* External contributions are not accepted (link:../../CONTRIBUTING.md[CONTRIBUTING.md]); the repository's interaction
+* External contributions are not accepted (https://github.com/plan-marshall/plan-marshall-mcp/blob/main/CONTRIBUTING.md[CONTRIBUTING.md]); the repository's interaction
   limit is "collaborators only".
 * The code is split over the repositories of link:../specification/module-structure.adoc#repositories[Module Structure § Repositories]: the
   plain-Java modules, the parent and the documentation stay public while the product is developed, so that CI, static

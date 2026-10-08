@@ -1,6 +1,6 @@
 ---
 name: traced-implementation
-description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc) and implementation watch items (doc/ImplementationWatch.adoc) and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, the same PR writes the concept, developer and user documentation from the corpus, deletes the implemented specification sections and watch items, and links each requirement to its code, tests and documentation.
+description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc) and implementation watch items (doc/ImplementationWatch.adoc) and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, a documentation pull request in this repository, paired with the code pull request in the code repository, writes the concept, developer and user documentation from the corpus, deletes the implemented specification sections and watch items, and links each requirement to its code, tests and documentation.
 user-invocable: true
 argument-hint: "[roadmap milestone | specification section | requirement IDs]"
 allowed-tools: Agent, Bash, Read, Edit, Write, Grep, Glob
@@ -19,7 +19,13 @@ behaviour. When a slice is implemented, that knowledge moves to where its reader
 - **Developer documentation**: how the implementation is built, extended and tested.
 - **User documentation**: how the system is installed, configured, operated and troubleshot.
 
-An implementation therefore goes through three stages, all inside one PR:
+The documents live in this repository, `plan-marshall/plan-marshall-documentation`; the code lives in the code
+repositories of the organisation (`plan-marshall-mcp`, `pm-mcp-core`, `pm-mcp-clients`, `pm-mcp-parent`). An
+implementation is therefore two pull requests that name each other: the **code pull request** in the repository
+of the modules it changes, and the **documentation pull request** here. Work with both repositories checked out
+side by side.
+
+An implementation goes through three stages, spread over those two pull requests:
 
 1. **Plan with the trace**: every task names the requirements, specification sections and watch items it
    implements, and every specified statement is assigned its destination.
@@ -29,16 +35,16 @@ An implementation therefore goes through three stages, all inside one PR:
 3. **Replace**: the implemented specification sections and watch items are deleted, and each requirement
    links to the code, tests and documentation that now carry them.
 
-A PR that implements specified behaviour and leaves the specification or watch text of that behaviour in
-place is incomplete. A PR that deletes specification or watch text whose content has not reached its
-destination is wrong.
+An implementation whose code pull request is merged while the specification or watch text of that behaviour stays
+in place is incomplete. A documentation pull request that deletes specification or watch text whose content has not
+reached its destination, or that is merged before its code pull request, is wrong.
 
 This is the procedure behind `doc/Specification.adoc` § Specification Lifecycle Governance and
 `doc/ImplementationWatch.adoc` § Lifecycle: implemented content is removed, not marked (there is no
 `IMPLEMENTED` status and no closed-item record). `PLANNED` and `IN PROGRESS` apply to what remains.
 
 Use it together with the plan-marshall workflow (`/plan-marshall`): stage 1 belongs in outline and task
-planning (phases 3–4), stage 2 in execution and verification (phase 5), stage 3 before the PR is created
+planning (phases 3–4), stage 2 in execution and verification (phase 5), stage 3 before the documentation pull request is created
 (phase 6).
 
 ## Documentation Trees
@@ -164,9 +170,9 @@ plan corrects it; the code never diverges from the documents, and the plan does 
   rows switch to the corrected text.
 - **Scope bound**: a correction fixes what this slice proves wrong. A correction that would change the
   product's intent (drop a capability, change a security or trust boundary, change an operator-visible
-  contract beyond the slice) is still made in the plan, but flagged as `intent change` in the PR body so
-  the reviewer decides on it when approving the PR.
-- Every correction is listed in the PR body (§ PR) and is reviewed with the PR.
+  contract beyond the slice) is still made in the plan, but flagged as `intent change` in the body of the documentation pull request so
+  the reviewer decides on it when approving it.
+- Every correction is listed in the body of the documentation pull request (§ PR) and is reviewed with it.
 
 ## Stage 2 — Implement, document, verify
 
@@ -223,8 +229,8 @@ Status is `covered`, `gap` or `out of slice`. Use parallel read-only agents for 
 specification document or documentation tree), then check their tables yourself against the code and the
 documents; an agent's "covered" without file, test and document section names does not count.
 
-Then run the build gates of `CLAUDE.md` (quality gate, full verify, coverage, integration tests where the
-module has them). Every gate green and every row `covered` or `out of slice` is the precondition for
+Then run the build gates of the `CLAUDE.md` of the code repository (quality gate, full verify, coverage, integration
+tests where the module has them). Every gate green and every row `covered` or `out of slice` is the precondition for
 stage 3. A `gap` is implemented or documented, or, with the user's consent, moved to `out of slice`; it is
 never removed from the specification or watch.
 
@@ -240,17 +246,19 @@ implementation details." sentence stands. Paths are relative to `doc/` (the modu
 `doc/Requirements.adoc`, like the existing `link:specification/…` links):
 
 ```
-Implementation: link:../pm-modules/pm-workflow/src/main/java/de/planmarshall/workflow/state/StateRenderer.java[StateRenderer],
-link:../pm-mcp-server/src/main/java/de/planmarshall/mcp/server/tool/PmStateTool.java[PmStateTool]
+Implementation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/state/StateRenderer.java[StateRenderer],
+https://github.com/plan-marshall/plan-marshall-mcp/blob/main/pm-mcp-server/src/main/java/de/planmarshall/mcp/server/tool/PmStateTool.java[PmStateTool]
 
-Verified by: link:../pm-mcp-server/src/test/java/de/planmarshall/mcp/server/tool/PmStateToolTest.java[PmStateToolTest],
-link:../pm-mcp-server/src/test/java/de/planmarshall/mcp/server/PmStateIT.java[PmStateIT]
+Verified by: https://github.com/plan-marshall/plan-marshall-mcp/blob/main/pm-mcp-server/src/test/java/de/planmarshall/mcp/server/tool/PmStateToolTest.java[PmStateToolTest],
+https://github.com/plan-marshall/plan-marshall-mcp/blob/main/pm-mcp-server/src/test/java/de/planmarshall/mcp/server/PmStateIT.java[PmStateIT]
 
 Documentation: link:concepts/hypermedia.adoc#_state_representation[Concepts § State Representation],
 link:user/mcp-tools.adoc#_pm_state[User Guide § pm_state]
 ```
 
-- Link types (classes, test classes), not methods or line numbers; link documentation sections by anchor.
+- Link types (classes, test classes), not methods or line numbers; link documentation sections by anchor. A link
+  into code is an absolute link to `blob/main` of the repository that owns the file; it resolves once the code pull
+  request is merged, which is one reason the documentation pull request merges second.
 - The "See the … Specification" sentence keeps only the specification links that still point at
   remaining sections; with none left, it is removed.
 - The requirement's _Implementation watch_ line loses the removed items; with none left, it is removed.
@@ -299,11 +307,16 @@ final step is confirmed with the user before it is done.
 Run `trace.py > <scratchpad>/trace-after.txt` and compare with the baseline. The only permitted new
 findings are "requirement without specification" for requirements whose specified content is now fully
 implemented and which carry `Implementation:` and `Documentation:` lines. Every broken link or anchor
-(including those in the new documentation) is fixed. Verify every `link:../…java[…]` target exists on disk.
+(including those in the new documentation) is fixed. Verify that the target of every absolute link into code exists in the checkout of its repository, on the
+branch of the code pull request.
 
 ## PR
 
-One PR contains code, tests, documentation, requirement links and the deletions. The PR body contains:
+The code pull request contains code and tests. The documentation pull request contains the documentation, the
+requirement links and the deletions. Each names the other in its first line. The code pull request is merged first;
+the documentation pull request is merged when the code is on `main` of its repository, and is rebased if the code
+changed in review. A correction of a requirement that the code depends on (§ 1.3) is part of the documentation pull
+request; the code pull request states it. The body of the documentation pull request contains:
 
 - **Slice**: milestone / specification / requirements.
 - **Coverage**: the table from `coverage.md` (condensed to one row per requirement, specification section
@@ -315,7 +328,7 @@ One PR contains code, tests, documentation, requirement links and the deletions.
   `intent change` flag where § 1.3 requires it.
 - **Remaining**: the `out of slice` rows that stay in the documents, with reasons.
 
-Follow the Git workflow in `CLAUDE.md` for branch, commit, CI and review comments.
+Follow the Git workflow in the `CLAUDE.md` of each repository for branch, commit, CI and review comments.
 
 ## Rules
 

@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cuioss/cuioss-organization/main/.github/actions/read-project-config/schema.json
+name: plan-marshall-documentation
+description: Requirements, specifications, roadmap and documentation of plan-marshall-mcp
+
+# No build and no artifact. Pull requests are reviewed by cuioss-review-bot; the required check is the link
+# and traceability check of .github/workflows/links.yml.
+cuioss-review-bot:
+  enabled: true
+  packs: []
+  additional_rules: []

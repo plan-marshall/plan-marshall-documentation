@@ -4,7 +4,7 @@
 :toc-title: Table of Contents
 :nofooter:
 
-link:../README.md[plan-marshall-mcp] » Developer Guide
+link:../README.md[plan-marshall documentation] » Developer Guide
 
 == Overview
 

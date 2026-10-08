@@ -18,7 +18,7 @@ The reason is the repository cut: `pm-mcp-server` stays in the repository that i
 == The Build Test
 _Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
 
-link:../../pm-mcp-server/src/test/java/de/planmarshall/mcp/server/architecture/AssemblyHoldsWiringOnlyTest.java[`AssemblyHoldsWiringOnlyTest`] reads the compiled classes below `de/planmarshall/mcp/server/` with the class-file API of the JDK and looks at the constant pool of each: the class entries and the type descriptors, which include the annotations. It fails with the names of the top-level classes that reference no framework type and are not a record referenced by a class that does.
+https://github.com/plan-marshall/plan-marshall-mcp/blob/main/pm-mcp-server/src/test/java/de/planmarshall/mcp/server/architecture/AssemblyHoldsWiringOnlyTest.java[`AssemblyHoldsWiringOnlyTest`] reads the compiled classes below `de/planmarshall/mcp/server/` with the class-file API of the JDK and looks at the constant pool of each: the class entries and the type descriptors, which include the annotations. It fails with the names of the top-level classes that reference no framework type and are not a record referenced by a class that does.
 
 Its control runs the same rule over four fixture classes in the test sources (`architecture/fixture`): a framework-free class and a record nobody references trip the rule, a class that takes a Vert.x `JsonObject` and the record it returns do not.
 

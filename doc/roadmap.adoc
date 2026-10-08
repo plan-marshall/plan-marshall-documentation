@@ -6,7 +6,7 @@
 :source-highlighter: highlight.js
 :nofooter:
 
-link:../README.md[plan-marshall-mcp] » Roadmap
+link:../README.md[plan-marshall documentation] » Roadmap
 
 == Overview
 

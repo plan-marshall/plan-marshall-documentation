@@ -6,7 +6,7 @@
 :source-highlighter: highlight.js
 :nofooter:
 
-link:../../README.md[plan-marshall-mcp] » link:../roadmap.adoc[Roadmap] » Repository Split Plan
+link:../../README.md[plan-marshall documentation] » link:../roadmap.adoc[Roadmap] » Repository Split Plan
 
 == Purpose
 

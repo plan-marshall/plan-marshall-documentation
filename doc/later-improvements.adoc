@@ -4,7 +4,7 @@
 :toc-title: Table of Contents
 :nofooter:
 
-link:../README.md[plan-marshall-mcp] » link:roadmap.adoc[Roadmap] » Later Improvements
+link:../README.md[plan-marshall documentation] » link:roadmap.adoc[Roadmap] » Later Improvements
 
 == Overview
 
