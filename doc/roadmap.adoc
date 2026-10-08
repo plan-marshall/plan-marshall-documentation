@@ -133,8 +133,8 @@ This milestone moves the eleven modules of Milestone 0 Part B from the one repos
 
 *Documentation repository.*
 
-* [ ] Create `plan-marshall-documentation` and move `doc/` into it with its history; pull requests go through the merge queue and are reviewed by `cuioss-review-bot`
-* [ ] Turn the links from documents into code (`Implementation:` and `Verified by:` lines) into absolute links to the owning repository, adapt the project skill `traced-implementation` to a change that spans a code repository and the documentation repository (the pull requests reference each other and merge together), and move the generated diagrams and state tables to a pull request the product build opens in the documentation repository, with the drift test in `pm-mcp-server` reading the documentation at a pinned revision
+* [x] Create `plan-marshall-documentation` and move `doc/` into it with its history; pull requests go through the merge queue and are reviewed by `cuioss-review-bot`
+* [~] Turn the links from documents into code (`Implementation:` and `Verified by:` lines) into absolute links to the owning repository, adapt the project skill `traced-implementation` to a change that spans a code repository and the documentation repository (the pull requests reference each other and merge together), and move the generated diagrams and state tables to a pull request the product build opens in the documentation repository, with the drift test in `pm-mcp-server` reading the documentation at a pinned revision. Present: the links from documents into code are absolute links to the owning repository, and `traced-implementation` describes an implementation as a code pull request and a documentation pull request that name each other, the documentation one merged second. Remaining: the generated diagrams and state tables, which do not exist yet; when their generator arrives, the product build opens the pull request here and the drift test reads the documentation at a pinned revision
 
 *Module structure.*
 
