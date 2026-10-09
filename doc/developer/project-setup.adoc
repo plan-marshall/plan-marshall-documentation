@@ -100,6 +100,10 @@ What only the operator can do, because it needs organisation-owner rights or an 
 
 A failed local build is kept: its log is copied aside before a rerun, and the report names what failed.
 
+== Open Questions
+
+What waits for a decision of the operator is collected in link:../discussions/open-questions.adoc[Open Questions], each question with what it blocks, the options, and a recommendation. A session reads it beside this document, raises a question it runs into there, and removes one when its decision is written down where it belongs.
+
 == Not Set Up Yet
 
 These belong to the setup and do not exist; each is an item of roadmap Milestone 1 or a later improvement.

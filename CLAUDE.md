@@ -24,6 +24,10 @@ repositories depend on each other in practice, what every repository is set up w
 packages, and how a change gets from a branch to `main`. Read it before starting work. This file holds only what is
 specific to this repository; keep the two consistent, and change the reference when the setup changes.
 
+What waits for a decision of the operator is listed in `doc/discussions/open-questions.adoc`. Read it with the
+reference, add a question there instead of deciding it silently, and remove a question once its decision is written
+into the documents it concerns.
+
 ## Documentation
 
 AsciiDoc (`.adoc`) for all project documentation. Requirements go into `doc/requirements/`,

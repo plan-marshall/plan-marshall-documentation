@@ -20,3 +20,5 @@ Research notes reflect a point-in-time view of external projects and specificati
 == Proposals
 
 A proposal for a change of the requirements or specifications is written here as `<topic>.adoc` and listed in this section. Once it is decided and applied to the requirements and specifications, the proposal document is deleted.
+
+* xref:open-questions.adoc[Open Questions] — the questions that wait for a decision of the operator, each with what it blocks, the options, and a recommendation.
