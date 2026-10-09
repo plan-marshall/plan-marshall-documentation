@@ -14,37 +14,34 @@ It describes the setup as it is. What the product must do is stated in the link:
 
 == Repositories and Checkouts
 
-The product is built from five repositories of the GitHub organisation `plan-marshall`. Which module lives in which repository, with its packages and its dependency rules, is listed only in the link:../specification/module-structure.adoc[Module Structure Specification]; this document adds what a repository is set up with.
+The repositories of the product, with the modules each holds, their packages and their dependency rules, are listed only in the link:../specification/module-structure.adoc#repositories[Module Structure Specification]. This document does not repeat that listing; it adds, per repository of that listing, what its setup is:
 
-[cols="2,3,2,3",options="header"]
+[cols="2,3,3",options="header"]
 |===
-|Repository |Holds |Required checks |Deploys
+|Repository |Required checks |Deploys
 
 |`pm-mcp-parent`
-|the parent POM of every module
 |`build / conclusion`
 |release versions, by its workflow `deploy.yml`
 
 |`pm-mcp-clients`
-|the client contract and the client binaries
 |`build / conclusion`, `integration-tests / conclusion`
 |the `SNAPSHOT` of every merge to `main`
 
 |`pm-mcp-core`
-|the plain-Java engine
 |`build / conclusion`, `integration-tests / conclusion`
 |the `SNAPSHOT` of every merge to `main`
 
 |`plan-marshall-mcp`
-|the Quarkus assembly, the end-to-end tests, the model verification corpus
 |`build / conclusion`, `integration-tests / conclusion`
 |nothing
 
 |`plan-marshall-documentation`
-|every document, and the project skills `traced-implementation` and `doc-review`
 |`links`
 |nothing
 |===
+
+A repository that the listing gains or loses gets or loses its row here in the same change. The project skills `traced-implementation` and `doc-review` live in `plan-marshall-documentation`; the code repositories hold pointers to them.
 
 The authoritative list of the required checks of a repository is its ruleset `main-branch-protection` (`gh api repos/plan-marshall/<repository>/rulesets`).
 
@@ -77,7 +74,7 @@ Every repository has the structure of `cuioss/cuioss-organization`.
 
 * *Configuration*: `.github/project.yml`, read by the reusable workflows, which are referenced by full commit SHA with the version as a comment.
 * *Branch protection*: the rulesets `main-branch-protection` and `plan-marshall-merge-queue`. Nobody pushes to `main`; every merge goes through the merge queue.
-* *Updates from `cuioss`*: a release of `cuioss-organization` opens the update pull request in each of the five repositories, and a release of `cui-quarkus-parent` in `pm-mcp-parent`, through the GitHub App `plan-marshall-release-bot`. The repositories are entered as consumers in the `cuioss` repositories that release.
+* *Updates from `cuioss`*: a release of `cuioss-organization` opens the update pull request in each repository, and a release of `cui-quarkus-parent` in `pm-mcp-parent`, through the GitHub App `plan-marshall-release-bot`. The repositories are entered as consumers in the `cuioss` repositories that release.
 * *Dependency updates*: Dependabot, which reads the organisation's registry with the organisation-level Dependabot secret `PLAN_MARSHALL_PACKAGES_TOKEN` (a token with package read permission; Dependabot does not see Actions secrets).
 * *Static analysis*: SonarCloud, organisation `plan-marshall`, in the three repositories that hold code, analysed by the CI build with coverage. _Automatic Analysis_ is switched off for these projects; with it on, the CI analysis fails. A pull request that changes no code skips the build and with it the analysis.
 * *Review*: `cuioss-review-bot` and Sourcery in every repository, CodeRabbit in the code repositories. Their checks are not required checks, and the status of a review bot can stay pending for good.
@@ -111,4 +108,4 @@ These belong to the setup and do not exist; each is an item of roadmap Milestone
 * The module `pm-web-app` and its front-end build.
 * A build of the consumers at an upstream merge (link:../later-improvements.adoc[Later Improvements], L-14).
 * A token for the consumers' CI once a publishing repository is private: their workflow token then no longer resolves its packages (link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5]).
-* Private repositories. All five are public; `plan-marshall-mcp` is switched to private before the first model-facing content is committed to it, this repository when the documentation has settled.
+* Private repositories. All are public; `plan-marshall-mcp` is switched to private before the first model-facing content is committed to it, this repository when the documentation has settled.
