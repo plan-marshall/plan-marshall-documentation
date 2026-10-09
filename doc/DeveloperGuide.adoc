@@ -24,4 +24,7 @@ The developer guide describes how the implemented system is built, extended and 
 
 |link:developer/registry-setup.adoc[Registry Setup]
 |Why every build needs a token for the organisation's package registry, the one-time setup of a developer machine, how the repository's Maven settings find the registry, and how the parent POM confines every deploy to it.
+
+|link:developer/primitive-spi.adoc[The Primitive SPI and the Content Validators]
+|The contract of a primitive in `pm-core` and what a primitive declares, the registry the assembly fills through its constructor and what it refuses, the validators of a submitted commit message, AsciiDoc text and solution outline with their rules, and how a primitive and a validator are added and tested.
 |===

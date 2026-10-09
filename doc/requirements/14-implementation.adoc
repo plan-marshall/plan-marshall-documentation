@@ -105,6 +105,23 @@ All plan phase lifecycles, finalize sequences, and epic workflows must be define
 
 See the link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification], link:specification/state-catalogue.adoc[State Catalogue], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
+Implementation (the primitive as a typed contract and the registry that refuses a malformed one; the first statement of this requirement):
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/Primitive.java[Primitive],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/PrimitiveOutcome.java[PrimitiveOutcome],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/OutcomeClass.java[OutcomeClass],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/PrimitiveResult.java[PrimitiveResult],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/AwaitedEvent.java[AwaitedEvent],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/CycleMeasure.java[CycleMeasure],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/FreeParam.java[FreeParam],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/PrimitiveRegistry.java[PrimitiveRegistry],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/PrimitiveRegistrationException.java[PrimitiveRegistrationException]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/PrimitiveContractTest.java[PrimitiveContractTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/PrimitiveRegistryTest.java[PrimitiveRegistryTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/SpiVocabularyTest.java[SpiVocabularyTest]
+
+Documentation: link:developer/primitive-spi.adoc#spi-contract[Developer Guide § The Contract of a Primitive], link:developer/primitive-spi.adoc#registry[Developer Guide § The Registry]
+
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-1[PM-WATCH-DSL-1], link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-9[PM-WATCH-DSL-9], link:implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-1[PM-WATCH-FS-1], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-11[PM-WATCH-GEN-11], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-15[PM-WATCH-GEN-15], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-20[PM-WATCH-GEN-20], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-22[PM-WATCH-GEN-22], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-23[PM-WATCH-GEN-23], link:implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-6[PM-WATCH-TOOL-6]
 
 [#PM-IMPL-6]
