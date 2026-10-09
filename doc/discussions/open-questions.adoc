@@ -77,14 +77,6 @@ Options:: (1) Rely on GitHub's notification of the account that last changed the
 Recommendation:: check the notification once; 2 only if it does not arrive.
 Blocks:: nothing; without it the nightly build protects less than it seems to.
 
-[#review-bot-image-pull]
-=== The Review Bot and the Docker Hub Rate Limit
-
-Question:: The run of `cuioss-review-bot` pulls its container image from Docker Hub without authentication. When the shared runners have used up the anonymous pull allowance, both of its jobs fail before they review anything, as on the pull request that added this document, twice in a row. How shall the bot get its image?
-Options:: (1) Accept it and re-run the jobs later. (2) Authenticate the pull with a Docker Hub account of the organisation. (3) Take the image from a registry without that limit (GitHub's container registry), which is a change in `cuioss/cuioss-organization`.
-Recommendation:: 3; it removes the cause for every repository that uses the bot.
-Blocks:: nothing, because the bot's checks are not required; but in this repository the bot is the only reviewer beside Sourcery, so a pull request can merge here unreviewed by it.
-
 [#recorded-elsewhere]
 == Recorded Elsewhere
 
