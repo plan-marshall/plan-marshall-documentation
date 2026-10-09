@@ -34,6 +34,7 @@ All server-owned state of one project lives in its per-project machine store `<P
 │       │   ├── TASK-001.json
 │       │   └── TASK-002.json
 │       ├── findings.jsonl
+│       ├── analysis.jsonl               # Observations of the code analysis providers (gate result, issue counts)
 │       ├── assessments.jsonl            # Append-only component assessments (never findings)
 │       ├── review-participation.jsonl   # Per-round review-bot participation records
 │       ├── metrics.json                 # Task usage rows and phase measurements (record-metrics)
