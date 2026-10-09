@@ -69,7 +69,11 @@ guaranteed since `pm-mcp-parent` 0.1.1: the organisation registry is asked for `
 id filter); the Sonatype snapshot repository is switched off for the modules of the product and filtered to
 `de.cuioss`; the registry is listed before Maven Central, so a coordinate the registry has is never asked of Central.
 What is not guaranteed: Maven Central is asked for a `de.planmarshall` coordinate when the registry does not have it
-(a mistyped or not yet deployed version). The group id filter of the wrapper's Maven is an allow-list and cannot
+(a mistyped or not yet deployed version). Measured in a CI build from an empty local repository after the change: 41
+requests for a `de.planmarshall` coordinate, all to `maven.pkg.github.com`, none for another group to that host, and
+the parent POM asked of the registry first. Repositories that a foreign POM declares are asked while Maven builds
+that POM's model and cannot be switched off from the product's POMs: the snapshot repository of the cui parent (hence
+its filter) and `repo.gradle.org`, which a Quarkus BOM declares (two requests, for third-party BOMs). The group id filter of the wrapper's Maven is an allow-list and cannot
 exclude one group from Central (link:../later-improvements.adoc#_l_15_exclusion_filter_for_the_products_coordinates_on_maven_central[Later Improvements, L-15]). The domain
 `planmarshall.de` of the group id must therefore stay registered by the organisation: whoever controls it can claim
 the namespace `de.planmarshall` on Maven Central.

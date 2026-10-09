@@ -473,7 +473,12 @@ sequence. Who held the port at the bind was not observed: recording it with `lso
 failure does not occur. Symptom two, the test's TLS client gets `SSLHandshakeException: Remote host terminated the
 handshake`: the daemon logs `PM_MCP-11: Web listener open on 0.0.0.0:59907 (lan: true)` and its close 250 ms later,
 and nothing else, since it logs no failed handshake; unexplained. In two runs both symptoms occurred together. Whether
-the daemon opens the listener a second time, and so causes both, is neither ruled out nor confirmed. The three roadmap
+the daemon opens the listener a second time, and so causes both, is neither ruled out nor confirmed.
++
+Measured on 9 October 2026: symptom two also occurs on the JVM and without load. `WebListenerTest.shouldServeLanOverTls`
+(a `@QuarkusTest`, no native binary) failed once in two runs of `verify -Pcoverage` with the same
+`SSLHandshakeException: Remote host terminated the handshake`, at a load average of 3.4. "Native only" and "triggered
+by load" therefore hold for symptom one at most; the ended handshake needs neither. The three roadmap
 items of Milestone 1 on the web listener's port and its logging settle this; the item is closed by their result.
 
 [#PM-WATCH-CLI-26]
