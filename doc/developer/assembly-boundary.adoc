@@ -35,9 +35,6 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requireme
 |===
 |Package |Content
 
-|`de.planmarshall.runtime`
-|`PmMcpLogMessages`, the log messages of the daemon (link:../LogMessages.adoc[Log Messages]). The classes of the assembly log through it as well.
-
 |`…runtime.start`
 |The start sequence up to the socket bind (`StartupSequence`): the singleton lock, the removal of a stale socket and runtime record, the check of the base directory and its permissions, and the runtime token. `NativeLibraryPath` and `PosixModes` are its helpers.
 
@@ -60,6 +57,8 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requireme
 `pm-runtime` depends on `pm-core` and, for `MachinePaths`, on `pm-api` (a module of `pm-mcp-clients`, resolved from the registry). It is the only module that depends on `commonmark` and LSP4J; `pm-mcp-server` declares neither.
 
 The assembly reaches these classes in two ways. Services are produced through CDI: `SecretStoreProducer` produces the active `SecretStore`, and `EmptyRegistries` the default `JobTokenRegistry` and `DeviceRegistry`. The start sequence runs in `PmMcpd` before the container starts, so it is called directly.
+
+The log messages of the daemon are not in `pm-runtime`: `PmMcpLogMessages` is in `pm-core` (package `de.planmarshall.core.log`), because every module logs through the one registry (link:../LogMessages.adoc[Log Messages]). A new message is therefore a change of `pm-core`, merged and deployed before the class of the assembly that logs it can build.
 
 == Tests and Fixtures
 _Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_

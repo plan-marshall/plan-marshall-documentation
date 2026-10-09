@@ -46,6 +46,28 @@ Guard:: The plan implementing this anchor decides the point (with the operator w
 the result in the specification and the requirement it touches, and deletes this item.
 Source:: `specification/module-structure.adoc:70`, `:80`, `:238`, `requirements/14-implementation.adoc:46`.
 
+== Findings & Code-Analysis Contracts
+
+[#PM-WATCH-MOD-8]
+=== PM-WATCH-MOD-8: Open: the key of the findings registry
+
+Anchor:: link:../specification/module-structure.adoc#findings-analysis-contracts[Module Structure § Findings & Code-Analysis Contracts]
+Hazard:: Undecided: the findings registry of `pm-core` is resolved "by source kind", and the listing names three source
+kinds (review bots, static analysis, code scanning), while the findings store has a closed `source` enumeration of
+eleven values (`sonar`, `github_pr`, `gitlab_mr`, `ci`, `self_review`, `arch_gate`, `compiler`, `qgate`,
+`security_audit`, `code_review`, `dependency_delta`), most of which no provider module fetches. No document says which
+of the two keys the registry, nor how one maps to the other; a registry keyed by a third vocabulary of its own lets a
+finding be fetched by one key and stored under another. The specification names `FindingSource.fetch(scope)` and
+`FindingResponder.respond(finding, disposition)` and fixes neither the type of the scope nor the one of the finding.
+The declarations in `de.planmarshall.core.findings` therefore carry no key, and the scope and the finding as type
+parameters.
+Guard:: The plan implementing this anchor decides the key and the two types (with the operator where it changes
+scope), records the result in the specification, replaces the type parameters, and deletes this item. Until then no
+registry of findings is built and no provider module declares a key of its own.
+Source:: the package map of the module structure (Milestone 1), `specification/module-structure.adoc` § Findings &
+Code-Analysis Contracts and § Dependency Rules, `specification/store-schemas/03-findings-and-review-records.adoc`
+(`source`).
+
 == Repositories & Artifact Flow
 
 [#PM-WATCH-MOD-5]
@@ -107,12 +129,12 @@ Source:: design review.
 
 Anchor:: link:../specification/module-structure.adoc#artifact-flow[Module Structure § Artifact Flow]
 Hazard:: The `LogRecord` constants of every INFO, WARN and ERROR message are registered in `PmMcpLogMessages` of
-`pm-runtime` in `pm-mcp-core`, and `pm-mcp-server` builds against the deployed `SNAPSHOT` of that repository. A new
+`pm-core` in `pm-mcp-core`, and `pm-mcp-server` builds against the deployed `SNAPSHOT` of that repository. A new
 log line of the assembly is therefore two pull requests in sequence: the constant is merged and deployed in
 `pm-mcp-core` before the code that logs it can build in `plan-marshall-mcp`. A change that needs a new message
 together with its fix is tempted to reuse a message that does not fit, or to log without a registered message.
 Guard:: A plan that adds a log line to `pm-mcp-server` schedules the `pm-mcp-core` pull request first and names it in
-the code pull request; the rule itself (one registry of messages, in `pm-runtime`) is unchanged.
+the code pull request; the rule itself (one registry of messages, in `pm-core`) is unchanged.
 Source:: the web listener fix of PM-WATCH-CLI-21, whose rejected port candidates are logged with the existing
 message `PM_MCP-112`, and whose logging items wait for new messages.
 
