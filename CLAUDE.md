@@ -16,6 +16,14 @@ assembly `pm-mcp-server`, the end-to-end tests, the model verification corpus `t
 `pm-mcp-parent` (the parent POM). The only listing of the repositories and modules is
 `doc/specification/module-structure.adoc`; name modules from there and never repeat the listing elsewhere.
 
+## Project Setup
+
+`doc/developer/project-setup.adoc` is the reference for how the project is organised and worked on, in this repository
+and in the four code repositories: the repositories and their checkouts beside each other, building, how the
+repositories depend on each other in practice, what every repository is set up with, how the work is planned as work
+packages, and how a change gets from a branch to `main`. Read it before starting work. This file holds only what is
+specific to this repository; keep the two consistent, and change the reference when the setup changes.
+
 ## Documentation
 
 AsciiDoc (`.adoc`) for all project documentation. Requirements go into `doc/requirements/`,
@@ -60,7 +68,7 @@ other in their descriptions; the documentation pull request is merged when the c
 
 `main` is protected by rulesets and merges go through the merge queue; direct pushes to `main` are not allowed.
 Branch, commit, push, open a pull request, wait for the required check `links / links`, answer and resolve every
-review comment (the reviewer is `cuioss-review-bot`). Do not merge without the user's word. Commits end with
+review comment (the reviewer is `cuioss-review-bot`). Who may merge what is stated in the reference (_From a Branch to `main`_). Commits end with
 `Co-Authored-By: plan-marshall <noreply@cuioss.de>`.
 
 ## Temporary Files

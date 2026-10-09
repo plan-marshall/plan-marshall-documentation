@@ -1,0 +1,114 @@
+= Project Setup
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../../README.md[plan-marshall documentation] » link:../DeveloperGuide.adoc[Developer Guide] » Project Setup
+
+== Purpose
+
+This document is the reference for how the project is organised and worked on: where things live, how the repositories depend on each other in practice, what every repository is set up with, how work is planned, and how a change gets from a branch to `main`. A person or a session that starts work in any of the repositories reads it first; the `CLAUDE.md` of each repository holds only what is specific to that repository and points here for the rest.
+
+It describes the setup as it is. What the product must do is stated in the link:../Requirements.adoc[Requirements] and the link:../Specification.adoc[Specification]; what is delivered when, in the link:../roadmap.adoc[Roadmap].
+
+== Repositories and Checkouts
+
+The product is built from five repositories of the GitHub organisation `plan-marshall`. Which module lives in which repository, with its packages and its dependency rules, is listed only in the link:../specification/module-structure.adoc[Module Structure Specification]; this document adds what a repository is set up with.
+
+[cols="2,3,2,3",options="header"]
+|===
+|Repository |Holds |Required checks |Deploys
+
+|`pm-mcp-parent`
+|the parent POM of every module
+|`build / conclusion`
+|release versions, by its workflow `deploy.yml`
+
+|`pm-mcp-clients`
+|the client contract and the client binaries
+|`build / conclusion`, `integration-tests / conclusion`
+|the `SNAPSHOT` of every merge to `main`
+
+|`pm-mcp-core`
+|the plain-Java engine
+|`build / conclusion`, `integration-tests / conclusion`
+|the `SNAPSHOT` of every merge to `main`
+
+|`plan-marshall-mcp`
+|the Quarkus assembly, the end-to-end tests, the model verification corpus
+|`build / conclusion`, `integration-tests / conclusion`
+|nothing
+
+|`plan-marshall-documentation`
+|every document, and the project skills `traced-implementation` and `doc-review`
+|`links`
+|nothing
+|===
+
+The authoritative list of the required checks of a repository is its ruleset `main-branch-protection` (`gh api repos/plan-marshall/<repository>/rulesets`).
+
+*Checkouts beside each other.* The repositories are checked out as siblings of one directory, each under its own name. Relative links between them rely on that: the work packages of a code repository link the documents as `../../../plan-marshall-documentation/doc/…`, and a test that compares code with a document reads it from the sibling checkout.
+
+*One working copy, one actor.* A working copy has one `HEAD` and one `target/` directory. Two sessions, or a session and an IDE, that use the same working copy change each other's state without any error message.
+
+* A session that works beside another one uses a clone of its own. It never switches a branch, pulls, or builds in a working copy it does not own; to read, it uses the remote (`git show origin/main:<path>`, `gh api`) or its own clone.
+* An IDE that builds automatically writes class files into Maven's `target/` directories. The Java extension of VS Code did so with a Java level below the project's and made Maven builds fail and, once, skip a test without failing. A local build made while an IDE has the folder open is trustworthy only if the number of tests run is the expected one; sessions therefore work in clones that no IDE has open.
+
+== Building
+
+* *Java 25* is the lower limit of every module. It is set once, as the compiler release in `pm-mcp-parent`, and no module overrides it. CI builds with Java 25 and 26; the native binaries are built with GraalVM 25.
+* *Only through Maven and JUnit*, with the wrapper `./mvnw` of the repository. The commands and profiles of a repository are in its `CLAUDE.md`: `verify`, `verify -Ppre-commit` (the quality gate; it rewrites files, and its rewrites are reviewed and committed), `verify -Pcoverage`, `verify -Pintegration-tests`, and `verify -Pnative,integration-tests` where the repository builds a binary.
+* *The registry token.* Every build resolves the parent POM and the modules of the other repositories from the package registry of the organisation, which answers no anonymous request. The one-time setup of a machine and how CI resolves are described in link:registry-setup.adoc[Registry Setup].
+* *No dependency without the operator.* A new dependency, Maven plugin, or GitHub action is asked for first.
+
+== How the Repositories Depend on Each Other in Practice
+
+The order is `pm-mcp-parent` -> `pm-mcp-clients` -> `pm-mcp-core` -> `plan-marshall-mcp`; the rules behind it are in link:../specification/module-structure.adoc#artifact-flow[Module Structure § Artifact Flow].
+
+* *A consumer always builds against the newest `SNAPSHOT`.* A change merged in `pm-mcp-clients` or `pm-mcp-core` is deployed by the build of `main` and reaches the consumers with their next build. `pm-mcp-core` (02:17 UTC) and `plan-marshall-mcp` (02:47 UTC) also build every night, so a break caused upstream shows by the next morning without a pull request there. Nothing starts a consumer's build at the upstream merge.
+* *Only the parent has versions.* A release of `pm-mcp-parent` reaches its consumers as a Dependabot update of the parent version.
+* *A change that breaks a consumer* (a moved or renamed type, a changed contract) is two pull requests. The consumer's pull request is made green first against the upstream change installed locally (`./mvnw install -DskipTests` in the upstream clone). Then the upstream pull request is merged, its `SNAPSHOT` deploy awaited, the consumer's checks re-run and its pull request merged directly afterwards, away from the nightly builds. Between the two merges `main` of the consumer does not compile; that window is kept to minutes.
+* *Resolution is pinned.* The group id `de.planmarshall` is resolved only from the organisation's registry, and the registry is asked only for that group; a build check in every code repository fails otherwise (link:registry-setup.adoc#deployment-target[Registry Setup § The Deployment Target]). The domain `planmarshall.de` stays registered for as long as the group id is in use, because a public registry assigns a group id to whoever holds its domain.
+
+== What Every Repository Is Set Up With
+
+Every repository has the structure of `cuioss/cuioss-organization`.
+
+* *Configuration*: `.github/project.yml`, read by the reusable workflows, which are referenced by full commit SHA with the version as a comment.
+* *Branch protection*: the rulesets `main-branch-protection` and `plan-marshall-merge-queue`. Nobody pushes to `main`; every merge goes through the merge queue.
+* *Updates from `cuioss`*: a release of `cuioss-organization` opens the update pull request in each of the five repositories, and a release of `cui-quarkus-parent` in `pm-mcp-parent`, through the GitHub App `plan-marshall-release-bot`. The repositories are entered as consumers in the `cuioss` repositories that release.
+* *Dependency updates*: Dependabot, which reads the organisation's registry with the organisation-level Dependabot secret `PLAN_MARSHALL_PACKAGES_TOKEN` (a token with package read permission; Dependabot does not see Actions secrets).
+* *Static analysis*: SonarCloud, organisation `plan-marshall`, in the three repositories that hold code, analysed by the CI build with coverage. _Automatic Analysis_ is switched off for these projects; with it on, the CI analysis fails. A pull request that changes no code skips the build and with it the analysis.
+* *Review*: `cuioss-review-bot` and Sourcery in every repository, CodeRabbit in the code repositories. Their checks are not required checks, and the status of a review bot can stay pending for good.
+* *`CLAUDE.md`*: what is specific to the repository, and a pointer to this document.
+
+What only the operator can do, because it needs organisation-owner rights or an account of an external service: installing a GitHub App on a repository, organisation secrets and Dependabot secrets, importing a repository into SonarCloud and switching its analysis mode, the personal token of a machine, and merges in the repositories of `cuioss`.
+
+== Planning the Work
+
+* *The roadmap states exits, not order.* A link:../roadmap.adoc[Roadmap] milestone says what must exist for its exit.
+* *Work packages state the order.* Each code repository plans its work in `doc/plans/`: one file per work package and the index `README.adoc`. A work package is what one session takes up and lands as one pull request with its documentation pull request. The index is the only place that states the status of a package and what it depends on, also on packages of the other repositories; a package is ready when it is open and everything it depends on is done, whatever milestone it serves.
+* *A package is claimed* by a draft pull request that names it and sets it to `in progress`, opened after checking that no open pull request names it already. Nothing enforces this; of two claims the later one is closed by hand.
+* *The plan files hold tasks only.* Requirements, specifications, and watch items stay here and are linked from the plans.
+* *Trace before code.* A package names its starting set of requirements, sections, and watch documents. The session that works it first builds the trace matrix of the project skill `traced-implementation` and splits or extends the package where the matrix shows it.
+
+== From a Branch to `main`
+
+. Branch, commit, push, open a pull request. Commits end with `Co-Authored-By: plan-marshall <noreply@cuioss.de>`; a pull request body carries no tool footer.
+. Wait for the *required* checks of the repository, with a time limit. Never wait on the status of a review bot.
+. Read every review comment, then fix it or answer why not, and resolve its thread. Comments also arrive after the checks have passed: list the unanswered ones again directly before merging, and never queue a pull request in the step that first reports comments.
+. Merge. A small or medium pull request may be merged by the session that made it once the required checks are green on the final commit and no comment is unanswered. The operator's word is needed for a large pull request, one that moves or removes modules, changes the visibility of a repository or its publishing, security, or branch settings, releases something, or lands in a repository of another organisation.
+. A change of code and documents is two pull requests that name each other; the one here merges after the one in the code repository (the `CLAUDE.md` of this repository, _A change that spans code and documents_).
+
+A failed local build is kept: its log is copied aside before a rerun, and the report names what failed.
+
+== Not Set Up Yet
+
+These belong to the setup and do not exist; each is an item of roadmap Milestone 1 or a later improvement.
+
+* Native builds in CI and the client binaries as archives in the registry; until then the native layout of the end-to-end tests takes the client binaries from a sibling checkout of `pm-mcp-clients` built with `-Pnative`.
+* The module `pm-web-app` and its front-end build.
+* A build of the consumers at an upstream merge (link:../later-improvements.adoc[Later Improvements], L-14).
+* A token for the consumers' CI once a publishing repository is private: their workflow token then no longer resolves its packages (link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5]).
+* Private repositories. All five are public; `plan-marshall-mcp` is switched to private before the first model-facing content is committed to it, this repository when the documentation has settled.
