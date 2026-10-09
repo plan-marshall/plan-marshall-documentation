@@ -84,3 +84,5 @@ Client profiles must be governed as versioned, schema-validated data artifacts e
 * All profile documents must be validated against the closed client profile JSON Schema at startup, and the connection overrides against the closed schema of `machine-config.json`; a malformed profile or override must be rejected with a structured diagnostic error.
 
 See the link:specification/client-profiles.adoc[Client Profiles & Dynamic Translation Specification] and link:specification/timeouts/03-retention-host-config.adoc#host-integration[Timeouts & Budgets Specification] (host idle timeout, bounded wait bounds) for implementation details.
+
+Implementation watch: link:implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-13[PM-WATCH-CLIENT-13]
