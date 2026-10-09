@@ -25,6 +25,8 @@ Milestone 0 holds every verification; its Part B built each verified technique i
 
 Items name deliverables and link their specification; the linked sections are authoritative, and the roadmap never restates their detail.
 
+A milestone states what must exist for its exit; it does not state the order of work. The work is planned as work packages with their dependencies in `doc/plans/` of each code repository, one file per package with an index: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/README.adoc[`pm-mcp-clients`], link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/plans/README.adoc[`pm-mcp-core`], and link:https://github.com/plan-marshall/plan-marshall-mcp/blob/main/doc/plans/README.adoc[`plan-marshall-mcp`]. A package names the milestone it serves and is ready when everything it depends on is done, whatever its milestone. The plans hold tasks only and link the requirements, specifications, and watch items here.
+
 Every milestone takes the items of link:implementation-watch/cross-cutting.adoc[Cross-Cutting Implementation Watch] that are anchored to its specifications as mandatory watch input, beside the watch documents it names.
 
 Every migration stage is a self-contained usable release (`PM-MIG-1`): prerequisites are pulled forward into the milestone that first needs them, and no stage relies on `plan-marshall` delivery (`PM-MIG-2`).
