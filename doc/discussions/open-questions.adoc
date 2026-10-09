@@ -1,0 +1,107 @@
+= Open Questions
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Requirements.adoc[Requirements] » xref:README.adoc[Discussions] » Open Questions
+
+Questions that wait for a decision of the operator, each with what it blocks, the options, and a recommendation. A question is removed from this document when it is decided and the decision is written into the requirements, the specifications, the link:../roadmap.adoc[Roadmap], the link:../developer/project-setup.adoc[Project Setup], or the work packages; the document itself is deleted with its last question.
+
+Undecided points of the design that an implementation has to settle are not listed here: they are watch items marked _Open_ or _Undecided_ in the link:../ImplementationWatch.adoc[Implementation Watch] (<<recorded-elsewhere>>).
+
+== Working Rules
+
+[#merge-rule]
+=== Who May Merge Without Asking
+
+Question:: Does the rule that a session merges its own small or medium pull request apply to every session, as link:../developer/project-setup.adoc[Project Setup § From a Branch to `main`] states it, or only where the operator said so in a conversation?
+Why it is open:: The operator gave the authorisation to one session. Writing it into the reference extended it to all of them, and a reviewer flagged that as a risk: the checks of the review bots are not required checks, so a change the operator never saw can reach `main`.
+Options:: (1) Keep the rule for every session, with its bounds. (2) Keep it for documentation and plan pull requests only, and require the operator's word for code. (3) Remove it; every merge needs the operator's word.
+Recommendation:: 2. Documents and plans are cheap to correct afterwards; code that reaches `main` is deployed as a `SNAPSHOT` to the consumers at once.
+Blocks:: nothing; it changes how fast small changes land.
+
+[#claude-md-pointers]
+=== The Reference in the Code Repositories
+
+Question:: Shall the `CLAUDE.md` of `pm-mcp-clients`, `pm-mcp-core`, and `plan-marshall-mcp` point to link:../developer/project-setup.adoc[Project Setup] and drop what they repeat of it?
+Why it is open:: Project Setup says every repository's `CLAUDE.md` points to it. Only the one of this repository does.
+Options:: (1) Add the pointer and keep the files as they are. (2) Add the pointer and remove the sections the reference now covers (the git workflow, the publishing rule), so that there is one place to change.
+Recommendation:: 2, in one pull request per repository.
+Blocks:: nothing; until then the statement in Project Setup is ahead of the files.
+
+== Planning and Order
+
+[#default-units-before-private]
+=== Default Workflow Units Before the Repository Is Private
+
+Question:: The exit of roadmap Milestone 3 names `DefaultUnitInvariantTest` and `StateCatalogueDriftTest`, which run over the default workflow units. Those units are model-facing content, and no such content is committed to `plan-marshall-mcp` before it is private, which the roadmap schedules for Milestone 7. Which of the two gives way?
+Options:: (1) Switch `plan-marshall-mcp` to private when the work package starts, four milestones earlier than planned, and with it give up free CI minutes, static analysis and reviews for that repository from then on. (2) Run the two tests of the Milestone 3 exit over fixture units; the default units and the tests over them arrive with Milestone 7.
+Recommendation:: 2. It keeps the repository public for as long as planned, and the tests prove the mechanism either way.
+Blocks:: the work package `default-units-and-drift-tests` of `plan-marshall-mcp`, and the wording of the Milestone 3 exit.
+
+== Tools and Machines
+
+[#python-for-differential-tests]
+=== A Python Interpreter in the Test Environment
+
+Question:: The differential test harness (`PM-TEST-2`) runs the Python reference scripts of `plan-marshall` against the Java primitives. May the test environment of `pm-mcp-core`, CI included, require a Python interpreter and a checkout of `plan-marshall` at the commit the migration inventory pins?
+Options:: (1) Yes, behind a Maven profile of its own, so that the regular build needs neither. (2) No; the reference outputs are recorded once as fixture files and the harness compares against those, re-recorded when the pin advances.
+Recommendation:: 2 for the build, with the recording itself as a documented manual step. The regular build stays free of a second language, and the oracle is still the real script.
+Blocks:: the work package `differential-test-harness` of `pm-mcp-core`, and with it the exit of Milestone 4 (Stage 1 criteria).
+
+[#wsl2-machine]
+=== A Machine with WSL2
+
+Question:: Who verifies Landlock on WSL2, carried over from Milestone 0, and on which machine?
+Options:: (1) The operator provides a Windows machine with WSL2 for one measurement. (2) WSL2 is recorded as unverified and served on the evidence of native Linux until someone runs it.
+Recommendation:: 2 until a machine is at hand; the confinement level is reported per job in any case, so an unconfined WSL2 would show.
+Blocks:: the work package `landlock-on-wsl2` of `pm-mcp-clients`.
+
+== Module Structure
+
+[#http-base]
+=== The HTTP Base of the Provider Modules
+
+Question:: `pm-provider-sonar` depends on `pm-provider-ci` only to reuse the shared HTTP base, although a code analysis provider is not a CI provider. Does the HTTP base move to a place of its own?
+Options:: (1) Leave it; the dependency is a build fact with no effect on behaviour. (2) A module of its own in `pm-providers` for the HTTP base, which `pm-provider-ci` and every provider adapter depend on. (3) A package of `pm-runtime`, which already depends on `cui-http`; the provider modules would then depend on the runtime module.
+Recommendation:: 2 when the first analysis adapter is implemented, not before; 3 would turn the dependency direction around.
+Blocks:: nothing now; it shapes the Sonar adapter of roadmap Milestone 6.
+
+[#web-app-toolchain]
+=== The Front-End Toolchain of `pm-web-app`
+
+Question:: `pm-web-app` needs `frontend-maven-plugin`, a pinned Node and npm, and the packages of the web application. May these dependencies be added, and when is the module created?
+Options:: (1) Create the module now with an empty application shell, so that the structure of Milestone 1 is complete. (2) Create it with the web access of Milestone 11, when it has something to serve.
+Recommendation:: 2. An application shell is an empty module, which the project avoids, and the toolchain would be kept current for a year without use.
+Blocks:: the items of Milestone 1 that name `pm-web-app`; with option 2 they move to Milestone 11.
+
+== Operations
+
+[#nightly-failures]
+=== Who Sees a Failed Nightly Build
+
+Question:: The nightly builds of `pm-mcp-core` and `plan-marshall-mcp` show an upstream break by the next morning only if someone learns of the failure. Does a failed scheduled run reach the operator?
+What is known:: a failed scheduled run is listed in the Actions tab; whether it sends a notification depends on the operator's GitHub notification settings, which were not checked.
+Options:: (1) Rely on GitHub's notification of the account that last changed the workflow file. (2) Let a failed nightly open an issue in its repository.
+Recommendation:: check the notification once; 2 only if it does not arrive.
+Blocks:: nothing; without it the nightly build protects less than it seems to.
+
+[#review-bot-image-pull]
+=== The Review Bot and the Docker Hub Rate Limit
+
+Question:: The run of `cuioss-review-bot` pulls its container image from Docker Hub without authentication. When the shared runners have used up the anonymous pull allowance, both of its jobs fail before they review anything, as on the pull request that added this document, twice in a row. How shall the bot get its image?
+Options:: (1) Accept it and re-run the jobs later. (2) Authenticate the pull with a Docker Hub account of the organisation. (3) Take the image from a registry without that limit (GitHub's container registry), which is a change in `cuioss/cuioss-organization`.
+Recommendation:: 3; it removes the cause for every repository that uses the bot.
+Blocks:: nothing, because the bot's checks are not required; but in this repository the bot is the only reviewer beside Sourcery, so a pull request can merge here unreviewed by it.
+
+[#recorded-elsewhere]
+== Recorded Elsewhere
+
+Open points that an implementation settles are watch items; they are listed here so that this document shows what is undecided overall.
+
+* link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-3[PM-WATCH-MOD-3]: the build order of `pm-e2e`.
+* link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-4[PM-WATCH-MOD-4]: one TOON encoder in `pm-api`, or a JSON-only API; to be decided before the API contract of `/api/v1`.
+* link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5]: which token the consumers' CI uses once a publishing repository is private.
+* link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-8[PM-WATCH-MOD-8]: the key of the findings registry.
+
+Unproven, not undecided: that Dependabot reads the registry in `pm-mcp-clients` and `plan-marshall-mcp` with the organisation secret, that it picks up a release of the parent, and that a release of `cui-quarkus-parent` reaches `pm-mcp-parent` (link:../roadmap.adoc[Roadmap], Milestone 1, the item on changes reaching the consumers).
