@@ -45,7 +45,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`workspace`
 |`auto`
 |`setup.check-operator-files` (`valid`); `setup.select-integration-variants` (`selected`, `retry`); `setup.verify-credentials` (a refreshed fact invalidates an effective `native` variant).
-|`native` applies to every checked integration unless the derived fact `git_native_capability` reports a used feature native cannot serve, or a stored `cli` choice lacks its enrolled host tool; `commit_identity` must be set.
+|Per checked integration the effective variant is the stored choice, else `cli` where its host tool is enrolled, else `native`; it is invalid while it is `native` and the derived fact `git_native_capability` reports a used feature native cannot serve, or a stored `cli` choice lacks its enrolled host tool; `commit_identity` must be set.
 |`current` -> `setup.verify-credentials`; `needs_answer` -> `setup.select-integration-variants`.
 |link:../domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions Specification, Integration Variants]
 
@@ -53,7 +53,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`workspace`
 |`link`
 |`setup.probe-integration-variants` (`needs_answer`).
-|Operator channel only, never a question record: `select_variants` (rel `next`) opens the elicitation where the connection declared support (the `git_native_capability` findings, the ambient-identity notice for `cli`; captures `commit_identity` while unset) and writes `local-config.json`; without elicitation support the `facts` name `pm-operator config --project <project_id>`. `retry` re-enters the probe. `facts` name only the integrations that need a choice.
+|Operator channel only, never a question record: `select_variants` (rel `next`) opens the elicitation where the connection declared support (the `git_native_capability` findings, the enrolment that selects the CLI variant, the ambient-identity notice for `cli`; captures `commit_identity` while unset) and writes `local-config.json`; without elicitation support the `facts` name `pm-operator config --project <project_id>`. `retry` re-enters the probe. `facts` name only the integrations that need a choice.
 |`selected` (the choice written), `retry` -> `setup.probe-integration-variants`, which validates the choice.
 |link:../domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions Specification, Integration Variants]
 

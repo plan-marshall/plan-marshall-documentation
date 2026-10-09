@@ -369,15 +369,19 @@ Source:: plan-marshall code-intelligence-substrate PLAN-CIS-052 fold-N3, fold-N4
 Anchor:: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions § Integration Variants],
 link:../Requirements.adoc#PM-EXEC-5[PM-EXEC-5]
 Hazard:: A setup or plan step touches the repository or a provider while the effective variant of its integration is
-invalid (native cannot serve a used feature, or a stored CLI choice names a tool that is not enrolled), so an
-identity the operator never confirmed acts for the project.
+invalid (native cannot serve a used feature, or a stored CLI choice names a tool that is not enrolled), or the
+CLI variant runs for an integration whose tool the operator never enrolled for the project, so an identity the
+operator never made available acts for it.
 Guard:: Fixture project with a feature the native variant cannot serve (a `.husky/` hook) and no stored choice: from
 `pm-mcp enter` until the operator's choice is stored through the operator channel, the counters of JGit repository
 operations, HTTP requests to provider origins, and `git` and `ci` jobs stay at zero, and every `git.*` and `ci.*`
 primitive refuses with `integration_variant_unset`, the plan bootstrap routes to `start.setup-required`, and its
 `start.create-scope` transaction's re-check returns to `start.ready`; the capability derivation reads files only.
-Negative control: a project the native variant can serve runs with the compiled default `native` at once, without
-any question and without writing the default into `local-config.json`.
+Negative controls: a project without an enrolled host tool that the native variant can serve runs `native` at
+once, and the same project with `gh` enrolled runs the `github` integration as `cli` with
+`identity: operator_ambient` in its audit records, each without any question and without a write to
+`local-config.json`; with `gh` enrolled and a stored `native` choice it runs `native` with the agent credential;
+a tool that is installed on the machine but not enrolled for the project never selects the CLI variant.
 Source:: design review.
 
 [#PM-WATCH-EXT-28]
@@ -385,15 +389,18 @@ Source:: design review.
 
 Anchor:: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions § Integration Variants],
 link:../specification/cli-and-security/02-credentials-and-operator.adoc#native-confinement[CLI & Security § Native Operation Confinement]
-Hazard:: The repository gains a feature the native variant cannot serve after the operator chose `native` (for
-example `.husky/` is added); the stale choice keeps running unasked, or the server silently starts a CLI job and so
-acts with the operator's credentials.
+Hazard:: The repository gains a feature the native variant cannot serve while `native` is in effect (for
+example `.husky/` is added); the stale variant keeps running unasked, or the server silently starts a CLI job and so
+acts with the operator's credentials. Equally, an enrolment that changes between two setup runs changes the
+identity that acts, and a variant re-derived in the middle of a plan would change it under a running plan.
 Guard:: Fixture adds `.husky/` to a native-selected project: the next operation that needs the feature refuses with
 `capability_missing{reason}` naming the operator command, no CLI job starts, the reconcile run's probe
 `setup.probe-integration-variants` reports `needs_answer` and enters `setup.select-integration-variants`, which
 takes the choice only through the operator channel (elicitation, or `facts` naming `pm-operator config`), never
 as a question record and never from a model-relayed value; the stored choice stays unchanged until the operator
-acts.
+acts. A second fixture enrols `gh` while a plan runs natively: the plan keeps `native` to its end, the next setup
+run reports the change with both variants and the acting identity in its `facts` and its audit
+record, and only plans composed afterwards run `cli`.
 Source:: design review.
 
 [#PM-WATCH-EXT-33]

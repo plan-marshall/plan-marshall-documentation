@@ -227,7 +227,7 @@ Provider resolution uses explicit registries (the CI registry of `pm-provider-ci
 [#integration-variants]
 == Integration Variants
 
-Which implementation of `pm-provider-git`, `pm-provider-github`, or `pm-provider-gitlab` serves a project is settled per integration in project setup (link:domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions Specification, Integration Variants]): the native variant applies unless the derived fact `git_native_capability` finds a used repository feature the native variant cannot serve; only then is a choice required, and it is taken through the operator channel (`setup.select-integration-variants`). One variant serves all operations of an integration, and there is no automatic fallback from one variant to the other (`PM-EXEC-5`).
+Which implementation of `pm-provider-git`, `pm-provider-github`, or `pm-provider-gitlab` serves a project is settled per integration in project setup (link:domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions Specification, Integration Variants]): the CLI variant applies where the operator enrolled the integration's host tool for the project, the native variant where not, and the operator's stored choice where the other identity shall act; a choice is required only while the effective variant cannot serve the repository (`setup.select-integration-variants`). One variant serves all operations of an integration, it is fixed for a running plan, and no operation falls back from one variant to the other (`PM-EXEC-5`).
 
 [#findings-analysis-contracts]
 == Findings & Code-Analysis Contracts
