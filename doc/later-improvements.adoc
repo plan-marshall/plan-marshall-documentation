@@ -164,3 +164,13 @@ _Accepted limitation:_ a change merged in `pm-mcp-clients` or `pm-mcp-core` that
 * [ ] After the `SNAPSHOT` deploy on `main`, send a `repository_dispatch` to each consumer (`pm-mcp-clients` to `pm-mcp-core` and `plan-marshall-mcp`, `pm-mcp-core` to `plan-marshall-mcp`) with a token of the App minted for those repositories
 * [ ] Let the build and integration-test workflows of the consumers start on that event, and report a failed downstream run on the upstream commit
 
+=== L-15: Exclusion Filter for the Product's Coordinates on Maven Central
+
+_Deferred because:_ Maven's remote repository filtering by group id is an allow-list in the resolver of the wrapper's Maven (3.9.16, resolver 1.9.27). The exclusion form (a default `*` with `!de.planmarshall`) is documented for a newer resolver; with 3.9.16 a filter file that uses it makes Maven Central reject every group. An allow-list for Maven Central would have to name every third-party group id, those of transitive dependencies and of the plugins of every profile included, and each new one would fail the build until it is added.
+
+_Accepted limitation:_ Maven Central is asked for a `de.planmarshall` coordinate when the organisation registry does not have it. Nothing of the product is on Maven Central, and the domain of the group id is registered by the organisation, so no foreign artifact can answer; the request discloses the coordinate (link:implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5]).
+
+* [ ] When the Maven of the wrapper ships a resolver whose group id filter supports exclusion, add `.mvn/rrf/groupId-central.txt` with `*` and `!de.planmarshall` to every code repository
+* [ ] Extend the build check `product-coordinates-from-the-organisation-registry` of `pm-mcp-parent` to require that file, and its fixture
+* [ ] Prove in one CI run with transfer output that a `de.planmarshall` coordinate the registry lacks is not asked of Maven Central
+
