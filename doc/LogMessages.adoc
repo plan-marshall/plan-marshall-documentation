@@ -28,7 +28,7 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |ID |Component |Message |Description
 |PM_MCP-110 |SocketBinding |Socket '%s' had mode %s after the bind and was set to 0600 |Logged when Vert.x created the socket under the process umask; the runtime restricts it right after the bind
 |PM_MCP-111 |CoreTools |Core tool '%s' not registered: the name is already registered |Logged when another component registered a core tool name first
-|PM_MCP-112 |WebListener |Web listener could not open on port %s: %s |Logged when the web listener cannot bind its port (answered `web_listener_conflict`) or cannot close cleanly
+|PM_MCP-112 |WebListener |Web listener could not open on port %s: %s |Logged when the web listener cannot bind its port (answered `web_listener_conflict`), for each candidate port it rejects while choosing a port for port `0`, or when it cannot close cleanly
 |PM_MCP-130 |SecretStoreProducer |No OS keyring usable, the file credential store serves: %s |Logged at start when neither the macOS Keychain nor the Secret Service is usable; the reason names the backend and why
 |PM_MCP-140 |LspClient |Language server (pid %s) did not end cleanly, terminating it: %s |Logged when `shutdown`/`exit` fails or the process does not end within the request timeout; the process is then terminated
 |===
