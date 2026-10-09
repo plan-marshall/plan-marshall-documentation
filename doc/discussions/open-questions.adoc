@@ -11,15 +11,6 @@ Undecided points of the design that an implementation has to settle are not list
 
 == Working Rules
 
-[#merge-rule]
-=== Who May Merge Without Asking
-
-Question:: Does the rule that a session merges its own small or medium pull request apply to every session, as link:../developer/project-setup.adoc[Project Setup § From a Branch to `main`] states it, or only where the operator said so in a conversation?
-Why it is open:: The operator gave the authorisation to one session. Writing it into the reference extended it to all of them, and a reviewer flagged that as a risk: the checks of the review bots are not required checks, so a change the operator never saw can reach `main`.
-Options:: (1) Keep the rule for every session, with its bounds. (2) Keep it for documentation and plan pull requests only, and require the operator's word for code. (3) Remove it; every merge needs the operator's word.
-Recommendation:: 2. Documents and plans are cheap to correct afterwards; code that reaches `main` is deployed as a `SNAPSHOT` to the consumers at once.
-Blocks:: nothing; it changes how fast small changes land.
-
 [#claude-md-pointers]
 === The Reference in the Code Repositories
 
