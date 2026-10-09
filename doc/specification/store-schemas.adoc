@@ -66,7 +66,7 @@ Implemented in (link:module-structure.adoc[Module Structure Specification]):
 
 * link:store-schemas/01-format-and-session-log.adoc[Format Versioning & Scope Session Log] — format versioning, atomic writes, the transaction journal, the scope session log of entry rows, and the pending entry record with its bootstrap state
 * link:store-schemas/02-workflow-state-store.adoc[Workflow State Store] — the workflow state store `mcp/status.json` (plan outcome, instance version, the queue tasks of the current model state, policy counters, waiver requests, gaps, conditions) and the merge outcome mapping
-* link:store-schemas/03-findings-and-review-records.adoc[Owed Items, Findings & Review Records] — owed items, the findings ledger, component assessments, review participation, and the review-bot registry
+* link:store-schemas/03-findings-and-review-records.adoc[Owed Items, Findings & Review Records] — owed items, the findings ledger, the analysis result record, component assessments, review participation, and the review-bot registry
 * link:store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger Records] — epic inbox and plan mailbox, the epic ledger records (header, queue row, landing record, kept landing envelope), and the change ledger
 * link:store-schemas/05-metrics-and-quality-report.adoc[Metrics & Quality Report] — the metrics store (task rows with usage per attempt) and the quality report record
 * link:store-schemas/06-task-and-references.adoc[Task & References Records] — task records and the references and footprint store (with the recorded unplanned changes)

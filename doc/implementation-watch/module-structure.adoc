@@ -54,7 +54,7 @@ Source:: `specification/module-structure.adoc:70`, `:80`, `:238`, `requirements/
 Anchor:: link:../specification/module-structure.adoc#findings-analysis-contracts[Module Structure § Findings & Code-Analysis Contracts]
 Hazard:: Undecided: the findings registry of `pm-core` is resolved "by source kind", and the listing names three source
 kinds (review bots, static analysis, code scanning), while the findings store has a closed `source` enumeration of
-eleven values (`sonar`, `github_pr`, `gitlab_mr`, `ci`, `self_review`, `arch_gate`, `compiler`, `qgate`,
+eleven values (`analysis`, `github_pr`, `gitlab_mr`, `ci`, `self_review`, `arch_gate`, `compiler`, `qgate`,
 `security_audit`, `code_review`, `dependency_delta`), most of which no provider module fetches. No document says which
 of the two keys the registry, nor how one maps to the other; a registry keyed by a third vocabulary of its own lets a
 finding be fetched by one key and stored under another. The specification names `FindingSource.fetch(scope)` and

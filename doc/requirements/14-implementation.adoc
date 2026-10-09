@@ -38,7 +38,7 @@ Verified by: https://github.com/plan-marshall/plan-marshall-mcp/blob/main/pm-mcp
 
 Documentation: link:developer/assembly-boundary.adoc[Developer Guide § The Assembly Boundary], link:developer/registry-setup.adoc[Developer Guide § Registry Setup]
 
-Implementation watch: link:implementation-watch/module-structure.adoc#PM-WATCH-MOD-1[PM-WATCH-MOD-1]
+Implementation watch: link:implementation-watch/module-structure.adoc#PM-WATCH-MOD-1[PM-WATCH-MOD-1], link:implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5], link:implementation-watch/module-structure.adoc#PM-WATCH-MOD-6[PM-WATCH-MOD-6]
 
 [#PM-IMPL-2]
 === PM-IMPL-2: Versioned JSON/JSONL Storage & TOON Wire Output
