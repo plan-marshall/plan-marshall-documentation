@@ -102,6 +102,20 @@ Guard:: A build check in `pm-mcp-core` and `pm-mcp-clients` fails when a module 
 from the content.
 Source:: design review.
 
+[#PM-WATCH-MOD-7]
+=== PM-WATCH-MOD-7: A log line in `pm-mcp-server` needs a change in `pm-mcp-core` first
+
+Anchor:: link:../specification/module-structure.adoc#artifact-flow[Module Structure § Artifact Flow]
+Hazard:: The `LogRecord` constants of every INFO, WARN and ERROR message are registered in `PmMcpLogMessages` of
+`pm-runtime` in `pm-mcp-core`, and `pm-mcp-server` builds against the deployed `SNAPSHOT` of that repository. A new
+log line of the assembly is therefore two pull requests in sequence: the constant is merged and deployed in
+`pm-mcp-core` before the code that logs it can build in `plan-marshall-mcp`. A change that needs a new message
+together with its fix is tempted to reuse a message that does not fit, or to log without a registered message.
+Guard:: A plan that adds a log line to `pm-mcp-server` schedules the `pm-mcp-core` pull request first and names it in
+the code pull request; the rule itself (one registry of messages, in `pm-runtime`) is unchanged.
+Source:: the web listener fix of PM-WATCH-CLI-21, whose rejected port candidates are logged with the existing
+message `PM_MCP-112`, and whose logging items wait for new messages.
+
 == Binaries & Build Types
 
 [#PM-WATCH-MOD-2]

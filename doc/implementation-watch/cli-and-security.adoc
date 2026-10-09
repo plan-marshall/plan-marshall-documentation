@@ -450,9 +450,10 @@ listening TCP socket, across a restart too;
 closes it and ends its open streams while `state/web-devices.json`, running plans, and running jobs stay untouched,
 and a stream open on the Unix-socket listener keeps delivering across the open and the close.
 Source:: design review.
-Observation:: Undecided: the native `WebListenerIT` fails under load with two symptoms, and neither is explained to
-the end. Measured on 8 October 2026 on macOS `arm64`, each run a fresh native daemon, on a machine that was never
-idle (load average 10 to 12 from other applications):
+Observation:: The native `WebListenerIT` and `WebListenerTest.shouldServeLanOverTls` failed intermittently with two
+symptoms: a `409` on `PUT /api/v1/web`, and the test's TLS client reporting `SSLHandshakeException: Remote host
+terminated the handshake`. First measurements, on 8 October 2026 on macOS `arm64`, each run a fresh native daemon, on
+a machine that was never idle (load average 10 to 12 from other applications):
 +
 [cols="3,3,1,1",options="header"]
 |===
@@ -464,22 +465,78 @@ idle (load average 10 to 12 from other applications):
 |`9494b84`, with a pause of a few hundred milliseconds before the listener is opened |the same parallel build |17 |0
 |===
 +
-The failure is older than the extraction of `pm-runtime` and is triggered by load. Symptom one, `409` on
-`PUT /api/v1/web`: the daemon logs `PM_MCP-112: Web listener could not open on port 59999: … bind(..) failed with
-error(-48): Address already in use` for the port the test had picked about 200 ms earlier by opening and closing a
-`ServerSocket(0)`; the `409` is the correct answer to a bind that failed. In those runs the test's next probe got the
-following port number (60020 then 60021, 60139 then 60140, 60149 then 60150), so the ports are handed out in
-sequence. Who held the port at the bind was not observed: recording it with `lsof` added the pause under which the
-failure does not occur. Symptom two, the test's TLS client gets `SSLHandshakeException: Remote host terminated the
-handshake`: the daemon logs `PM_MCP-11: Web listener open on 0.0.0.0:59907 (lan: true)` and its close 250 ms later,
-and nothing else, since it logs no failed handshake; unexplained. In two runs both symptoms occurred together. Whether
-the daemon opens the listener a second time, and so causes both, is neither ruled out nor confirmed.
+*Cause*, found on 9 October 2026 on the JVM (`WebListenerTest.shouldServeLanOverTls`, one Maven run per test run):
+both symptoms come from the port the tests chose and from the listener's bind with address reuse, on macOS.
+The tests took their port from `new ServerSocket(0)`. That socket sets `SO_REUSEADDR` and binds the wildcard address,
+and for such a bind the kernel hands out a port on which another process already listens on `127.0.0.1` (ports are
+handed out in sequence, so the probe meets every such listener the counter passes). The listener bound with address
+reuse too, the Vert.x default: in LAN mode its wildcard bind succeeded beside the other listener, and IPv4 loopback
+connections went to that listener, which closed them on the TLS ClientHello (symptom two); in loopback mode the bind
+of `127.0.0.1` failed (symptom one, a correct `409`). Load raised the rate only through the number of loopback
+listeners that other processes open.
 +
-Measured on 9 October 2026: symptom two also occurs on the JVM and without load. `WebListenerTest.shouldServeLanOverTls`
-(a `@QuarkusTest`, no native binary) failed once in two runs of `verify -Pcoverage` with the same
-`SSLHandshakeException: Remote host terminated the handshake`, at a load average of 3.4. "Native only" and "triggered
-by load" therefore hold for symptom one at most; the ended handshake needs neither. The three roadmap
-items of Milestone 1 on the web listener's port and its logging settle this; the item is closed by their result.
+[cols="4,1,1,2",options="header"]
+|===
+|Run of `WebListenerTest.shouldServeLanOverTls` (JVM, before the fix) |Runs |Failures |Load average (1 min)
+|unchanged test, certificate and key of every run kept |80 |5 |5 to 10
+|with `javax.net.debug=ssl:handshake` and Netty at `DEBUG` |60 |1 |4 to 8
+|with probes of the port after the test (four loops) |130 |9 |4 to 8
+|===
++
+*Evidence.* In every failed run the daemon logged one open of the listener and its close after the client had failed.
+With TLS debugging the daemon's TLS engine logged nothing after the open, while a passing run shows it consuming the
+ClientHello: the connection never reached the daemon. Four further handshakes on the same port after the failure all
+failed within 2 to 7 ms: the state lasts for the run and is no race at the open. A plain HTTP request to
+`127.0.0.1:<port>` in a failed run was answered by another process (`400`, "This is an explicit proxy server", and
+in one run `404` on port 64342, the fixed port of the IDE's local server, where the TLS client reported
+`Unrecognized SSL message, plaintext connection?`), while `[::1]:<port>` behaved as the daemon's TLS listener. A
+JUnit experiment with a listener held on `127.0.0.1:X` reproduced each step without chance: `ServerSocket(0)` returned
+`X` in 5 of 5 passes of the port counter; a Vert.x listener on the wildcard address and `X` with address reuse
+bound, and a connection to `127.0.0.1:X` reached the other socket; without address reuse the bind was refused, and so
+it was beside a listener on `::1` and on a non-loopback IPv4 or IPv6 address; a Vert.x listener on port `0` was
+handed `X` by the kernel in 5 of 5 passes, with and without address reuse.
++
+*Refuted.* An invalid certificate or key from the DER encoder of `pm-runtime`: certificate and key of all 15 failed
+runs parse, match, and verify with `openssl`, and a test over 2000 generated key pairs in `pm-mcp-core` (`WebTlsTest`)
+finds no invalid encoding. A second open or a close of the listener during the handshake: one open per failed run, the
+close after the client's failure. The address family of `localhost`: it resolves to `127.0.0.1` first. A certificate
+or key left by another test or run, or read while written: every test JVM has a fresh base, and the material is
+written before the listener opens.
++
+*Fix.* The listener binds without address reuse, so a port held on any local address is `web_listener_conflict`; port
+`0` is served by a bounded selection among candidates that are bound explicitly, and the bound port is reported
+(link:../specification/cli-and-security/03-web-server.adoc#web-listener-bind[CLI & Security § Listener Exposure]). The
+tests open on port `0` and probe no port.
++
+*The reverse case, considered and not closed.* While the LAN listener is open, macOS lets a socket of the same user
+that sets `SO_REUSEADDR` bind `127.0.0.1`, `::1`, or an address of an interface on the listener's port, whether the
+listener set address reuse or not, and that socket then receives the connections to its address; without
+`SO_REUSEADDR` the bind is refused. Two remedies were measured or weighed and not taken: (2) the listener holds
+`127.0.0.1` and `::1` itself beside the wildcard socket, which refuses the foreign bind on loopback (measured) but
+needs address reuse on the listener's own three sockets, a check bind before them, and leaves the addresses of the
+interfaces open; (3) no wildcard socket, one socket per address, which serves no address that appears later and is a
+redesign. Neither gains anything against a process of the same user, which is no boundary
+(link:../specification/cli-and-security/03-web-server.adoc#web-threats[CLI & Security § Threat Notes]). A
+characterisation test (`WebListenerTest.characterisesForeignBindBesideOpenLanListener`) records the platform's
+behaviour. Not verified: a process of another user.
++
+*Verification* of the fix on 9 October 2026, macOS `arm64`:
++
+[cols="4,1,1,2",options="header"]
+|===
+|Run |Runs |Failures |Load average (1 min)
+|`WebListenerTest.shouldServeLanOverTls` on the JVM, one Maven run each |100 |0 |7 to 23
+|native `WebListenerIT` (three tests), a fresh native daemon each, native builds of `pm-mcpd` running in parallel |20 |0 |38 to 84
+|===
++
+The three tests with a listener held on `127.0.0.1`, `::1`, and a non-loopback address fail without the fix on macOS
+(`200` instead of `409`) and pass with it; on Linux (CI) they pass, since Linux refuses a bind beside a listening
+socket with and without address reuse. The characterisation test measured on Linux (CI) that the bind beside the
+open LAN listener is refused with and without `SO_REUSEADDR`.
++
+Open: the two logging items of roadmap Milestone 1 (a failed TLS handshake, the cause of every open and close with
+the bound address); a handshake warning would not have shown this defect, since the connection never reached the
+daemon.
 
 [#PM-WATCH-CLI-26]
 === PM-WATCH-CLI-26: The listener decides what is web-originated, never a header
