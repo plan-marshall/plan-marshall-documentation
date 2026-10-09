@@ -16,6 +16,9 @@ The developer guide describes how the implemented system is built, extended and 
 |===
 |Topic |What it describes
 
+|link:developer/project-setup.adoc[Project Setup]
+|The reference for how the project is organised and worked on: the repositories and their checkouts, building, how the repositories depend on each other in practice, what every repository is set up with, how the work is planned as work packages, and how a change gets from a branch to `main`
+
 |link:developer/assembly-boundary.adoc[The Assembly Boundary]
 |What belongs in the Quarkus assembly `pm-mcp-server` and what in the library module `pm-runtime`, the build test that enforces the boundary, and where the tests, the shared test fixtures and the native-image metadata of a class live.
 
