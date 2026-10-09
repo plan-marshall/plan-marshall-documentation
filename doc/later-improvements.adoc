@@ -174,3 +174,12 @@ _Accepted limitation:_ Maven Central is asked for a `de.planmarshall` coordinate
 * [ ] Extend the build check `product-coordinates-from-the-organisation-registry` of `pm-mcp-parent` to require that file, and its fixture
 * [ ] Prove in one CI run with transfer output that a `de.planmarshall` coordinate the registry lacks is not asked of Maven Central
 
+
+=== L-16: Explicit Import Layout in the Parent's Rewrite Configuration
+
+_Deferred because:_ The quality gate (`verify -Ppre-commit`) orders imports with OpenRewrite's `OrderImports`, which has no declared layout and derives it from the sources of the module it runs on. The derived layout changes with the sources: in `pm-mcp-core` a test with the first `javax` imports of the repository made the gate rewrite the blank lines between the import groups of 34 files of `pm-runtime` that the change did not touch, while `main` and the same change without those imports were left alone. A declared layout belongs to the recipes of `pm-mcp-parent`, and a change there is a release of the parent.
+
+_Accepted limitation:_ Until then a change that introduces a new import group can make the gate reformat unrelated files of its module. A fresh run of the gate on `main` tells such a change from a `main` that is not clean.
+
+* [ ] With the next release of `pm-mcp-parent`, declare the import layout as a named style in its rewrite configuration (static imports, `java`, `javax`, all others, with the blank lines the sources have today) and activate it for the `pre-commit` profile
+* [ ] Prove in each code repository that the gate rewrites no file on `main` with the new parent, and that a file with a `javax` import added to `pm-runtime` leaves the other files alone
