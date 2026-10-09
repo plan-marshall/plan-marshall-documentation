@@ -42,4 +42,7 @@ The developer guide describes how the implemented system is built, extended and 
 
 |link:developer/workflow-dsl.adoc[The Workflow Language]
 |The immutable tree of a workflow unit, the lexer and parser with their refusals, the reading of a plan instance's header, the printer and the round trip, the static verifier with its checks and exemptions, and the seeded transition fuzzer that finds dead states: the packages, their rules and pitfalls, and their tests.
+
+|link:developer/primitive-spi.adoc[The Primitive SPI and the Content Validators]
+|The contract of a primitive in `pm-core` and what a primitive declares, the registry the assembly fills through its constructor and what it refuses, the validators of a submitted commit message, AsciiDoc text and solution outline with their rules, and how a primitive and a validator are added and tested.
 |===
