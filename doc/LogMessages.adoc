@@ -17,6 +17,8 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-12 |WebListener |Web listener on port %s closed |Logged when the web listener has closed (web access disabled, or the runtime stops)
 |PM_MCP-13 |RuntimeApiResource |Runtime stop requested through the local API |Logged when `POST /api/v1/runtime/stop` is accepted; the runtime exits with code `0` shortly after
 |PM_MCP-14 |CoreTools |Core tools registered: %s |Logged at start with the core tools registered with their flat input schemas
+|PM_MCP-15 |WebListener |Web listener open requested on %s:%s (lan: %s), cause: %s |Logged for every request to open the web listener, also one that finds it open, with the address, the requested port (`0` for any free port), the exposure and what asked for it (`PUT /api/v1/web`)
+|PM_MCP-17 |WebListener |Web listener on port %s closing, cause: %s |Logged before the web listener closes, with what caused the close (`PUT /api/v1/web` or `runtime shutdown`)
 |PM_MCP-30 |SecretStoreProducer |Credential store '%s' active, service name '%s' |Logged at start with the one active credential backend (`keychain`, `secret-service` or `file`) and the keyring service name of the instance
 |PM_MCP-40 |LspClient |Language server '%s' started (pid %s, position encoding %s) |Logged when a language server of the LSP pool answered `initialize`; names the executable, its process id and the negotiated position encoding
 |===
@@ -29,6 +31,7 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-110 |SocketBinding |Socket '%s' had mode %s after the bind and was set to 0600 |Logged when Vert.x created the socket under the process umask; the runtime restricts it right after the bind
 |PM_MCP-111 |CoreTools |Core tool '%s' not registered: the name is already registered |Logged when another component registered a core tool name first
 |PM_MCP-112 |WebListener |Web listener could not open on port %s: %s |Logged when the web listener cannot bind its port (answered `web_listener_conflict`), for each candidate port it rejects while choosing a port for port `0`, or when it cannot close cleanly
+|PM_MCP-113 |WebListener |Web listener on port %s: connection failed before a request (TLS handshake or connection setup): %s |Logged when a connection to the web listener fails before its first request, a failed TLS handshake included; one line with the class and message of the failure and no stack trace, since a client can cause it at will
 |PM_MCP-130 |SecretStoreProducer |No OS keyring usable, the file credential store serves: %s |Logged at start when neither the macOS Keychain nor the Secret Service is usable; the reason names the backend and why
 |PM_MCP-140 |LspClient |Language server (pid %s) did not end cleanly, terminating it: %s |Logged when `shutdown`/`exit` fails or the process does not end within the request timeout; the process is then terminated
 |===

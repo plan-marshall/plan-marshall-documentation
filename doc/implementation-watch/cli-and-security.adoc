@@ -534,9 +534,10 @@ The three tests with a listener held on `127.0.0.1`, `::1`, and a non-loopback a
 socket with and without address reuse. The characterisation test measured on Linux (CI) that the bind beside the
 open LAN listener is refused with and without `SO_REUSEADDR`.
 +
-Open: the two logging items of roadmap Milestone 1 (a failed TLS handshake, the cause of every open and close with
-the bound address); a handshake warning would not have shown this defect, since the connection never reached the
-daemon.
+*Logging.* The listener logs every request to open it and every close with the cause, and a connection that fails
+before its first request (a failed TLS handshake included) as a warning. That warning would not have shown this
+defect, since the connection never reached the daemon. The local address the operating system reports for the bound
+socket is not logged: Vert.x exposes the bound port, which is logged, and no accessor for the address.
 
 [#PM-WATCH-CLI-26]
 === PM-WATCH-CLI-26: The listener decides what is web-originated, never a header
