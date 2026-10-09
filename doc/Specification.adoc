@@ -52,7 +52,7 @@ The implementation of `plan-marshall-mcp` is modularized into sixteen targeted t
 |`PLANNED`
 |link:Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:Requirements.adoc#PM-TECH-3[PM-TECH-3], link:Requirements.adoc#PM-TECH-4[PM-TECH-4], link:Requirements.adoc#PM-DIST-1[PM-DIST-1], link:Requirements.adoc#PM-EXEC-5[PM-EXEC-5], link:Requirements.adoc#PM-TEST-3[PM-TEST-3], link:Requirements.adoc#PM-TEST-4[PM-TEST-4], link:Requirements.adoc#PM-TEST-6[PM-TEST-6]
 |The authoritative listing of repositories and modules: the repositories with their visibility and the artifact flow between them through the organisation's registry, aggregators and modules with package namespace, responsibilities, allowed dependencies and the specification documents each implements, the dependency rules and their build-time enforcement, integration variants, the four binaries and their build types, test placement, and the rationale of the module cuts.
-|link:implementation-watch/module-structure.adoc[module-structure.adoc] (6 items)
+|link:implementation-watch/module-structure.adoc[module-structure.adoc] (8 items)
 
 |link:specification/runtime-model.adoc[runtime-model.adoc]
 |`PLANNED`

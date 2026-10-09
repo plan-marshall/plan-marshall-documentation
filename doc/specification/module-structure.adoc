@@ -10,7 +10,7 @@ link:../Specification.adoc[Specification] » Module Structure
 
 == Overview
 
-This document is the authoritative listing of the repositories and Maven modules of *plan-marshall-mcp* (`PM-MCP`): the repositories with their visibility and the artifacts each publishes, the aggregators, every module with its package namespace, responsibilities and allowed dependencies, the binary it builds, and the specification documents it implements. Every other document names modules only by reference to this listing and never repeats it; a module that is added, renamed or removed changes here first.
+This document is the authoritative listing of the repositories and Maven modules of *plan-marshall-mcp* (`PM-MCP`): the repositories with their visibility and the artifacts each publishes, the aggregators, every module with its package namespace, its packages, responsibilities and allowed dependencies, the binary it builds, and the specification documents it implements. Every other document names modules only by reference to this listing and never repeats it; a module that is added, renamed or removed changes here first.
 
 The listing is linked in both directions: the *Specified in* column of <<modules>> names the specification documents (or parts) each module implements, and every specification document names its implementing modules in its `Modules` section, linking back to the module's row here. A change to either side updates the other in the same change (link:../Specification.adoc#_traceability_requirements[Specification § Traceability Requirements]). When Milestone 1 implements the module structure, this listing moves into the module map of the developer documentation, which then takes over as the only listing (project skill `traced-implementation`).
 
@@ -208,6 +208,305 @@ _Implementation watch: link:../implementation-watch/module-structure.adoc#PM-WAT
 |link:runtime-model.adoc[Runtime Model] (local adapter, MCP endpoint, connection binding), link:mcp-tools.adoc[MCP Tools], link:cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[CLI & Security § Operator Channel Isolation], link:cli-and-security/03-web-server.adoc#web-server[CLI & Security § Web Access & Pairing] (web adapter), link:cli-and-security/01-cli-and-installer.adoc#installation-layout[CLI & Security § Installation Layout] (release layout), link:client-profiles/03-bundle-manifest.adoc[Client Profiles § Bundle Manifest] (bundle packaging), link:domain-extensions/06-configuration.adoc[Domain Extensions § Configuration] (default-unit build tests, check of the default units against the assembled primitive catalogue), link:workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow DSL § Workflow Definition Units] (default units as content), link:timeouts.adoc[Timeouts] (runtime lifecycle, web access)
 |===
 
+[#packages]
+== Packages
+
+The packages of the modules that have more than one; every other module has the one package of its namespace (<<modules>>). Every package exists in the code with a `package-info.java` that says what the package is for and names the specification it implements, also where no type has arrived yet: such a package contributes no class to its JAR. Only the names of `de.planmarshall.core.findings`, `de.planmarshall.core.analysis`, `de.planmarshall.core.spi`, `de.planmarshall.core.domain`, `de.planmarshall.core.architecture`, `de.planmarshall.workflow.ast`, `de.planmarshall.workflow.classification`, `de.planmarshall.workflow.finalize`, `de.planmarshall.workflow.envelope`, and `de.planmarshall.mcp.server.web` are used by other documents; the name of every other package without a type is settled when its first type arrives, and a rename until then changes this table and the `package-info.java` together.
+
+.Packages of `pm-core`
+[cols="2,4,3"]
+|===
+|Package |Holds |Specified in
+
+|`de.planmarshall.core.toon`
+|The deterministic TOON encoder, which the providers use as well.
+|link:hypermedia-format/03-composite-wait-and-encoder.adoc[Hypermedia Format § Composite Wait & TOON Encoder]
+
+|`de.planmarshall.core.findings`
+|The provider-neutral findings contract: a source of normalized findings (`FindingSource`), the answer to a finding on its provider (`FindingResponder`) and the closed dispositions of triage (`Disposition`). The provider modules implement it.
+|<<findings-analysis-contracts>>, link:phase-workflows/05-finalize-review-metrics-descriptor.adoc[Phase Workflows § Finalize Review, Metrics & Step Descriptor], link:store-schemas/03-findings-and-review-records.adoc[Store Schemas § Owed Items, Findings & Review Records]
+
+|`de.planmarshall.core.analysis`
+|The provider-neutral code-analysis contract: the analysis status of a commit or pull request (`AnalysisStatus`), the quality gate result and the new issues of a code analysis provider. A provider adapter maps its results to the closed status values.
+|<<findings-analysis-contracts>>, link:phase-workflows/04-finalize-step-bands.adoc[Phase Workflows § Finalize Step Ordering Bands], link:hypermedia-format/03-composite-wait-and-encoder.adoc[Hypermedia Format § Composite Wait & TOON Encoder] (`analysis_status`)
+
+|`de.planmarshall.core.spi`
+|The primitive SPI: the interface every deterministic server operation implements, with its outcome classes (`OutcomeClass`) and the events a primitive waits for (`AwaitedEvent`). The plan-domain primitives of `pm-workflow` and the `git.*` and `ci.*` primitives of the provider modules build against it.
+|link:workflow-dsl/05-primitives.adoc[Workflow DSL § Primitive Interface & Transition Validation] (Primitive SPI Contract)
+
+|`de.planmarshall.core.domain`
+|The domain extensions: the four axes of a domain and the descriptors that declare them.
+|link:domain-extensions/01-four-axis-architecture.adoc[Domain Extensions § Four-Axis Domain Architecture]
+
+|`de.planmarshall.core.architecture`
+|The merges over the contributions of the domain extensions: edge derivation and path ownership.
+|link:domain-extensions/02-merge-algorithms.adoc[Domain Extensions § Provenance-Preserving Merge Algorithms]
+
+|`de.planmarshall.core.service`
+|The service interfaces the foundation declares and `pm-runtime` implements: the job runner, the secret source and plan locking. The engine reaches the runtime through them alone.
+|<<modules>>, link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes]
+
+|`de.planmarshall.core.store`
+|The JSON and JSONL state stores: the `format_version` envelopes, the digests, the store layout of workspace, project and machine, and the global lock order.
+|link:store-schemas.adoc[Store Schemas], link:filesystem-layout.adoc[Filesystem Layout]
+
+|`de.planmarshall.core.config`
+|The configuration: its split into team, local and machine files, the derived facts, and the keys of job budgets and retention.
+|link:domain-extensions/06-configuration.adoc[Domain Extensions § Configuration Split & Upgrades], link:store-schemas/07-project-configuration.adoc[Store Schemas § Project Configuration (project.json, workflow.json)], link:store-schemas/08-project-configuration-local.adoc[Store Schemas § Project Configuration (domains.json, build-map.json, local-config.json)], link:store-schemas/09-derived-facts-and-build-timings.adoc[Store Schemas § Derived Facts & Build Timings], link:timeouts.adoc[Timeouts]
+
+|`de.planmarshall.core.discovery`
+|The discovery of the modules of a project and of their facts.
+|link:domain-extensions/03-module-discovery.adoc[Domain Extensions § Module Discovery, Build Map & Architecture Queries]
+
+|`de.planmarshall.core.recipe`
+|The recipes and the extension points a domain contributes to.
+|link:domain-extensions/05-recipes-and-extension-points.adoc[Domain Extensions § Recipes, Extension Points & Project Scripts]
+
+|`de.planmarshall.core.build`
+|The build output parsers, the evaluation of a gate, and the compiled artifact pattern table.
+|link:job-runtime/03-parsers-and-gates.adoc[Job Runtime § Build Output Parsers, Timeouts, Gate Honesty & Ingestion Validator]
+
+|`de.planmarshall.core.profile`
+|The client profiles: the loader of the profile documents of `pm-api`, their validation, the placeholders and the vocabulary translation. No class names a harness.
+|link:client-profiles/01-profile-schema.adoc[Client Profiles § Client Profile Schema], link:client-profiles/02-placeholders-and-detection.adoc[Client Profiles § Placeholder Rendering & Environment Detection]
+
+|`de.planmarshall.core.role`
+|The role sets: the schema of a role artifact, the shipped, machine and project sets with their override and validation against the client profiles, and the qualification records.
+|link:model-work/01-roles-and-configuration.adoc[Model Work § Roles & Configuration]
+
+|`de.planmarshall.core.queue`
+|The task queue store: the queue task records, the task leases and the session generation record.
+|link:model-work/02-task-protocol.adoc[Model Work § Task Protocol] (Queue Task), link:store-schemas/16-task-queue.adoc[Store Schemas § Task Queue & Qualification Records]
+
+|`de.planmarshall.core.id`
+|The identifier types and their validation.
+|link:identifiers.adoc[Identifiers]
+
+|`de.planmarshall.core.log`
+|The one registry of log messages every module logs through (`PmMcpLogMessages`), so that the identifiers are numbered once (PM-IMPL-1).
+|<<modules>>
+
+|===
+
+.Packages of `pm-workflow`
+[cols="2,4,3"]
+|===
+|Package |Holds |Specified in
+
+|`de.planmarshall.workflow.envelope`
+|The task envelopes: the packing of plan tasks into envelopes by their predicted cost.
+|link:model-work/06-envelopes-questions-deadlines.adoc[Model Work § Envelope Tasks, Questions & Deadlines]
+
+|`de.planmarshall.workflow.ast`
+|The immutable tree the parser of the workflow language produces: the source location of a node, the scopes a unit runs in (`WorkflowScope`) and the closed link relations and link forms (`LinkRelation`, `LinkForm`).
+|link:workflow-dsl/04-ast-node-model.adoc[Workflow DSL § AST Node Model]
+
+|`de.planmarshall.workflow.classification`
+|The classification of a plan and its deliverables by the intent of the change (`ChangeType`).
+|link:phase-workflows/03-q-gate-and-execute.adoc[Phase Workflows § Q-Gate Contracts & Phase 5 Execute] (Single-Writer `change_type` Contract)
+
+|`de.planmarshall.workflow.finalize`
+|The finalize steps: the descriptor of a step, the checks over the pipeline of steps, and the currency of a recorded verdict.
+|link:phase-workflows/04-finalize-step-bands.adoc[Phase Workflows § Finalize Step Ordering Bands], link:phase-workflows/05-finalize-review-metrics-descriptor.adoc[Phase Workflows § Finalize Review, Metrics & Step Descriptor], link:phase-workflows/06-finalize-re-entry-and-merge.adoc[Phase Workflows § Finalize Re-Entry & Merge]
+
+|`de.planmarshall.workflow.dsl`
+|The line-oriented workflow language: its lexer and its parser.
+|link:workflow-dsl/01-grammar.adoc[Workflow DSL § Grammar]
+
+|`de.planmarshall.workflow.verify`
+|The static verifier of workflow units, which runs at build time and at the start of the runtime.
+|link:workflow-dsl/07-loop-back-diagrams-verification.adoc[Workflow DSL § Loop-Back, Diagram Generation & Verification]
+
+|`de.planmarshall.workflow.engine`
+|The deterministic interpreter of the state machine: the call stack, the guards, the loop-back budgets, the remediation units, and the handling of questions and waivers.
+|link:workflow-dsl/02-units-jobs-decisions.adoc[Workflow DSL § Workflow Units, Implicit Links, Questions & Waivers], link:workflow-dsl/06-reusable-sub-workflows.adoc[Workflow DSL § Reusable Sub-Workflows], link:workflow-dsl/08-remediation-units.adoc[Workflow DSL § Remediation Policy Units], link:mcp-tools/01-core-workflow-tools.adoc[MCP Tools § Surface Design & Core Workflow Tools], link:state-catalogue.adoc[State Catalogue]
+
+|`de.planmarshall.workflow.plan`
+|The composition of a plan instance from the workflow units and the configuration of its project.
+|link:workflow-dsl/09-plan-instance.adoc[Workflow DSL § Plan Instance], link:domain-extensions/06-configuration.adoc[Domain Extensions § Configuration Split & Upgrades]
+
+|`de.planmarshall.workflow.hypermedia`
+|The hypermedia state engine: the representation of the current state, its link forms and link grammar, and the composite wait.
+|link:hypermedia-format/01-representation-and-link-forms.adoc[Hypermedia Format § Representation Structure & Link Forms], link:hypermedia-format/02-link-grammar.adoc[Hypermedia Format § Link Relation & Identifier Grammar], link:hypermedia-format/03-composite-wait-and-encoder.adoc[Hypermedia Format § Composite Wait & TOON Encoder] (Composite Wait)
+
+|`de.planmarshall.workflow.model`
+|The one model caller: it reads the artifact of the role a model state names and turns the step into queue tasks.
+|link:model-work/01-roles-and-configuration.adoc[Model Work § Roles & Configuration]
+
+|`de.planmarshall.workflow.task`
+|The task protocol unit `worker-task`: offers, acknowledgement, leases and fencing, task outcomes and re-offers.
+|link:model-work/02-task-protocol.adoc[Model Work § Task Protocol]
+
+|`de.planmarshall.workflow.question`
+|The question records, their adjudication and their deadlines.
+|link:model-work/06-envelopes-questions-deadlines.adoc[Model Work § Envelope Tasks, Questions & Deadlines], link:phase-workflows/07-questions-waivers-operator-influence.adoc[Phase Workflows § Questions, Waivers & Operator Influence], link:timeouts/01-job-budgets-and-waits.adoc[Timeouts § Job Budgets & Waits]
+
+|`de.planmarshall.workflow.consult`
+|The consultation of one role by another.
+|link:model-work/05-consultation.adoc[Model Work § Consultation]
+
+|`de.planmarshall.workflow.screening`
+|The screening of untrusted text and the triage states.
+|link:model-work/07-untrusted-text-screening.adoc[Model Work § Untrusted Text Batches, Screening & Batched Triage]
+
+|`de.planmarshall.workflow.epic`
+|The coordination of the plans of an epic.
+|link:model-work/08-epic-coordination.adoc[Model Work § Epic Coordination]
+
+|`de.planmarshall.workflow.spend`
+|The completion of a task, its usage and the spend accounting.
+|link:model-work/09-completion-usage-and-spend.adoc[Model Work § Task Completion, Usage & Spend]
+
+|`de.planmarshall.workflow.decision`
+|The decision quorum and the decision records.
+|link:model-work/10-decision-quorum.adoc[Model Work § Recommendation Score & Decisions: Ask or Quorum], link:model-work/11-decision-records.adoc[Model Work § Decision Records & Corpus Export]
+
+|`de.planmarshall.workflow.primitive`
+|The plan-domain primitives, which implement the SPI of `pm-core`.
+|link:workflow-dsl/05-primitives.adoc[Workflow DSL § Primitive Interface & Transition Validation]
+
+|`de.planmarshall.workflow.unit`
+|The loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly; this module carries none.
+|link:workflow-dsl/02-units-jobs-decisions.adoc[Workflow DSL § Workflow Units, Implicit Links, Questions & Waivers] (Workflow Definition Units)
+
+|`de.planmarshall.workflow.setup`
+|The state machine of the project setup.
+|link:domain-extensions/04-setup-state-machine.adoc[Domain Extensions § Architecture Enrichment & Project Setup State Machine]
+
+|`de.planmarshall.workflow.diagram`
+|The generators of the Mermaid diagrams, the AsciiDoc state tables and the ASCII diagrams of a unit.
+|link:workflow-dsl/07-loop-back-diagrams-verification.adoc[Workflow DSL § Loop-Back, Diagram Generation & Verification]
+
+|`de.planmarshall.workflow.scenario`
+|The deterministic scenario replay harness `pm-scenario` (PM-TEST-4), a test-scope part of this module: JUnit, in process, against fixture units written for the test. Test scope.
+|<<test-placement>>, link:workflow-dsl/07-loop-back-diagrams-verification.adoc[Workflow DSL § Loop-Back, Diagram Generation & Verification]
+
+|===
+
+.Packages of `pm-runtime`
+[cols="2,4,3"]
+|===
+|Package |Holds |Specified in
+
+|`de.planmarshall.runtime.start`
+|The start sequence of the runtime up to the socket bind: the singleton lock, the stale socket, the base directory and the runtime token.
+|link:runtime-model/02-startup-recovery-drain.adoc[Runtime Model § Startup, Recovery & Drain]
+
+|`de.planmarshall.runtime.credentials`
+|The credential stores (Keychain, Secret Service with its D-Bus client in `credentials.dbus`, the file store) and the choice of the active one.
+|link:cli-and-security/02-credentials-and-operator.adoc[CLI & Security § Credentials, Operator Channel & Audit]
+
+|`de.planmarshall.runtime.web`
+|The state of web access and the certificate of the web listener.
+|link:cli-and-security/03-web-server.adoc[CLI & Security § Web Access & Pairing]
+
+|`de.planmarshall.runtime.security`
+|The registries of job tokens and paired devices the authentication of the daemon resolves a credential through.
+|link:model-work/04-worker-launch.adoc[Model Work § Worker Launch], link:cli-and-security/03-web-server.adoc[CLI & Security § Web Access & Pairing]
+
+|`de.planmarshall.runtime.lsp`
+|The client of the warm language server pool.
+|link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes]
+
+|`de.planmarshall.runtime.ingest`
+|The level-1 ingestion validator.
+|link:job-runtime/03-parsers-and-gates.adoc[Job Runtime § Build Output Parsers, Timeouts, Gate Honesty & Ingestion Validator]
+
+|`de.planmarshall.runtime.job`
+|The job runner pipeline: every job is started through the launcher `pm-exec`.
+|link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes]
+
+|`de.planmarshall.runtime.lock`
+|Plan locking, the implementation of the locking interface of `pm-core`.
+|<<modules>>, link:store-schemas/13-leases-integrity-testing.adoc[Store Schemas § Leases, Integrity Invariants & Script Disposition]
+
+|`de.planmarshall.runtime.worker`
+|The worker supervisor, one per project and role: starting, acknowledgement, silence and exit detection, recycling, ending and fencing of workers.
+|link:model-work/03-supervision-and-recycling.adoc[Model Work § Supervision & Recycling]
+
+|`de.planmarshall.runtime.launch`
+|The launch composition of a worker: the harness templates, the job token and generation, the launch prompt and the model slots.
+|link:model-work/04-worker-launch.adoc[Model Work § Worker Launch]
+
+|===
+
+.Packages of `pm-api`
+[cols="2,4,3"]
+|===
+|Package |Holds |Specified in
+
+|`de.planmarshall.api`
+|The machine paths and the version of the client contract.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust]
+
+|`de.planmarshall.api.http`
+|The HTTP/1.1 and Server-Sent Events client over the Unix socket of the daemon.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust]
+
+|`de.planmarshall.api.json`
+|The minimal JSON tree on the streaming API of `jackson-core`.
+|link:cli-and-security/01-cli-and-installer.adoc[CLI & Security § CLI Binaries, Client Installer & Entry]
+
+|`de.planmarshall.api.runtime`
+|The on-demand start procedure, the runtime-token checks and the codec of the runtime record; the detached spawn through FFM is in `api.posix`.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust]
+
+|`de.planmarshall.api.host`
+|The host-detection table.
+|link:client-profiles/02-placeholders-and-detection.adoc[Client Profiles § Placeholder Rendering & Environment Detection]
+
+|`de.planmarshall.api.resource`
+|The resource representations of the local API `/api/v1`: the records a client reads and writes, the link relations and the error codes.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust] (Local API)
+
+|`de.planmarshall.api.files`
+|The read-only codec of the files the two command-line binaries read directly, and the drift checks over them.
+|link:cli-and-security/01-cli-and-installer.adoc[CLI & Security § CLI Binaries, Client Installer & Entry] (CLI Implementation, Bundle Drift Notice)
+
+|`de.planmarshall.api.id`
+|The identifiers on the local API.
+|link:identifiers.adoc[Identifiers]
+
+|===
+
+.Packages of `pm-mcp-server`
+[cols="2,4,3"]
+|===
+|Package |Holds |Specified in
+
+|`de.planmarshall.mcp.server.runtime`
+|The entry point, the socket bind and the identity of the running instance.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust]
+
+|`de.planmarshall.mcp.server.security`
+|The authentication of every request on both listeners.
+|link:runtime-model/04-sessions-and-workers.adoc[Runtime Model § Sessions, Workers & Failure Semantics]
+
+|`de.planmarshall.mcp.server.api`
+|The local API `/api/v1`.
+|link:runtime-model/01-processes-and-transport.adoc[Runtime Model § Processes, Transport & Local Trust]
+
+|`de.planmarshall.mcp.server.credentials`
+|The credential resource of the local API and the producer of the active store.
+|link:cli-and-security/02-credentials-and-operator.adoc[CLI & Security § Credentials, Operator Channel & Audit]
+
+|`de.planmarshall.mcp.server.tools`
+|The MCP tools.
+|link:mcp-tools/01-core-workflow-tools.adoc[MCP Tools § Surface Design & Core Workflow Tools], link:mcp-tools/02-service-and-skill-tools.adoc[MCP Tools § Service & Skill Tools]
+
+|`de.planmarshall.mcp.server.web`
+|The web adapter.
+|link:cli-and-security/03-web-server.adoc[CLI & Security § Web Access & Pairing]
+
+|`de.planmarshall.mcp.server.resources`
+|The MCP resources of the daemon and the Skills Extension.
+|link:mcp-tools/02-service-and-skill-tools.adoc[MCP Tools § Service & Skill Tools], link:mcp-tools/03-resource-uris.adoc[MCP Tools § Resource URI Surface]
+
+|`de.planmarshall.mcp.server.operator`
+|The operator channel of the local adapter and its audit.
+|link:cli-and-security/02-credentials-and-operator.adoc[CLI & Security § Credentials, Operator Channel & Audit] (Operator Channel Isolation)
+
+|===
 [#dependency-rules]
 == Dependency Rules
 _Implementation watch: link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-1[PM-WATCH-MOD-1], link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-3[PM-WATCH-MOD-3]_
@@ -231,6 +530,7 @@ Which implementation of `pm-provider-git`, `pm-provider-github`, or `pm-provider
 
 [#findings-analysis-contracts]
 == Findings & Code-Analysis Contracts
+_Implementation watch: link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-8[PM-WATCH-MOD-8]_
 
 The findings and code-analysis contracts are provider-neutral and live in `pm-core` (packages `de.planmarshall.core.findings` and `de.planmarshall.core.analysis`), not in provider modules of their own, because their data is part of the foundation: the findings store persists the normalized findings (link:store-schemas/03-findings-and-review-records.adoc[Store Schemas § Findings & Review Records]), and the composite wait in `pm-workflow` evaluates the `analysis_status` dimension, so neither `pm-core` nor `pm-workflow` could reach them in a provider module.
 
