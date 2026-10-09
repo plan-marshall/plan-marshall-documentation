@@ -144,7 +144,7 @@ A value the server can observe is derived, never configured; an override exists 
 |`git_native_capability`
 |local
 |repository configuration and files of the enrolled root: hooks (a non-sample file in `.git/hooks/`, `core.hooksPath`, `.husky/`, `lefthook.yml`, `.pre-commit-config.yaml`), commit signing (`commit.gpgSign`, `tag.gpgSign`) and the network fact `signed_commits_required`, `.gitattributes` filter drivers including LFS, `.gitmodules` submodules, `extensions.objectFormat` (SHA-256), `extensions.partialClone`, `core.sparseCheckout`, split index, `extensions.worktreeConfig`, and a remote that is SSH-only (no HTTPS mapping for its host). Value `{native_supported, reasons[]}`, each reason naming the feature (`hooks`, `signing`, `filter_driver`, `lfs`, `submodules`, `sha256_object_format`, `partial_clone`, `sparse_checkout`, `split_index`, `worktree_config`, `ssh_only_remote`) and the path or key that shows it
-|`setup.select-integration-variants` (the native git variant is offered only while `native_supported`); every native git operation refuses with `capability_missing{reason}` naming the operator command that selects the CLI variant, never falling back on its own; a newly found reason invalidates a native choice and the setup asks again
+|`setup.select-integration-variants` (the native git variant is offered only while `native_supported`); every native git operation refuses with `capability_missing{reason}` naming the operator command that enrols the host tool and so selects the CLI variant, never falling back on its own; a newly found reason invalidates an effective native variant and the setup asks again
 |none
 
 |`domain_activation`
