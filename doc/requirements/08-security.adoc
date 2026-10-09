@@ -37,6 +37,15 @@ To prevent unauthorized file modifications or cross-project data leakage, all PM
 
 See the link:specification/filesystem-layout.adoc[Filesystem Layout Specification], link:specification/job-runtime.adoc[Job Runtime Specification], link:specification/mcp-tools.adoc[MCP Tools Specification], and link:specification/store-schemas/15-screening-and-grants.adoc#grant-record[Store Schemas Specification] (cross-project grant log) for implementation details.
 
+Implementation (the canonicalization of a project path, its confinement to the enrolled root and the live linked worktrees, and the outcome `path_traversal_rejected`; the project resolution, the confinement source, the operations that pass their paths through the check, and the cross-project grant are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/PathConfinement.java[PathConfinement],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/WorkspaceRoots.java[WorkspaceRoots],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ConfinementOutcome.java[ConfinementOutcome],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/workspace/WorkspaceConfinement.java[WorkspaceConfinement]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/PathConfinementTest.java[PathConfinementTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LinkedWorktreeConfinementTest.java[LinkedWorktreeConfinementTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/workspace/WorkspaceConfinementTest.java[WorkspaceConfinementTest]
+
 Implementation watch: link:implementation-watch/cli-and-security.adoc#PM-WATCH-CLI-2[PM-WATCH-CLI-2], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-42[PM-WATCH-PHASE-42], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-24[PM-WATCH-STORE-24], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-33[PM-WATCH-STORE-33]
 
 [#PM-SEC-3]
