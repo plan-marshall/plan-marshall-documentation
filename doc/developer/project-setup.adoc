@@ -85,8 +85,8 @@ What only the operator can do, because it needs organisation-owner rights or an 
 == Planning the Work
 
 * *The roadmap states exits, not order.* A link:../roadmap.adoc[Roadmap] milestone says what must exist for its exit.
-* *Work packages state the order.* Each code repository plans its work in `doc/plans/`: one file per work package and the index `README.adoc`. A work package is what one session takes up and lands as one pull request with its documentation pull request. The index is the only place that states the status of a package and what it depends on, also on packages of the other repositories; a package is ready when it is open and everything it depends on is done, whatever milestone it serves.
-* *A package is claimed* by a draft pull request that names it and sets it to `in progress`, opened after checking that no open pull request names it already. Nothing enforces this; of two claims the later one is closed by hand.
+* *Work packages state the order.* Each code repository plans its work in `doc/plans/`: one file per work package and the index `README.adoc`. A work package is what one session takes up and lands as one pull request, updating the documents here as part of the same work. The index is the only place that states the status of a package and what it depends on, also on packages of the other repositories; a package is ready when it is open and everything it depends on is done, whatever milestone it serves.
+* *A package is worked in the usual `plan-marshall` flow*: branch, commits, pull request at finalize. It is not claimed by a draft pull request; its row in the index is set to `done` within those commits. Before starting, the session checks that no open pull request names the package already.
 * *The plan files hold tasks only.* Requirements, specifications, and watch items stay here and are linked from the plans.
 * *Trace before code.* A package names its starting set of requirements, sections, and watch documents. The session that works it first builds the trace matrix of the project skill `traced-implementation` and splits or extends the package where the matrix shows it.
 
@@ -96,7 +96,7 @@ What only the operator can do, because it needs organisation-owner rights or an 
 . Wait for the *required* checks of the repository, with a time limit. Never wait on the status of a review bot.
 . Read every review comment, then fix it or answer why not, and resolve its thread. Comments also arrive after the checks have passed: list the unanswered ones again directly before merging, and never queue a pull request in the step that first reports comments.
 . Merge. The implementation of a work package is normally run by `plan-marshall`, whose own workflow controls the pull request and its merge. A pull request a session makes outside of it (documents, plans, setup, a small fix) may be merged by that session at its own judgement when it is small or medium, once the required checks are green on the final commit and no comment is unanswered. The operator's word is needed for a large pull request, one that moves or removes modules, changes the visibility of a repository or its publishing, security, or branch settings, releases something, or lands in a repository of another organisation.
-. A change of code and documents is two pull requests that name each other; the one here merges after the one in the code repository (the `CLAUDE.md` of this repository, _A change that spans code and documents_).
+. A change of code and documents is made by one plan as part of its own work: it opens a pull request in each repository, neither has to name the other, and it merges the one here itself, without a separate approval, once the one in the code repository has merged and the required check is green (the `CLAUDE.md` of this repository, _A change that spans code and documents_).
 
 A failed local build is kept: its log is copied aside before a rerun, and the report names what failed.
 

@@ -1,6 +1,6 @@
 ---
 name: traced-implementation
-description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc) and implementation watch items (doc/ImplementationWatch.adoc) and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, a documentation pull request in this repository, paired with the code pull request in the code repository, writes the concept, developer and user documentation from the corpus, deletes the implemented specification sections and watch items, and links each requirement to its code, tests and documentation.
+description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc) and implementation watch items (doc/ImplementationWatch.adoc) and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, the same plan updates this repository directly: its documentation pull request, merged without a separate approval once the code is on main, writes the concept, developer and user documentation from the corpus, deletes the implemented specification sections and watch items, and links each requirement to its code, tests and documentation.
 user-invocable: true
 argument-hint: "[roadmap milestone | specification section | requirement IDs]"
 allowed-tools: Agent, Bash, Read, Edit, Write, Grep, Glob
@@ -21,9 +21,11 @@ behaviour. When a slice is implemented, that knowledge moves to where its reader
 
 The documents live in this repository, `plan-marshall/plan-marshall-documentation`; the code lives in the code
 repositories of the organisation (`plan-marshall-mcp`, `pm-mcp-core`, `pm-mcp-clients`, `pm-mcp-parent`). An
-implementation is therefore two pull requests that name each other: the **code pull request** in the repository
-of the modules it changes, and the **documentation pull request** here. Work with both repositories checked out
-side by side.
+implementation therefore changes two repositories, and one plan makes both changes as part of its own work: the
+**code pull request** in the repository of the modules it changes, and the **documentation pull request** here.
+Updating the documents is an ordinary step of the plan, not a separate procedure: the two pull requests need not
+name each other, and the plan merges the documentation pull request itself (§ PR). Work with both repositories
+checked out side by side.
 
 An implementation goes through three stages, spread over those two pull requests:
 
@@ -258,7 +260,7 @@ link:user/mcp-tools.adoc#_pm_state[User Guide § pm_state]
 
 - Link types (classes, test classes), not methods or line numbers; link documentation sections by anchor. A link
   into code is an absolute link to `blob/main` of the repository that owns the file; it resolves once the code pull
-  request is merged, which is one reason the documentation pull request merges second.
+  request is merged, which is why the documentation pull request merges second.
 - The "See the … Specification" sentence keeps only the specification links that still point at
   remaining sections; with none left, it is removed.
 - The requirement's _Implementation watch_ line loses the removed items; with none left, it is removed.
@@ -313,10 +315,12 @@ branch of the code pull request.
 ## PR
 
 The code pull request contains code and tests. The documentation pull request contains the documentation, the
-requirement links and the deletions. Each names the other in its first line. The code pull request is merged first;
-the documentation pull request is merged when the code is on `main` of its repository, and is rebased if the code
-changed in review. A correction of a requirement that the code depends on (§ 1.3) is part of the documentation pull
-request; the code pull request states it. The body of the documentation pull request contains:
+requirement links and the deletions. The same plan opens both; neither has to name the other. The code pull request
+is merged first. The plan then merges the documentation pull request itself, through the merge queue and without a
+separate approval, as soon as the code is on `main` of its repository and the required check `links / links` is
+green; it is updated first if the code changed in review. A correction of a requirement that the code depends on
+(§ 1.3) is part of the documentation pull request; the code pull request states it. The body of the documentation
+pull request contains:
 
 - **Slice**: milestone / specification / requirements.
 - **Coverage**: the table from `coverage.md` (condensed to one row per requirement, specification section

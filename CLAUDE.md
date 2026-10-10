@@ -64,9 +64,11 @@ lines).
 
 ### A change that spans code and documents
 
-An implementation changes code in a code repository and documents here. These are two pull requests that name each
-other in their descriptions; the documentation pull request is merged when the code pull request has merged, so that
-`main` here never describes code that is not on `main` there (project skill `traced-implementation`).
+An implementation changes code in a code repository and documents here. The plan that implements it makes both
+changes as part of its own work: it opens the pull request here beside the code pull request and merges it through
+the merge queue, without a separate approval, as soon as the code is on `main` of its repository and the required
+check is green, so that `main` here never describes code that is not on `main` there. Neither pull request has to
+name the other (project skill `traced-implementation`).
 
 ## Git Workflow
 
