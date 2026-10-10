@@ -195,6 +195,25 @@ Fixture:: socket mode `0755` after bind; cold start 292 ms median with the extra
 the binary (macOS arm64).
 Source:: link:../specification/evaluation.adoc#results[Evaluation Reference], Gate 1 (local adapter; startup and memory bounds).
 
+[#PM-WATCH-RUN-18]
+=== PM-WATCH-RUN-18: Open: install and uninstall issued from a runtime the service started end that runtime
+
+Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime Model § Start Modes],
+link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]
+Hazard:: Undecided: `pm-operator runtime install|uninstall` are API requests the runtime executes. When the per-user
+service started that runtime, the step that stops the service (`launchctl bootout`, `systemctl --user stop`) ends the
+runtime in the middle of the request: the client gets no answer, and on macOS a reinstall leaves the job unloaded,
+because the `bootstrap` after the `bootout` is never issued, until the next login or the next install. Options: (1)
+the runtime answers the request first and runs the steps of the service manager from a detached process that
+outlives it; (2) a runtime started by the service refuses both requests with a code that tells the operator to stop
+the service first; (3) accept and document. Recommendation: 1, the request is answered and the reinstall completes.
+Guard:: Present in `pm-mcp-core`: the file work comes before every step that can stop the service (install writes
+the unit before it loads it, uninstall removes the unit before it unloads it), so an ended runtime leaves neither a
+stale nor a missing unit; `ServiceUnitInstallerTest` records whether the unit file exists at every command. The plan
+implementing the API request decides the point (with the operator where it changes scope), records the result in
+Start Modes and `PM-ARCH-7`, and deletes this item.
+Source:: `pm-mcp-core` work package `service-unit` (review of the install and uninstall order).
+
 == Relay
 
 [#PM-WATCH-RUN-16]
