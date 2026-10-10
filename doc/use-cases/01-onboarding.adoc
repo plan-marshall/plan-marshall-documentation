@@ -7,7 +7,13 @@ link:../UseCases.adoc[Use Cases] » Onboarding
 
 The operator makes a machine ready for `PM-MCP`: one harness to work with, the harnesses and models other plans may use, a model for every role, and the providers the machine can reach. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides.
 
-Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-5>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app; the command line is needed only to open it. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
+Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-6>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app; the command line is needed only to open it. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
+
+[#preselect-first]
+*Preselect as much as possible, hide nothing.* Every choice opens with a proposal the operator can accept as it is: the defaults, the found harnesses, the detected tools. The operator sees the whole of what will be recorded in one overview and can change any part of it; the detail is one step away, never in the way.
+
+[#verify-reports]
+*Every verification reports back.* A state that checks something (a harness, a profile, a credential store, a provider) shows each check as its own line that ends in a checkmark or in an error; an error names what failed, the answer that was received, and the fix. No check passes silently, and none fails without saying why.
 
 [#consent-first]
 *Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes. A remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
@@ -78,14 +84,18 @@ Flow::
        ▼ yes | yes, don't ask again
   [S] harness.scan             finds the executables of the harnesses the
        │                       profiles know, with their versions
-       ├── none found ──────► [S] harness.none     names how to install one
+       ├── none found ──────► [S] harness.none     names how to install a known
+       │                            │                one, and offers to add another
        │                            │ recheck ──► harness.scan
+       │                            │ add another ──► harness.add
        ▼ found one or more
   [O] harness.choose           the found harnesses, each with version,
-       │                       supported or not, worker-eligible or not
+       │                       supported or not, worker-eligible or not;
+       │                       the first supported one preselected
+       ├── add another (under "Advanced") ──► harness.add
        ▼
-  [S] harness.probe            version in the supported range;
-       │                       the harness is logged in
+  [S] harness.probe            version in the supported range; the harness
+       │                       is logged in; each check ✓ or ✗ with its cause
        ├── fails ───────────► [S] harness.blocked  names the cause and the fix
        │                            │ recheck ──► harness.probe
        │                            │ choose another ──► harness.choose
@@ -95,13 +105,35 @@ Flow::
   [S] harness.enrol            writes the harness enrolment
        ▼
   harness.done
+
+  Adding a harness the binary does not know:
+
+  [O] harness.add              the executable (path), a name, and how it is
+       │                       called headless: a draft profile, started
+       │                       from the template of the closest known harness
+       ▼
+  [O] harness.add-consent      may the server run it to verify the draft?
+       │                       (the stages, and their token cost)
+       ├── no ──────────────► stays at harness.add-consent
+       ▼ yes
+  [S] harness.verify-profile   profile verification, one line per stage,
+       │                       each ending in ✓ or ✗ with its finding
+       ├── a stage fails ────► harness.add   the stage, its finding, the
+       │                                     field of the draft to fix
+       ▼ all pass
+  [O] harness.add-confirm      the verified profile to be installed
+       ▼
+  [S] harness.install-profile  into the machine profile set
+       ▼
+  harness.probe                continues as for a found harness
 ----
-Variations:: a harness the profiles do not know is not offered; it needs its own profile first (link:../specification/client-profiles/01-profile-schema.adoc#profile-verification[Profile Verification]).
+Variations:: a known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
 Outcome:: one worker-eligible harness is enrolled on the machine.
 Changes::
 * *Consent* (<<change-consent>>): the scan starts only after the operator's consent.
 * *Harness scan* (<<change-harness-scan>>): the server finds the harnesses itself.
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
+* *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
 Design:: link:../design/02-onboarding.adoc#harness[Onboarding Screens]
 
@@ -152,8 +184,8 @@ Design:: link:../design/02-onboarding.adoc#models[Onboarding Screens]
 == UC-ONB-4: Assign Models to the Roles
 
 Status:: `DRAFT`
-Actor:: the operator, advised by a model.
-Goal:: give every role a harness, a model, and an effort from the catalogue.
+Actor:: the operator, optionally advised by a model.
+Goal:: give every role a harness, a model, and an effort from the catalogue, starting from the default assignment.
 Trigger:: <<UC-ONB-1>>, state `onboard.assign-roles`, or a later reconfiguration.
 Preconditions:: <<UC-ONB-3>> done.
 Flow::
@@ -168,17 +200,20 @@ Flow::
        │                       each with its advisory (what the role does,
        │                       what it needs, why this choice)
        ▼
-  [O] roles.consent            may a model refine the defaults for this
-       │                       machine? (cost shown)
-       ├── no ──────────────► roles.review, starting from the defaults
-       ▼ yes | yes, don't ask again
-  [M] roles.propose            departures from the defaults, each with its
-       │                       reason; no departure keeps the default
-       ▼
-  [O] roles.review             the defaults with their advisory and the
-       │                       proposed departures; accept all, change single
-       │                       roles, or give one model to a group of roles
-       ▼
+  [O] roles.review             the overview: the default applied to every
+       │                       role, grouped, with what departs from it;
+       │                       accept as it is, or change single roles or
+       │                       groups, each with its advisory beside it
+       ├── ask the steward ──► [O] roles.consent  may a model refine the
+       │                            │              defaults? (cost shown)
+       │                            ├── no ──► roles.review, unchanged
+       │                            ▼ yes
+       │                       [M] roles.propose   departures from the
+       │                            │              defaults, each with its reason
+       │                            ▼
+       │                       roles.review        the departures marked,
+       │                                           each to accept or reject
+       ▼ accept
   [S] roles.validate           harness enrolled and eligible, class runnable,
        │                       model allowed, effort supported
        ├── invalid ─────────► roles.review   names the role and the reason
@@ -187,7 +222,7 @@ Flow::
        ▼
   roles.done                   qualification follows per project
 ----
-Variations:: the model task fails: `roles.review` starts from the defaults. A role whose default cannot be met on this machine (no allowed model of its tier on any enrolled harness) is shown without a value and with its advisory, and must be assigned by hand.
+Variations:: the operator accepts the defaults as they are: one choice completes the step. The model task fails: `roles.review` stays as it was. A role whose default cannot be met on this machine (no allowed model of its tier on any enrolled harness) is shown without a value and with its advisory, and must be assigned by hand.
 Outcome:: every role names an enrolled harness and an allowed model.
 Changes::
 * *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
@@ -221,9 +256,19 @@ Flow::
   [O] providers.credentials    each missing credential, entered by the
        │                       operator only, never through a model
        ▼
-  [S] providers.verify         each credential and tool against its provider
-       ├── fails ───────────► providers.credentials   names the provider and the cause
-       ▼ passes
+  [S] providers.verify         every selected provider, one line per check,
+       │                       each ending in ✓ or ✗ with its cause:
+       │                       reachable; the credential authenticates and
+       │                       as whom; its permissions and expiry; for the
+       │                       CLI variant the tool's version and that it is
+       │                       logged in as the same identity
+       ├── a check fails ───► [O] providers.failed   the failed checks with the
+       │                            │                provider's answer and the fix
+       │                            │ fix credential ──► providers.credentials
+       │                            │ check again ──► providers.verify
+       │                            │ continue without it ──► providers.record
+       │                            │   (recorded as not available)
+       ▼ all pass
   [S] providers.record         the machine's provider defaults
        ▼
   providers.done
@@ -233,6 +278,7 @@ Outcome:: the machine's providers recorded as defaults; a project's setup and a 
 Changes::
 * *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
 * *Machine provider defaults* (<<change-provider-defaults>>).
+* *Provider verification* (<<change-provider-verification>>): a configured provider is verified before it is recorded, and again when the operator asks.
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
@@ -263,7 +309,8 @@ Flow::
        │                                         bus over SSH) and the fix
        │                                         │ recheck ──► store.detect
        ▼                                         │ choose another ──► store.choose
-  [S] store.check              writes, reads and deletes a test entry
+  [S] store.check              writes, reads and deletes a test entry;
+       │                       each ✓ or ✗ with its cause
        ├── fails ───────────► store.unavailable
        ▼ passes
   [S] store.record             the chosen store, as a machine setting
@@ -299,7 +346,7 @@ Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Sto
 Gap:: workflows have the scopes plan, epic, workspace (one per enrolled project) and entity; every scoped request needs an enrolled project.
 Fix::
 * A fourth top-level scope `machine`, exactly one per machine, with its state in `<PM_MCP_BASE>/machine/mcp/status.json`.
-* Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-5>> is a sub-workflow of it.
+* Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-6>> is a sub-workflow of it.
 * Like the project setup it has no terminal state and rests in `onboard.completed`; `onboard.entry` records `onboard_run: first_run | reconfigure` and the aspect.
 * A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.harness-catalogue` may start one.
 * The plan bootstrap's setup gate (`start.resolve`) also checks that the machine is onboarded and names the web app when it is not.
@@ -333,6 +380,17 @@ Fix::
 * A profile field `headless.auth_probe`: an argument vector and the exit codes that mean logged in and logged out. `harness.probe` runs it; `logged_out` leads to `harness.blocked` with the login command of the harness.
 * A harness whose profile has no `auth_probe` is probed by one minimal headless call of the profile's `launch` form; its token cost is shown before it runs.
 Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema].
+
+[#change-unknown-harness]
+=== Unknown Harness
+
+Gap:: a profile comes into being only through `pm-operator profile verify` with a draft written by the operator as a file; the onboarding offers only harnesses with a shipped or installed profile, so a machine without one cannot be onboarded.
+Fix::
+* `harness.add` takes the draft as a form: the executable, a client id and name, and the interface statements profile verification needs from the operator (headless arguments, environment, MCP configuration, output and usage format, version probe), prefilled from the profile of the known harness the operator picks as the closest.
+* `harness.verify-profile` is profile verification (link:../specification/client-profiles/01-profile-schema.adoc#profile-verification[Profile Verification]) run as a sub-workflow, each stage a line with ✓ or ✗; a failed stage names the draft field it concerns. Its token cost is stated in `harness.add-consent`.
+* The verified profile is installed into the machine profile set and enrolled like a found harness; it is worker-eligible only if verification shows it.
+* Offered under _Advanced_ while harnesses were found, and directly when none was found.
+Affects:: link:../specification/client-profiles/01-profile-schema.adoc#profile-verification[Profile Verification], link:../specification/client-profiles/01-profile-schema.adoc#profile-sets[Profile Sets].
 
 [#change-model-catalogue]
 === Model Catalogue
@@ -395,6 +453,16 @@ Fix::
 * The machine enrols CLI tools once (`<PM_MCP_BASE>/host-tools.json`, path and digest like a harness); a project's enrolment uses them unless it enrols its own.
 * A project still derives its CI provider from its remote; it takes the variant and the credential from the machine default unless its own setup sets them.
 Affects:: link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration], link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/store-schemas/11-enrolment-store.adoc[Enrolment Store].
+
+[#change-provider-verification]
+=== Provider Verification
+
+Gap:: `pm-operator credentials verify` checks one credential when the operator runs it, and the project setup verifies credentials per project; nothing verifies a provider as a whole (reachability, credential, CLI tool, identity) when it is configured for the machine.
+Fix::
+* `providers.verify` runs, per selected provider, the checks of its kind and reports each as a line ending in ✓ or ✗ (<<verify-reports>>): the origin is reachable; the credential authenticates (`ci.whoami`) and as whom; its permissions and expiry; for the CLI variant the tool's version and that it is logged in as the same identity as the credential.
+* A provider whose checks fail is recorded only on the operator's word, and then as not available; it never serves a project in that state.
+* The same verification runs from the machine settings on request; its last result and time are shown with each provider. Checks that need a repository (permissions on it, check runs visible) stay in the project setup.
+Affects:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials] (`verify`), link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants].
 
 [#change-plan-overrides]
 === Plan Overrides

@@ -16,6 +16,8 @@ Status: `DRAFT`. The wireframes are ASCII sketches of layout and content, not of
 * *The screen is the state.* Each screen renders one state of the onboarding workflow: what the server reports for it, and one control per link it offers. The app holds no step order and no rule of its own; reloading the page, closing the browser, or opening it on another paired device shows the same state.
 * *Nothing happens on its own.* No screen starts an action when it opens. Every action that looks at the machine, runs a program, or asks a model is behind a consent screen (<<consent>>); every other action is behind a button that names it.
 * *Say exactly what will happen.* A button is labelled with what it does ("Look for harnesses", "Enrol Claude Code"), never "Next" or "OK". A consent screen lists the directories, the commands, and the cost before it asks.
+* *Preselected, never hidden.* Every screen opens with the proposal filled in (defaults, found harnesses, detected tools), so accepting it is one click; the overview shows everything that will be recorded, and every part of it can be changed, the detail one click away.
+* *Every check reports back.* A check is a line that turns from a spinner into ✓ or ✗; a ✗ carries what failed, the answer received, and the fix. Nothing is marked done that was not checked.
 * *Saying no is safe.* "Not now" never ends in an error or a warning colour; the screen stays and says that nothing was done.
 * *First run and later change look alike.* A later run of one aspect opens the same screen with the current values filled in and the step bar showing only that aspect.
 
@@ -121,11 +123,55 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
   The first harness also runs the advice in the next steps. You can add
   the others in ② Models.
 
+  ▸ Advanced: add a harness that is not listed
+
   [ Look again ]                              [ Check Claude Code ]
 ----
 
 * Harnesses that cannot run workers are listed, greyed, with the reason; harnesses not found are listed so the operator sees what was looked for.
-* *No harness found* (`harness.none`): the list is replaced by what was looked for, a short install hint per harness with a link to its own installation page, and *Look again*.
+* *No harness found* (`harness.none`): the list is replaced by what was looked for, *Add a harness that is not listed* as the primary action, and a short install hint per harness with a link to its own installation page, and *Look again*.
+
+[#harness-add]
+=== Add a Harness That Is Not Listed (`harness.add`, `harness.verify-profile`)
+
+[source,text]
+----
+  Add a harness
+
+  Executable   [ /usr/local/bin/aider                         ] [ Browse ]
+  Name         [ Aider              ]   id [ aider ]
+  Start from   [ OpenCode ▾ ]   the closest known harness; its settings
+                                are filled in below
+
+  ▾ How it is called headless                      (from OpenCode, edit)
+    Arguments      [ --message {prompt} --yes --no-pretty            ]
+    MCP config     [ --mcp-config {mcp_config_file}                  ]
+    Output         ( ) text  (•) JSON lines        Usage  [ field: usage ]
+    Version probe  [ --version ]
+  ▸ Environment, tools, commands (4 more)
+
+  [ Cancel ]                                       [ Verify this harness ]
+----
+
+*Verify this harness* leads through its consent screen (the stages, their token cost) to the verification:
+
+[source,text]
+----
+  Verifying Aider
+
+    ✓  identity      aider 0.86.1
+    ✓  detection
+    ✓  launch        a headless call answered in 4.1 s
+    ✗  isolation     the MCP configuration was not used: the harness
+                     read ~/.aider.conf.yml instead
+                     → set "Arguments" to include --no-config        [ Edit ]
+    ·  classes, limits, paths, faults   not run
+
+  [ Cancel ]                                   [ Edit the settings ]
+----
+
+* A ✗ links to the field it concerns; the stages after it are listed as not run. A pass of every stage leads to the confirmation of the profile and then to <<harness-confirm>>.
+* A known harness found nowhere is added the same way with its path only; the settings are its shipped ones and are not shown.
 
 [#harness-probe]
 === Check (`harness.probe`, `harness.blocked`)
@@ -193,6 +239,27 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
 
 [#roles]
 == ③ Roles (`roles.review`)
+
+The step opens with the default assignment applied, as an overview; accepting it is one click.
+
+[source,text]
+----
+  Give every role a harness and a model
+
+  The default assignment is applied to all 31 roles.
+
+    Claude Code · opus-5.5      7 roles   planning and decisions   ⓘ
+    Claude Code · sonnet-5.5   16 roles   execution and review     ⓘ
+    OpenCode · qwen-coder       6 roles   screening and checks     ⓘ
+    ⚠ not assignable            2 roles   no fast model allowed    → assign
+
+  [ Adjust roles ]   [ Ask the steward to refine… ]     [ Use the defaults ]
+----
+
+* Each line is one harness and model with its roles, grouped by what they do; ⓘ lists the roles and the advisory of the group. A ⚠ line opens the table filtered to its roles.
+* *Use the defaults* is disabled while a ⚠ line remains; it saves the assignment.
+* *Ask the steward to refine…* goes through its consent screen; the proposed departures then appear in the table, marked, each to accept or reject.
+* *Adjust roles* opens the table:
 
 [source,text]
 ----
@@ -295,7 +362,31 @@ The advisory of a role (ⓘ, opened in place below its row):
 ----
 
 * On the LAN listener the input is replaced by the command to run in a terminal (`pm-operator credentials set sonar`) and *Check again* (link:../use-cases/01-onboarding.adoc#change-web-credentials[Credentials in the Web App]).
-* A failed verification (`providers.verify`) returns to this screen with the provider's answer under the input.
+* *Store and verify* stores the token and leads to the check (<<providers-verify>>).
+
+[#providers-verify]
+=== Check (`providers.verify`, `providers.failed`)
+
+[source,text]
+----
+  Checking the providers
+
+  GitHub                                                       ✓ ready
+    ✓  github.com reachable
+    ✓  token authenticates as oliver-wolff (fine-grained, expires in 41 days)
+    ✓  permissions: contents, pull requests, checks (read and write)
+    ✓  gh 2.71 is logged in as the same account
+
+  SonarCloud                                                   ✗ not ready
+    ✓  sonarcloud.io reachable
+    ✗  token refused: 401 "Invalid token"
+       → enter the token again                         [ Enter token ]
+
+  [ Continue without SonarCloud ]   [ Check again ]
+----
+
+* Every provider and every check has its own line; a provider is ✓ only when all its checks are. A ✗ shows the provider's answer and the fix.
+* *Continue without SonarCloud* records it as not available after a confirmation; all ✓ continues on its own to <<done>>.
 
 [#done]
 == Done (`onboard.completed`)
