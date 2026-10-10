@@ -6,8 +6,10 @@ holds no code and builds no artifact.
 
 | Document | What it is |
 |---|---|
+| [Use Cases](doc/UseCases.adoc) | What a person does with the system and gets out of it (`doc/use-cases/`) |
 | [Requirements](doc/Requirements.adoc) | The normative requirements (`doc/requirements/`) |
 | [Specification](doc/Specification.adoc) | The technical specifications of what is not implemented yet (`doc/specification/`) |
+| [Design](doc/Design.adoc) | How the use cases look and behave on the screen (`doc/design/`) |
 | [Implementation Watch](doc/ImplementationWatch.adoc) | Defect archetypes and fixtures to guard during implementation (`doc/implementation-watch/`) |
 | [Roadmap](doc/roadmap.adoc) | The delivery staging |
 | [Concepts](doc/Concepts.adoc) | Why the system is built the way it is |

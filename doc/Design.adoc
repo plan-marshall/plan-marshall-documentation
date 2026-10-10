@@ -1,0 +1,31 @@
+= plan-marshall-mcp Design
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../README.md[plan-marshall documentation] » Design
+
+== Overview
+
+The design shows how the link:UseCases.adoc[Use Cases] look and behave on the screen: the views, what they show, how one moves between them, the interactions, and the visual language. It is the counterpart of the link:Specification.adoc[Specification] for what a person sees; the specification states what the system does behind it, and a design never contradicts it.
+
+== Conventions
+
+* *One document per subject*: `design/NN-<subject>.adoc`, listed in <<index>>.
+* *Traceability*: every document names the use cases it serves (`_Use cases:_` below its title) and the specification sections it relies on.
+* *Status*: `DRAFT` while it is being worked out, `AGREED` once the operator agreed to it.
+* *Pictures*: wireframes and mock-ups are SVG files in `doc/resources/`, named `design-<subject>-<what>.svg`, embedded with `image::`; a picture always has a text that says what it shows.
+
+[#index]
+== Design Documents
+
+[cols="2,1,1,3",options="header"]
+|===
+|Document |Status |Use cases |What it covers
+
+|link:design/01-web-app.adoc[01-web-app.adoc]
+|`DRAFT`
+|link:use-cases/01-web-app.adoc#UC-WEB-1[UC-WEB-1], link:use-cases/01-web-app.adoc#UC-WEB-2[UC-WEB-2], link:use-cases/01-web-app.adoc#UC-WEB-3[UC-WEB-3]
+|The web app as a whole: its structure and navigation, the plan views, the plan designer, and its visual language.
+|===

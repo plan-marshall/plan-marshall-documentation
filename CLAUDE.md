@@ -4,9 +4,10 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 ## Project
 
-`plan-marshall-documentation` holds every document of plan-marshall-mcp (PM-MCP): requirements in
+`plan-marshall-documentation` holds every document of plan-marshall-mcp (PM-MCP): use cases in `doc/UseCases.adoc` (modules in
+`doc/use-cases/`), requirements in
 `doc/Requirements.adoc` (modules in `doc/requirements/`), technical specifications in `doc/Specification.adoc`
-(documents in `doc/specification/`), delivery staging in `doc/roadmap.adoc`, defect archetypes and fixtures to guard
+(documents in `doc/specification/`), the screen design in `doc/Design.adoc` (documents in `doc/design/`), delivery staging in `doc/roadmap.adoc`, defect archetypes and fixtures to guard
 during implementation in `doc/ImplementationWatch.adoc` (documents in `doc/implementation-watch/`), and the concept,
 developer and user documentation of the implemented system. It holds no code and builds no artifact.
 
@@ -30,7 +31,9 @@ into the documents it concerns.
 
 ## Documentation
 
-AsciiDoc (`.adoc`) for all project documentation. Requirements go into `doc/requirements/`,
+AsciiDoc (`.adoc`) for all project documentation. Use cases go into `doc/use-cases/` (index `doc/UseCases.adoc`,
+identifiers `UC-<AREA>-<N>`), the screen design that shows them into `doc/design/` (index `doc/Design.adoc`).
+Requirements go into `doc/requirements/`,
 technical specifications into `doc/specification/` (traceability rules in `doc/Specification.adoc`; a reference
 specification with status `REFERENCE`, such as `evaluation.adoc`, records evidence and defines nothing),
 research notes and open proposals into `doc/discussions/` (a decided proposal is applied and then deleted).
