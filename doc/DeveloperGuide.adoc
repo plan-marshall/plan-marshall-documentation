@@ -24,4 +24,7 @@ The developer guide describes how the implemented system is built, extended and 
 
 |link:developer/registry-setup.adoc[Registry Setup]
 |Why every build needs a token for the organisation's package registry, the one-time setup of a developer machine, how the repository's Maven settings find the registry, and how the parent POM confines every deploy to it.
+
+|link:developer/locks-and-leases.adoc[Locks and Leases]
+|The lock manager and the total lock order, the keys and lock files, the atomic write and the lock-free read of a store, the lease store and the stale lease sweep: the types, how to use and extend them, their pitfalls and their tests.
 |===

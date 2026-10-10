@@ -139,5 +139,33 @@ Persisted stores must preserve defect-driven data integrity invariants, detect o
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
+Implementation (the lock order with its assertion, the lock manager, the sibling lock files and the atomic write, the lock-free snapshot read that reports a digest mismatch as unverified, the common lease record with its store, and the stale lease sweep; the digests and their verification, the transaction journal, the footprint reconciliation, the lesson claims, the four lease stores with their own documents, the task leases, and the wiring of the lock manager into the daemon are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockLevel.java[LockLevel],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockKey.java[LockKey],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockOrder.java[LockOrder],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/LockManager.java[LockManager],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/InternalFaultException.java[InternalFaultException],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[AuditEvent],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/AtomicStoreFile.java[AtomicStoreFile],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreSnapshot.java[StoreSnapshot],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LeaseCodec.java[LeaseCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LeaseStore.java[LeaseStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/FileLockManager.java[FileLockManager],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/HolderLiveness.java[HolderLiveness],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/StaleLeaseSweep.java[StaleLeaseSweep]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockOrderTest.java[LockOrderTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockKeyTest.java[LockKeyTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/LockContractTest.java[LockContractTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/AtomicStoreFileTest.java[AtomicStoreFileTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreSnapshotTest.java[StoreSnapshotTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LeaseCodecTest.java[LeaseCodecTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LeaseStoreTest.java[LeaseStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/FileLockManagerTest.java[FileLockManagerTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/FileLockManagerTwoProcessIT.java[FileLockManagerTwoProcessIT],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/HolderLivenessTest.java[HolderLivenessTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/StaleLeaseSweepTest.java[StaleLeaseSweepTest]
+
+Documentation: link:concepts/locks-and-leases.adoc[Concepts § Locks and Leases], link:developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]
+
 Implementation watch: link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-24[PM-WATCH-GEN-24], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-46[PM-WATCH-GEN-46], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-64[PM-WATCH-PHASE-64], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-10[PM-WATCH-STORE-10], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-11[PM-WATCH-STORE-11], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-22[PM-WATCH-STORE-22], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-43[PM-WATCH-STORE-43], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-44[PM-WATCH-STORE-44], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-47[PM-WATCH-STORE-47], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-49[PM-WATCH-STORE-49]
 

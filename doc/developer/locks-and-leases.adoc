@@ -1,0 +1,156 @@
+= Locks and Leases
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » Locks and Leases
+
+== The Types
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+The locking of the stores is split between the foundation `pm-core` and the library module `pm-runtime` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`]; `pm-core` declares and decides, `pm-runtime` opens files and takes locks. Why the system locks this way is explained in link:../concepts/locks-and-leases.adoc[Concepts § Locks and Leases].
+
+[cols="1,1,3", options="header"]
+|===
+|Type |Package |What it does
+
+|`LockLevel`
+|`de.planmarshall.core.store`
+|The eleven levels of the total lock order, declared in acquisition order: workspace, plan, epic, epic worktree, lesson store, local configuration, derived facts, build timings, queue, machine store, leaf.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockKey.java[`LockKey`]
+|`de.planmarshall.core.store`
+|The canonical key of one lock: its level, the absolute lock file, and the id that orders it within its level. One factory per lock of the runtime (`LockKey.plan(base, projectId, planId)`, `LockKey.mergeQueue(base)`, …); the factories are the one list of the lock paths. A project or scope id is checked against the identifier pattern before it becomes part of a path.
+
+|`LockOrder`
+|`de.planmarshall.core.store`
+|The order assertion as a pure function of the held keys and the requested key: `Reentry`, `Permitted` or `Violation`. It opens no file.
+
+|`LockManager`, `LockTransaction`
+|`de.planmarshall.core.service`
+|The locking interface the engine sees: a transaction acquires keys one by one and releases them all on `close()`, in the reverse order.
+
+|`InternalFaultException`, `AuditEvent`, `AuditSink`
+|`de.planmarshall.core.service`
+|The refusal of an out-of-order acquisition (reason `lock_order_violation`) and its audit record `lock_order_violation` (`category: store`, `outcome: refused`, `details{held, requested}`), handed to the sink the runtime supplies.
+
+|`FileLockManager`
+|`de.planmarshall.runtime.lock`
+|The one implementation of `LockManager` (see <<lock-manager>>).
+
+|`AtomicStoreFile`
+|`de.planmarshall.core.store`
+|The write of a store replaced by rename (see <<atomic-write>>).
+
+|`StoreSnapshot`, `StoreIntegrity`
+|`de.planmarshall.core.store`
+|The lock-free read of a store, and what it can say about the content: `UNCHECKED`, `VERIFIED` or `DIGEST_UNVERIFIED`.
+
+|`LeaseOwner`, `HolderInstance`, `ScopeType`, `LeaseRecord`, `LeaseCodec`, `LeaseStore`
+|`de.planmarshall.core.store`
+|The lease record shared by the machine lease stores and the store that claims, releases, adopts and orphans leases (see <<leases>>).
+
+|`HolderLiveness`, `StaleLeaseSweep`
+|`de.planmarshall.runtime.lock`
+|Whether the runtime that serves a lease is alive, and the sweep of a lease store at runtime start (see <<sweep>>).
+|===
+
+The process locks of the runtime, its singleton lock `locks/runtime.lock` and the start lock `locks/runtime-start.lock`, are held for a process, not a transaction. They have no `LockKey` and do not go through the lock manager.
+
+[#lock-manager]
+== The Lock Manager
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A lock of the operating system (`FileChannel.lock()`) excludes other processes but not the threads of its own process: a second lock on the same file from the same process fails with `OverlappingFileLockException`, and closing any channel on a file releases every lock the process holds on it. `FileLockManager` therefore keeps two things per lock:
+
+* one `ReentrantLock` per `LockKey`, on which the threads of the runtime wait, so the operating system is asked by one thread only;
+* at most one open channel and one OS lock per lock file, counted by its holders: the first holder opens the channel and takes the lock, the last one closes it.
+
+Both exist only while a thread uses them: the in-process lock of a key from the first thread that asks for the key until the last thread that holds or waits for it has given it back, and the channel of a lock file from the first holder until the last one has closed it. A thread enters a key before it waits, so a lock is never replaced under a waiting thread.
+
+`LockTransaction.acquire(key)` asserts the order and acquires in one call. A key that `LockOrder` refuses is logged (`PM_MCP-250`, link:../LogMessages.adoc[Log Messages]), its audit record is handed to the `AuditSink`, nothing is acquired and no lock file is created, and the call throws `InternalFaultException`. `pm-core` names no wire error; mapping the exception to `internal_fault` is the job of the assembly.
+
+A lock file below `locks/` is created with mode `0600`, its directories with mode `0700`. A leaf key names the append-only file itself (`logs/audit.jsonl`, a plan's `mcp/mailbox.jsonl`); the manager creates that file where it is absent, but never its directory, which belongs to the store. Opening an existing lock file changes neither its content nor its modification time.
+
+=== Using It
+
+[source,java]
+----
+try (var transaction = lockManager.openTransaction()) {
+    transaction.acquire(LockKey.plan(base, projectId, planId));
+    transaction.acquire(LockKey.queue(base, projectId));
+    // read, decide, write
+}
+----
+
+Acquire the keys in the order of the levels; within a level, by id. The transaction releases them in the reverse order when it closes.
+
+[#pitfalls]
+=== Pitfalls
+
+* *One instance per runtime.* A second `FileLockManager` in the same process does not just fail: its acquisition meets the lock of the first one, throws `IllegalStateException` (cause `OverlappingFileLockException`), and closes the channel it has just opened, which on POSIX releases the OS lock of the first instance. The first instance then goes on without excluding other processes. The assembly `pm-mcp-server` must wire exactly one instance.
+* *Never open a lock file past the manager.* The same applies to a test or a tool that opens a channel on a lock file the manager holds: closing that channel drops the manager's OS lock. The probes in `FileLockManagerTest` keep their channel open until `@AfterEach`, after the last release.
+* *The order is asserted per transaction.* A thread that opens a second transaction while the first holds a key can acquire the same key again in the second one (the `ReentrantLock` lets it in), and the order is not checked across the two. Do not nest transactions.
+* *The lock object of a key is not stable.* The manager drops the in-process lock of a key when nobody uses it, so a later acquisition gets a new object. Never keep a reference to it.
+* *Never lock a store that is replaced by rename.* The rename replaces the inode, and a lock on the old file excludes nobody. Such a store has a sibling lock file; only the append-only leaf files are locked directly.
+* *Holding a lease is not holding a lock.* A lease can be held across any lock acquisition; a lock is held for one transaction only.
+
+=== Adding a Lock
+
+* A new lock of an existing level: add a factory to `LockKey` with its fixed path below `projects/<project_id>/locks/` or `locks/`, and a case to `LockKeyTest`.
+* A new level: add the constant to `LockLevel` at its place in the order, then the factory, and extend `LockOrderTest` by the two new level boundaries. Update link:../requirements/14-implementation.adoc#PM-IMPL-7[PM-IMPL-7], which states the order.
+
+=== Tests
+
+* `LockOrderTest`: a refused acquisition at every level boundary, re-entry, nothing after a leaf, and the order within the plan, epic and machine store levels.
+* `LockKeyTest`: the path of every factory and the identifier check.
+* `LockContractTest`: the audit event `lock_order_violation`, the internal fault and the log identifiers.
+* `FileLockManagerTest`: acquisition and release, the refusal with nothing acquired, the modes of the lock files, and the entries kept only while in use.
+* `FileLockManagerTwoProcessIT` (with `LockHolderProcess`, `-Pintegration-tests`): the lock excludes a second JVM in both directions.
+
+[#atomic-write]
+== Atomic Write and Lock-Free Read
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`AtomicStoreFile.write` writes the content to a sibling temporary file `<store>.tmp.<uuid>` with mode `0600`, forces it to disk, renames it over the store (`ATOMIC_MOVE`), and then forces the directory of the store to disk, so that the rename itself survives a crash. An `AtomicStoreFile` is bound to the key of its sibling lock file (a key whose lock file is the store itself is refused), and its `read` and `write` must be called inside a transaction that holds that key; otherwise they throw `InternalFaultException` (reason `store_lock_not_held`) and nothing is written. If the directory cannot be forced, the store has already been replaced, and the `UncheckedIOException` says so. Neither `AtomicStoreFile` nor `LeaseStore` creates the directory of a store; whoever starts the runtime does.
+
+`StoreSnapshot.read` reads the store without any lock. A rename replaces the file in one step, so the read sees the content before or after a write, never part of one. A store that does not exist is a snapshot without content. Given a recorded size and SHA-256, the snapshot reports `VERIFIED` or `DIGEST_UNVERIFIED`; it never decides that a store was tampered with, because it may have seen a transaction in flight. Only a reader holding the store's lock decides.
+
+Tests: `AtomicStoreFileTest`, `StoreSnapshotTest`.
+
+[#leases]
+== Leases
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A lease store document is `{"format_version": 1, "leases": [{"key", "owner", "acquired_at", "lease_expires_at"}]}`; the key is any non-blank string, unique in the store. `LeaseCodec` accepts exactly `format_version` `1`: a lower one is `format_outdated`, a higher one `format_newer`, a missing or non-integer one `unreadable`. The store-specific documents (`merge-queue.json`, `build-slots.json`, `model-slots.json`, `review-bot-windows.json`) are not read by it yet; their packages decide how they build on it.
+
+An instant is written in exactly the shape of `Instant.toString()`: UTC with `Z`, fractional seconds only when needed and then in groups of three digits. Another spelling of the same moment is refused as `unreadable`, never normalised, so that a lease written by one component and read by another round-trips byte-identical.
+
+`LeaseStore` runs each write as one short transaction on the store's lock key: read, decide, write, release.
+
+* `claim(lease)`: granted when the key is free; otherwise the result names the holder.
+* `release(key, expectedOwner)`: removes the lease only while its owner equals the expected one in every field; otherwise it writes nothing and returns the lease it found. `release(key)` removes the lease whoever owns it.
+* `adopt(key, newHolder)`: sets the serving runtime and clears `orphaned_at`.
+* `orphan(key, orphanedAt)`: marks the lease; a lease that is orphaned already keeps its first mark and nothing is written.
+* `reviseAll(revision)`: reads, revises and writes every lease in one transaction; a revision that returns a lease under another key is refused.
+
+Tests: `LeaseCodecTest`, `LeaseStoreTest`.
+
+[#sweep]
+== The Stale Lease Sweep
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`StaleLeaseSweep.sweep(store, abandoned, now)` judges every lease of one store in one `reviseAll` transaction:
+
+. the holder is alive: kept (rule `holder_alive`);
+. the holder is not alive and `abandoned` says the lease was abandoned: removed (rule `abandoned`);
+. the holder is not alive and there is no such evidence: kept and marked orphaned, unless it was marked before (rule `skipped_no_evidence`).
+
+`HolderLiveness.isAlive` compares the process id and the start instant of the holder together, because process ids are reused. A running process whose start instant the OS does not report counts as alive: a lease is never treated as abandoned on a guess.
+
+The evidence is the caller's: the owning scope is terminal, archived or no longer resolvable, the lease expired without adoption, or the job of a slot was recorded `killed`. The predicate runs while the store's lock is held, so it must read without a lock and take none.
+
+The result names the rule of every lease. A sweep that removed nothing says why: `root_absent`, `root_unreadable` (the store is in another format version or unreadable; the refusal is in the result), `nothing_listed`, or `all_kept`. Each lease newly marked orphaned is logged as `PM_MCP-151`, and the finished sweep of a store that was read as `PM_MCP-50`; a store that is absent or refused is not logged at INFO. The sweep writes no audit record.
+
+Tests: `StaleLeaseSweepTest`, `HolderLivenessTest`.
