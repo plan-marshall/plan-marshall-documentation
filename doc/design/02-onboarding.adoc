@@ -1,0 +1,296 @@
+= Design: Onboarding Screens
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../Design.adoc[Design] » Onboarding Screens
+
+_Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use-cases/01-onboarding.adoc#UC-ONB-2[UC-ONB-2], link:../use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], link:../use-cases/01-onboarding.adoc#UC-ONB-4[UC-ONB-4], link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5]_
+
+_Relies on: link:../use-cases/01-onboarding.adoc#changes[Onboarding, Changes to the Specification] (proposed), link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
+
+Status: `DRAFT`. The wireframes are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
+
+== Principles
+
+* *The screen is the state.* Each screen renders one state of the onboarding workflow: what the server reports for it, and one control per link it offers. The app holds no step order and no rule of its own; reloading the page, closing the browser, or opening it on another paired device shows the same state.
+* *Nothing happens on its own.* No screen starts an action when it opens. Every action that looks at the machine, runs a program, or asks a model is behind a consent screen (<<consent>>); every other action is behind a button that names it.
+* *Say exactly what will happen.* A button is labelled with what it does ("Look for harnesses", "Enrol Claude Code"), never "Next" or "OK". A consent screen lists the directories, the commands, and the cost before it asks.
+* *Saying no is safe.* "Not now" never ends in an error or a warning colour; the screen stays and says that nothing was done.
+* *First run and later change look alike.* A later run of one aspect opens the same screen with the current values filled in and the step bar showing only that aspect.
+
+[#frame]
+== Frame
+
+The onboarding fills the whole app until it is complete; the rest of the app is reached once `onboard.completed` is reached. A later run opens from the machine settings in the same frame.
+
+[source,text]
+----
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ plan-marshall                                   Machine: mbp-oliver   ⚙  ?   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  ① Harness  ──  ② Models  ──  ③ Roles  ──  ④ Providers  ──  ✓ Done           │
+│  ━━━━━━━━━━                                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  <title of the state>                                                        │
+│  <one or two sentences: what this step is for>                               │
+│                                                                              │
+│  <content of the state>                                                      │
+│                                                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  <secondary links>                                   [ <primary link> ]      │
+└──────────────────────────────────────────────────────────────────────────────┘
+----
+
+* *Step bar*: the four sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
+* *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
+* *Model at work* (`[M]` states): the content shows that a model task runs, on which harness and role, the time so far, and the expected cost; when it fails or the operator leaves it, the screen continues as the use case's variation says (without a recommendation).
+
+[#start]
+== Start
+
+Shown at the first run in `onboard.entry`.
+
+[source,text]
+----
+  Set up this machine for plan-marshall
+
+  Four steps. Nothing on this machine is looked at, run, or changed until
+  you say so in that step.
+
+    ① Harness     choose the coding agent the server works with first
+    ② Models      choose the agents and models other plans may use
+    ③ Roles       give every role an agent and a model
+    ④ Providers   the git hosts, CI and analysis services this machine uses
+
+  You can stop at any point; the next visit continues where you stopped.
+
+                                                        [ Begin with ① ]
+----
+
+[#consent]
+== Consent
+
+One pattern for every `<step>.consent` state. Its content comes from the consent kind (link:../use-cases/01-onboarding.adoc#change-consent[Consent Before Acting]); the screen adds nothing the server did not state.
+
+[source,text]
+----
+  Look for harnesses on this machine?
+
+  The server would
+    • look for these programs:  claude, opencode, codex, agy
+    • in:  the directories of your PATH,
+           ~/.local/bin, /Applications, /opt/homebrew/bin
+    • run for each one found:   <program> --version
+
+  It would not
+    • read any other file, or start a harness session
+    • send anything over the network
+
+  Cost: none.
+
+  ( ) Ask me again next time
+  ( ) Don't ask again for this action      (you can withdraw it in ⚙ Settings)
+
+  [ Not now ]                                       [ Look for harnesses ]
+----
+
+* *Not now* (link `no`): the screen stays and shows "Nothing was done." under the title, with the same two buttons. The step bar does not move.
+* The remember choice is a choice inside the screen, not a third button, so the primary button stays one action: `yes` or `yes_remember` by the choice.
+* A consent with a model cost names the role, the harness, and the expected cost from earlier runs, or "not known yet" for the first run.
+
+[#harness]
+== ① Harness
+
+[#harness-choose]
+=== Choose (`harness.choose`)
+
+[source,text]
+----
+  Choose the harness to start with
+
+  Found on this machine:
+
+  (•) Claude Code   2.4.1   /Users/oliver/.local/bin/claude   ✓ supported
+  ( ) OpenCode      1.9.0   /opt/homebrew/bin/opencode        ✓ supported
+      Codex         0.31.2  /opt/homebrew/bin/codex           ✗ cannot run workers
+      Antigravity   —       not found
+
+  The first harness also runs the advice in the next steps. You can add
+  the others in ② Models.
+
+  [ Look again ]                              [ Check Claude Code ]
+----
+
+* Harnesses that cannot run workers are listed, greyed, with the reason; harnesses not found are listed so the operator sees what was looked for.
+* *No harness found* (`harness.none`): the list is replaced by what was looked for, a short install hint per harness with a link to its own installation page, and *Look again*.
+
+[#harness-probe]
+=== Check (`harness.probe`, `harness.blocked`)
+
+[source,text]
+----
+  Checking Claude Code
+
+    ✓  version 2.4.1 is supported (2.0 – 2.x)
+    ✗  not logged in
+
+  Log in to Claude Code in a terminal, then check again:
+
+      claude login                                             [ Copy ]
+
+  [ Choose another harness ]                          [ Check again ]
+----
+
+* Each check is a line that turns from a spinner to ✓ or ✗; a failing check names its fix and a command where one exists. The checks that need a consent of their own (the login probe) show their consent screen first.
+
+[#harness-confirm]
+=== Confirm (`harness.confirm`)
+
+[source,text]
+----
+  Enrol Claude Code
+
+  The server will remember this program and start workers with it only
+  while it is unchanged:
+
+    Path      /Users/oliver/.local/bin/claude
+    Version   2.4.1
+    SHA-256   9f2c…41ab                                         [ Show ]
+
+  [ Back ]                                         [ Enrol Claude Code ]
+----
+
+[#models]
+== ② Models (`catalogue.select`)
+
+[source,text]
+----
+  Choose the harnesses and models other plans may use
+
+  ┌ Recommendation ──────────────────────────────────── by steward ┐
+  │ Use Claude Code for writing roles and OpenCode with a small    │
+  │ model for screening; allow the three models below.  [ Why? ]   │
+  └────────────────────────────────────────────────────────────────┘
+
+  Claude Code   enrolled
+    [x] opus-5.5          ★ recommended
+    [x] sonnet-5.5        ★ recommended
+    [ ] haiku-5.5
+
+  OpenCode      found, not enrolled                  [x] enrol
+    [x] qwen-coder-32b    ★ recommended
+    [ ] + add a model id
+
+  [ Back ]                                   [ Enrol and allow 3 models ]
+----
+
+* The recommendation is preselected and marked; the operator's change of a preselected box removes the mark from it. *Why?* opens the rationale with cost and limits per model.
+* A harness that cannot list its models shows an input for model ids instead of the list.
+* Enrolling a further harness runs its checks and confirmation (<<harness-probe>>, <<harness-confirm>>) inline before the step completes.
+
+[#roles]
+== ③ Roles (`roles.review`)
+
+[source,text]
+----
+  Give every role a harness and a model                 31 roles · 2 to look at
+
+  Group: [ by phase ▾ ]   Filter: [            ]   [ Assign to selection… ]
+
+  ▾ Planning
+    [ ] refine      writer     Claude Code  sonnet-5.5  medium   default        ⓘ
+    [ ] outline     writer     Claude Code  opus-5.5    high     default        ⓘ
+  ▾ Review
+    [ ] qgate       read_only  OpenCode     qwen-coder  —        ✎ steward      ⓘ
+    [ ] screener    zero_tool  —            —           —        ⚠ no model     ⓘ
+                                                                   of tier fast
+  ▸ Execution (8)   ▸ Finalize (6)   ▸ Decisions (5)
+
+  [ Back ]                                              [ Save 31 roles ]
+----
+
+The advisory of a role (ⓘ, opened in place below its row):
+
+[source,text]
+----
+    outline     writer     Claude Code  opus-5.5    high     default        ⓘ
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │ What it does   Turns the refined request into deliverables and the    │
+    │                plan's lane; reads the whole affected codebase.        │
+    │ What it needs  Deep reasoning over a large context; few tool calls.   │
+    │ Why frontier   A weak outline costs more later than the model costs   │
+    │                here: every later phase builds on it.                  │
+    │ If cheaper     More loop-backs from the Q-Gate; standard tier passed  │
+    │                71 % of the qualification items (frontier 92 %).       │
+    │ Steward        no departure                                           │
+    │                                                 [ Reset to default ]  │
+    └───────────────────────────────────────────────────────────────────────┘
+----
+
+* Each row: role, class, harness, model, effort, and where the value comes from: `default`, `✎ steward` (a proposed departure, its reason in the advisory under _Steward_), `✎ changed` (the operator's), or `⚠` with the validation reason of `roles.validate` or a default that cannot be met here.
+* The advisory always shows the default's what and why, also when the value departs from it; *Reset to default* per row and for all.
+* *Assign to selection…* sets harness, model, and effort for the selected rows in one go; the advisories of the rows stay.
+* *Save* is disabled while a row is marked ⚠; the header counts them.
+
+[#providers]
+== ④ Providers
+
+[#providers-select]
+=== Select (`providers.select`)
+
+[source,text]
+----
+  Choose what this machine works with
+
+  GitHub        [x] available   variant ( ) native  (•) gh 2.71   credential ✓ stored
+  GitLab        [ ] available
+  SonarCloud    [x] available   native only                       credential ✗ missing
+  Review bots   [x] CodeRabbit  [x] Sourcery  [ ] cuioss-review-bot
+
+  These are the defaults for every project; a project's setup and a single
+  plan can override them.
+
+  [ Back ]                                 [ Continue with 2 providers ]
+----
+
+[#providers-credentials]
+=== Credentials (`providers.credentials`)
+
+[source,text]
+----
+  SonarCloud needs a token
+
+  Token   [ •••••••••••••••••••••••••••••• ]
+          Stored in the machine's credential store; it is never shown
+          again and never reaches a model or a log.
+
+  [ Skip SonarCloud ]                                [ Store and verify ]
+----
+
+* On the LAN listener the input is replaced by the command to run in a terminal (`pm-operator credentials set sonar`) and *Check again* (link:../use-cases/01-onboarding.adoc#change-web-credentials[Credentials in the Web App]).
+* A failed verification (`providers.verify`) returns to this screen with the provider's answer under the input.
+
+[#done]
+== Done (`onboard.completed`)
+
+[source,text]
+----
+  This machine is ready
+
+    ✓ Harness     Claude Code 2.4.1 (+ OpenCode 1.9.0)
+    ✓ Models      3 models allowed
+    ✓ Roles       31 roles assigned
+    ✓ Providers   GitHub (gh), SonarCloud
+
+  Next: enrol a project and set it up.
+
+  [ Machine settings ]                               [ Enrol a project ]
+----
+
+== Open Points
+
+* *Enrol a project* needs the project enrolment in the web app; today it is the CLI verb `pm-operator enrol`.
+* How the app looks between the screens: one route per state, or one route for the onboarding that renders whichever state the server reports.
+* Whether the step bar lets the operator look at a done step while the process stands in a later one.

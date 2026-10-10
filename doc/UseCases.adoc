@@ -15,6 +15,7 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 * *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `== UC-<AREA>-<N>: <title>`. A number is never reused.
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
 * *Status*: each use case states one of `DRAFT` (being written, open points named), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
+* *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit, marked `[S]` when the server acts, `[O]` when the operator chooses, and `[M]` when a model acts through a role task; the arrows carry the outcomes. The diagram shows the process, never a screen.
 * *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
 
 [source,asciidoc]
@@ -31,6 +32,7 @@ Flow:: the steps, numbered, as the actor experiences them.
 Variations:: other ways through, and what happens when something fails.
 Outcome:: what holds afterwards.
 Open points:: what is not decided yet.
+Changes:: the changes of the requirements and specifications it needs, each modelled as the fix of a gap.
 Requirements:: the requirements that serve it (link:Requirements.adoc[Requirements]).
 Design:: the design documents that show it (link:Design.adoc[Design]).
 ----
@@ -42,7 +44,11 @@ Design:: the design documents that show it (link:Design.adoc[Design]).
 |===
 |Area |Module |What it covers
 
+|`UC-ONB`
+|link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
+|Making a machine ready: the first harness, the harnesses and models for the work, the models of the roles, the providers of the machine.
+
 |`UC-WEB`
-|link:use-cases/01-web-app.adoc[01-web-app.adoc]
+|link:use-cases/02-web-app.adoc[02-web-app.adoc]
 |The web app: opening it, following plans and epics down to their parts, and designing a plan's process.
 |===
