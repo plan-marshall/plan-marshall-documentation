@@ -1,0 +1,100 @@
+= Store Integrity
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Concepts.adoc[Concepts] » Store Integrity
+
+The runtime keeps the state of plans, epics and the workspace in JSON documents and append-only JSONL logs in the per-project machine store. Those files must survive three things: a binary that reads a file written in another format, a process killed in the middle of a write, and an edit made outside the runtime. This document explains how the stores stay trustworthy through each of them. How the runtime keeps concurrent writes apart is explained in link:locks-and-leases.adoc[Locks and Leases]; how the code implements what this document describes is in link:../developer/store-substrate.adoc[Developer Guide § Store Substrate].
+
+[#format-versions]
+== Format Versions
+_Requirements: link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+Every store document and every JSONL record declares its `format_version`. A reader accepts exactly the current version of its file kind and refuses every other one; there is no older shape it still tolerates and no migration it runs on the side.
+
+A refusal says what is wrong and where: the file is `absent`, `unreadable`, `format_outdated` or `format_newer`, and the refusal names the file, the version found in it and the current one. The version is read before anything else, so a document of another version is refused as outdated or newer, not as unreadable because a field it carries has changed.
+
+What a reader refuses it leaves exactly as it is. A reader never repairs, migrates or rewrites a store: a file it cannot understand stays on disk for the operator, untouched, rather than being turned into something the runtime can read and the operator can no longer recognise.
+
+The same strictness holds inside the current version. A document has one shape: every declared field at most once, no undeclared field, every required field present, each with its one JSON type. An instant has one spelling, an RFC 3339 string in UTC with the suffix `Z`; another spelling of the same moment is refused. Because the reader accepts only what the writer writes, a document read and written again keeps its bytes, which is what lets its digest (below) mean anything.
+
+[#crash-consistency]
+== Crash Consistency
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A single store is replaced by one atomic rename, so a reader sees it whole, before or after a write. One write of a scope, however, often changes several of its stores at once: a status document, a task, a JSONL log. A process killed between two of those writes would leave the stores disagreeing with each other. Each scope (a plan, an epic, the workspace, the project's lesson store) therefore writes its stores through a transaction journal, under the lock of the scope.
+
+----
+  commit, under the scope lock                        killed here, the recovery ...
+
+  1 stage    the new content of every replaced store
+             to <store>.tmp.<id>, every appended block   ... finds no journal and
+             to <store>.append.<id>, each forced to disk     deletes the staged files
+                 |
+  2 journal  the journal, listing every target with its
+             staged file, its new size and SHA-256, and
+             for an append its size before the append,
+             written by rename and forced to disk
+                 |  ---------- from here on the write is decided ----------
+  3 apply    every staged file renamed over its store,   ... finds the journal and
+             every staged block appended                     rolls the write forward
+                 |
+  4 digests  the sidecar of the scope takes the new
+             sizes and SHA-256 from the journal
+                 |
+  5 close    the journal deleted and its directory
+             forced to disk
+
+  roll forward, for every target of the journal:
+    the store has the new size and SHA-256  ->  applied already, left alone
+    its staged file is still there          ->  replace: renamed over the store
+                                                append:  store cut back to its size
+                                                         before the append, block appended once
+    neither                                 ->  invariant violation: nothing is applied,
+                                                the journal and every store stay as they are
+  then: digests written from the journal, journal and staged files deleted,
+        one audit record transaction_rolled_forward
+----
+
+The journal is the point of no return. Before it is on disk, nothing the stores show has changed, and what the write staged is debris that the recovery removes. Once it is on disk, the write is decided, and the recovery completes it, it never undoes it. Completing is possible because the journal records where every target is headed: the recovery tells an applied target from a pending one by its size and SHA-256, so it can run any number of times and never applies a target twice. For an append the journal also records the size of the store before the append; the recovery cuts the store back to that size before it appends the block again, so an append that was cut off half-way is neither lost nor doubled.
+
+A target that has neither its new content nor its staged file has lost what the transaction wrote. The recovery then applies nothing, leaves the journal and every store in place, and reports the affected stores to its caller: completing only part of such a write would turn evidence into a consistent-looking state.
+
+A commit that fails part-way does not tidy up after itself. It leaves exactly what a killed process leaves, so there is one path that brings a scope back to a consistent state, the recovery, and it is the one the tests exercise by stopping a commit after every step.
+
+The recovery of a scope runs under the scope's lock, like a write, and touches only files the scope owns: the staged files it removes lie in the directories of that scope, so it never removes the staged file of a transaction another scope has in flight.
+
+[#writes-across-scopes]
+== Writes Across Scopes
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+Some writes go beyond one scope: they change the stores of a scope and, with them, a store of another scope, such as the lesson store, or one that belongs to no scope, such as the task queue. A journal belongs to one scope, and its recovery runs under that scope's lock only, so it cannot complete a write in another scope. Such a write is therefore never added to the journal.
+
+Instead it is written in a fixed order. The authoritative store, the one that records what happened, comes first; every further store is derived from it. Each step is a transaction of its own, under the lock of its own store, and the lock is given back before the next step begins, so no step holds the locks of two stores.
+
+A crash between two steps leaves the later stores behind the authoritative one, never the other way round. The recovery closes that gap by derivation: a reconciler of the write reads the authoritative store and applies each later write that is not in place yet, under the lock of the store it writes. Every derived write it applies leaves one audit record `cross_scope_reconciled`; a reconciler that finds everything in place changes nothing and records nothing. The store layer supplies the ordered write and the place for the reconcilers; each flow that writes across scopes brings its own steps and its own reconciler.
+
+[#append-only-logs]
+== Append-Only Logs
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+A JSONL store is history: it grows by appends and is never rewritten. An append writes its records in one write at the end of the file and forces the file to disk, and every record ends with a newline. A last line without a newline is therefore not a record but the trace of an append that was cut off: a torn tail.
+
+The torn tail is repaired by the next append, under the lock of the store and before it writes: it cuts the file back to the end of its last complete line and leaves an audit record `jsonl_tail_repaired` with the number and the SHA-256 of the bytes it cut off. Nothing before the last newline is ever touched. A complete line that does not parse, or that declares another format version, stays where it is and is reported with its line number, while the other records of the store stay readable.
+
+A reader never repairs. Without the lock it may meet an append in progress; it sees it as a torn tail, never as a record, and leaves it to the next writer. An append that is part of a scope's transaction repairs the tail when it stages, so the size before the append that the journal records is the size after the repair.
+
+[#out-of-band-edits]
+== Out-of-Band Edits
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+The stores lie outside the repository's working tree, but a shell with write access to the machine store can still change them behind the runtime. Each scope therefore keeps a digest sidecar: for every store its transactions write, the size and SHA-256 the store had after the last write. The sidecar lies beside the stores, never inside one, and it is written only by the digests step of a transaction or by the roll-forward of its journal. No other path records a digest, so a digest always describes content a transaction of the scope wrote.
+
+Whether a store was changed behind the runtime is decided only under the lock of its scope, after the recovery of the scope has run. A store whose content differs from its digest at that point was changed or deleted outside a transaction; one with no digest was never written by a transaction of the scope and is not compared.
+
+A reader without the lock cannot decide. It may look at a scope in the middle of a transaction: a store already replaced whose digest is not written yet, or a journal still present. A difference it sees, and every store of a scope whose journal exists, is reported as `digest_unverified`, naming the store. That says "not confirmed now", not "tampered", and leaves the decision to the next access that holds the lock.
+
+An edit that was meant is accepted by re-recording the digest of the store as it is now. Because digests are recorded only through the journal, this is an ordinary transaction that replaces the store by its own current content; afterwards every store of the scope is verified again.
+
+What the runtime does with a decided mismatch, the `integrity_breach` condition that pauses the scope, and the operator command `pm-operator accept-edit` that accepts an edit are not built yet; they are specified in link:../specification/store-schemas/13-leases-integrity-testing.adoc#store-digest-verification[Store Schemas Specification § Store Digest Verification].
