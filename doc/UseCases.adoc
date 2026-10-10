@@ -32,6 +32,7 @@ Flow:: the steps, numbered, as the actor experiences them.
 Variations:: other ways through, and what happens when something fails.
 Outcome:: what holds afterwards.
 Open points:: what is not decided yet.
+Changes:: the changes of the requirements and specifications it needs, each modelled as the fix of a gap.
 Requirements:: the requirements that serve it (link:Requirements.adoc[Requirements]).
 Design:: the design documents that show it (link:Design.adoc[Design]).
 ----
