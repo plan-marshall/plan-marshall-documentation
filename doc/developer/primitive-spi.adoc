@@ -43,7 +43,7 @@ A primitive is one deterministic operation of the server. Its contract is the pa
 |Marks a component of a parameter record as a value the caller supplies and declares the length bounds of a text value.
 |===
 
-The constants of the enums are stated in their sources and nowhere else; read them there.
+The constants of `OutcomeClass`, `AwaitedEvent` and `CycleMeasure` are stated in their sources and pinned by {spi-test}/SpiVocabularyTest.java[`SpiVocabularyTest`]; this document does not repeat them.
 
 === What a Primitive Declares
 
@@ -54,7 +54,7 @@ The other declarations have a default that says "nothing":
 * `producedArtifacts()` and `requiredArtifacts()` name the artifacts the primitive produces as side effects and the ones that must exist before it can pass.
 * `waivableGates()` names the gates the primitive may look a waiver up for. A primitive never writes a waiver.
 * `enqueuesJob()` is `true` for a primitive that starts a job. Such a primitive has at least one outcome whose `startsJob()` is `true` and reports the job in `PrimitiveResult.spawnedJobId()`.
-* `cycleMeasure()` names the measure that strictly decreases on every pass of a chained cycle through the state of the primitive. A primitive with the measure `ATTEMPT_CAP` also declares `exhaustionOutcome()`: the wire name of the outcome it returns once its cap is spent.
+* `cycleMeasure()` names the measure that strictly decreases on every pass of a chained cycle through the state of the primitive. A primitive with the measure `ATTEMPT_CAP` also declares `exhaustionOutcome()`: the wire name of the outcome it returns once its cap is spent. A primitive with any other measure declares none.
 
 === The Result
 
@@ -74,21 +74,64 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
 
 === What the Constructor Refuses
 
-The constructor checks every primitive before the registry exists. One malformed primitive leaves no registry at all; the constructor throws a {spi}/PrimitiveRegistrationException.java[`PrimitiveRegistrationException`] for the first primitive it refuses, in the order of the argument. The exception carries the id of the primitive and a `Reason`; tell refusals apart by the reason, never by the message. The reasons are the constants of `PrimitiveRegistrationException.Reason`, each documented at its constant.
+The constructor checks every primitive before the registry exists. One malformed primitive leaves no registry at all; the constructor throws a {spi}/PrimitiveRegistrationException.java[`PrimitiveRegistrationException`] for the first primitive it refuses, in the order of the argument. The exception carries the id of the primitive as it declared it (the text `null` when it declared none) and a `Reason`; tell refusals apart by the reason, never by the message.
 
-The constructor checks what the declarations of a primitive decide on their own:
+The constructor checks what the declarations of a primitive decide on their own. The reasons are the constants of `PrimitiveRegistrationException.Reason`:
 
-* The id is two identifiers joined by a dot. An identifier starts with a lower-case letter, followed by at most 31 lower-case letters, digits, `_` or `-`. No two primitives have the same id.
-* The parameter type is a record class.
-* The outcome type is an enum that implements `PrimitiveOutcome` and has at least one constant.
-* Every wire name is an identifier of the form above, no two outcomes of a primitive share one, and none is `stepped_out`, the name of the control outcome that only the engine returns when a sub-workflow is left.
-* The job side effect is declared on both sides: a primitive that enqueues a job has a job-starting outcome, and a primitive with a job-starting outcome declares that it enqueues a job.
-* A primitive with the measure `ATTEMPT_CAP` names an exhaustion outcome that is one of its outcomes and has the class `FAILURE`.
-* The awaited event is not `null`.
+[cols="2,3", options="header"]
+|===
+|Reason |What is refused
+
+|`DUPLICATE_ID`
+|A primitive whose id another primitive passed to the registry already has.
+
+|`MALFORMED_ID`
+|An id that is missing or is not two identifiers joined by a dot. An identifier starts with a lower-case letter, followed by at most 31 lower-case letters, digits, `_` or `-`.
+
+|`PARAMETER_TYPE_NOT_A_RECORD`
+|A parameter type that is missing or is not a record class.
+
+|`MALFORMED_FREE_PARAMETER`
+|A component of the parameter record that carries `@FreeParam` and is not a `String`, or whose bounds cannot hold: a negative `minLength`, a negative `maxLength`, or a `minLength` above the `maxLength`. Equal bounds are accepted, and a component without the annotation is not looked at.
+
+|`OPEN_OUTCOME_SET`
+|An outcome type that is missing, is not an enum that implements `PrimitiveOutcome`, or has no constant.
+
+|`DUPLICATE_WIRE_NAME`
+|Two outcomes of one primitive with the same wire name.
+
+|`MALFORMED_WIRE_NAME`
+|An outcome whose wire name is missing or is not an identifier of the form above.
+
+|`RESERVED_WIRE_NAME`
+|An outcome with the wire name `stepped_out`, the name of the control outcome that only the engine returns when a sub-workflow is left.
+
+|`MISSING_OUTCOME_CLASS`
+|An outcome whose `outcomeClass()` is `null`.
+
+|`UNDECLARED_JOB_SIDE_EFFECT`
+|A job side effect that is declared on one side only: a primitive that enqueues a job without a job-starting outcome, or a primitive with a job-starting outcome that does not declare that it enqueues a job.
+
+|`MISSING_CYCLE_MEASURE`
+|A primitive whose `cycleMeasure()` is `null`.
+
+|`ATTEMPT_CAP_WITHOUT_FAILURE_EXHAUSTION`
+|A primitive with the measure `ATTEMPT_CAP` whose exhaustion outcome is `null`, is empty, names none of its outcomes, or names an outcome that is not of class `FAILURE`.
+
+|`EXHAUSTION_OUTCOME_WITHOUT_ATTEMPT_CAP`
+|A primitive with any other measure that names an exhaustion outcome. No cap is ever spent, so no pass could return it.
+
+|`MISSING_AWAITED_EVENT`
+|A primitive whose `awaitedEvent()` is `null`.
+|===
+
+The table follows the enum, where each reason is documented at its constant. {spi-test}/PrimitiveRegistryTest.java[`PrimitiveRegistryTest`] fails when a reason has no malformed primitive in {spi-test}/TestPrimitives.java[`TestPrimitives`]; nothing compares this table with the enum, so a change of the enum is carried into it by hand.
+
+The exhaustion outcome is read tolerantly on one side only. A primitive without an attempt cap that returns `null` instead of an empty `Optional` declares none, like one that returns an empty one, and is accepted. With an attempt cap, `null` is refused like every other missing exhaustion outcome.
 
 A `null` collection or element is a `NullPointerException`, not a refusal.
 
-The constructor does not check what needs more than the primitive itself: whether a declared gate is on the list of waivable gates, whether a produced artifact is required by anyone, whether a name collides with a keyword of the workflow language, and whether an execution that returns a job-starting outcome carries a job identifier. `@FreeParam` is a declaration only; nothing in `pm-core` reads it.
+The constructor does not check what needs more than the primitive itself: whether a declared gate is on the list of waivable gates, whether a produced artifact is required by anyone, whether a name collides with a keyword of the workflow language, and whether an execution that returns a job-starting outcome carries a job identifier. The registry reads `@FreeParam` to check the declaration and for nothing else: this package binds no supplied value and refuses none that lies outside the bounds.
 
 [#content-validators]
 == The Content Validators
@@ -110,7 +153,7 @@ Every validator rejects a blank text. Beyond that:
 |A first line that is not of the form `type(scope)!: description` (the scope and the `!` are optional, the type consists of letters, and one space follows the colon), a header without a type or without a description, a body that does not start on the third line after exactly one blank line, and every `Co-Authored-By:` line, wherever it stands, in any spelling of upper and lower case, and whatever it names.
 
 |{spi}/validation/AsciiDocValidator.java[`AsciiDocValidator`]
-|A control character other than a tab, a delimited block that is never closed, a document title that is not the first non-blank line, a second document title, and a section more than one level below the section before it. A line inside a delimited block is content: it is neither a title nor a section, and inside a listing, literal or passthrough block it opens no further block.
+|A control character other than a tab, a delimited block that is never closed, a document title that is not the first non-blank line, a second document title, and a section more than one level below the section before it. A line inside a delimited block is content: it is neither a title nor a section, and inside a listing, literal, passthrough or comment block it opens no further block.
 
 |{spi}/validation/OutlineValidator.java[`OutlineValidator`]
 |In a list below `+**Affected files:**+`: a line that is not a bullet starting with a back-quoted path, and a path without one of the intents `(read)`, `(write-new)`, `(write-replace)`, `(write-conditional)`, `(delete)` at the end of its line. In a list below `+**Added dependencies:**+`: a line that is not a bullet with exactly one back-quoted coordinate, an ecosystem other than `maven`, `npm` and `pypi`, a coordinate that is not of the form of its ecosystem (for example because it carries a version), and a coordinate named a second time anywhere in the outline.
@@ -124,15 +167,27 @@ Three properties of the validators are deliberate:
 
 `OutlineValidator` decides only what the text decides on its own. It does not check that the files exist, that the tasks of the outline can be derived, or that a deliverable declares what its files require.
 
+=== The Block Delimiters of `AsciiDocValidator`
+
+`AsciiDocValidator` runs no AsciiDoc processor. It compares each line, without its trailing white space, with three forms of a block delimiter:
+
+* Four or more times one of the characters `+-+`, `+.+`, `+=+`, `+*+`, `+_+`, `{plus}` and `+/+`, and nothing else: the listing, literal, example, sidebar, quote, passthrough and comment block.
+* Exactly `+--+`: the open block. A line of three hyphens is ordinary text.
+* One of the characters `+|+`, `+,+`, `+:+` and `+!+` followed by three or more `+=+`, and nothing else: a table. `+!==+` and `+,===x+` are ordinary text.
+
+A block is closed by a line equal to the one that opened it; a longer or shorter delimiter does not close it. The content of a listing, literal, passthrough and comment block is taken verbatim, so a delimiter inside it opens nothing. Inside every other block, the open block and the table included, a further block may open.
+
+No kind of block has a rule key of its own. Every block that is still open at the end of the text is one violation of `AsciiDocValidator.RULE_UNCLOSED_BLOCK` on the line that opened it, the outer block first.
+
 [#pitfalls]
 == Pitfalls
 _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-6[PM-WF-6], link:../Requirements.adoc#PM-ARCH-4[PM-ARCH-4]_
 
 * *Give an outcome the class of what happened, not of how it sounds.* An operation of several parts of which one failed returns an outcome of class `FAILURE`. The class reaches the caller unchanged through `execute`, and a caller reads the class, never the wire name.
 * *Declare the awaited event that is true.* `NONE` is right only for a primitive whose outcome cannot change without a new call. A primitive that looks at a provider, a remote or the checkout again waits for an event.
-* *An attempt cap ends in a failure.* The exhaustion outcome of a primitive with `ATTEMPT_CAP` has the class `FAILURE`; the registry refuses any other class.
+* *An attempt cap ends in a failure.* The exhaustion outcome of a primitive with `ATTEMPT_CAP` has the class `FAILURE`; the registry refuses any other class. A primitive without an attempt cap names no exhaustion outcome; the registry refuses one that does.
 * *Do not treat the workspace scope as a plan.* An empty `scopeId()` is the workspace scope. Do not replace it by a placeholder identifier.
-* *Do not copy a closed vocabulary.* The outcome classes, the awaited events, the cycle measures, the refusal reasons and the rule keys each have one Java source. Link the type; a copied list is wrong after the next change.
+* *Do not copy a closed vocabulary.* The outcome classes, the awaited events, the cycle measures and the rule keys each have one Java source. Link the type; a copied list is wrong after the next change. The refusal reasons are the one vocabulary this document repeats, because each reason needs what it refuses beside it; change link:#registry[the table] together with the enum.
 * *A rule without a rejected case is not tested.* Every rule key of a validator has a test case with a text that breaks exactly that rule and asserts the key and the line.
 
 [#extending]
@@ -146,7 +201,7 @@ A new primitive:
 . Pass the instance to the constructor of the `PrimitiveRegistry` of the assembly.
 . Test it without a framework: construct a `PrimitiveRegistry` with it, which proves that it is well formed, and call `execute` with a `WorkflowExecutionContext` the test writes itself (the interface has one method).
 
-{spi-test}/TestPrimitives.java[`TestPrimitives`] holds a minimal primitive for every outcome class and is the pattern for such a test. {spi-test}/PrimitiveContractTest.java[`PrimitiveContractTest`] runs them through the contract, {spi-test}/PrimitiveRegistryTest.java[`PrimitiveRegistryTest`] holds one malformed primitive per refusal, and {spi-test}/SpiVocabularyTest.java[`SpiVocabularyTest`] pins the constants of the closed enums.
+{spi-test}/TestPrimitives.java[`TestPrimitives`] holds a minimal primitive for every outcome class and the malformed primitives, at least one for every reason of a refusal, and is the pattern for such a test. {spi-test}/PrimitiveContractTest.java[`PrimitiveContractTest`] runs the well-formed ones through the contract, {spi-test}/PrimitiveRegistryTest.java[`PrimitiveRegistryTest`] proves that each malformed one is refused with its reason, and {spi-test}/SpiVocabularyTest.java[`SpiVocabularyTest`] pins the constants of the closed enums.
 
 A new validator, or a new rule of an existing one:
 
