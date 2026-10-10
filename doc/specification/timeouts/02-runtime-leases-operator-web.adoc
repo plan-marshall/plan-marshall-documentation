@@ -109,7 +109,7 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |—
 |runtime
 |The wait continues; the lock manager appends one `lock_wait_exceeded` audit record (lock, holder, waited time), which counts as a `PM-MIG-5` integrity trigger event.
-|link:../runtime-model/01-processes-and-transport.adoc#_in_process_lock_manager[Runtime Model, In-Process Lock Manager]
+|link:../../developer/locks-and-leases.adoc#lock-manager[Developer Guide § The Lock Manager]
 |===
 
 [#leases]

@@ -1,0 +1,48 @@
+= Locks and Leases
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Concepts.adoc[Concepts] » Locks and Leases
+
+The runtime is the only process that writes the stores of `PM-MCP`, but it serves many calls at once, and a call often changes several stores. Three rules keep those writes from losing each other or deadlocking, while reads never wait. How the code implements them is in link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases].
+
+== Short Locks in One Order
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A write takes a lock, reads, decides, writes, and gives the lock back: a transaction. Locks are held for one transaction only, never while waiting for a model, a build or a provider.
+
+Two transactions that each hold one lock and wait for the other's deadlock. Every lock therefore has a place in one total order, and a transaction that needs several takes them strictly in that order:
+
+----
+workspace -> plan (by plan_id) -> epic (by epic_id) -> epic worktree -> lesson store
+  -> local configuration -> derived facts -> build timings -> task queue
+  -> machine stores (by lock path; enrolments by project_id) -> leaf (audit log, plan mailbox)
+----
+
+Nothing is taken after a leaf lock. The broad scopes come first, the shared machine-wide stores last: a plan transaction can update the task queue or a machine store, but nothing that holds a machine store lock ever waits for a plan.
+
+The order is not a convention. The lock manager checks it on every acquisition against the locks the transaction already holds, and refuses a lock that comes too late: the call fails as an internal fault, nothing is acquired, and an audit record names the held and the requested lock. A wrong order is a bug in the runtime, found by its tests, not a deadlock found in production.
+
+== Lock Files Beside the Stores
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A store is written as a whole new file that is renamed over the old one. That rename is what lets readers go without a lock (below), but it also means a lock on the store file itself protects nothing: the rename puts a new file in its place, and the next writer locks the new one. Each such store is therefore guarded by a separate lock file that is never replaced. Only the append-only files, which are never renamed, are locked directly.
+
+The locks of a project lie in its machine store under `projects/<project_id>/locks/`, outside the plan directories and worktrees they protect, so archiving a plan or working in a worktree never leaves two copies of one lock. The machine-wide stores have theirs under `locks/`.
+
+Within the runtime, the lock of the operating system cannot tell two threads of the same process apart. One lock manager therefore serves the whole runtime: threads wait on an in-process lock per key, and only the thread that gets it takes the lock of the operating system, which then guards against other processes.
+
+== Reads Without Locks
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+Because every store is replaced in one rename, a reader always sees a complete version, the one before a write or the one after it. Reads therefore take no lock and never wait for a writer.
+
+The price is that a reader may see a store in the middle of a transaction that changes several stores. A reader that finds a store not matching its recorded digest does not call it tampered with; it reports the store as unverified and leaves the decision to an access that holds the store's lock.
+
+== Leases for Long Claims
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+Some claims last minutes or hours: the merge slot of a repository, a build slot, a model slot, a review-bot rate window. Holding a lock that long would block every transaction behind it and, held across other acquisitions, break the order. Such a claim is a *lease*: a record in a store, written in a short transaction and then held without any lock.
+
+A lease is owned by its scope (a plan, an epic, the workspace, or the project), not by the runtime. The runtime that serves it is recorded only to know whether someone is still there. When the runtime has gone, the sweep at the next start does not release its leases but marks them orphaned, and the owning scope can adopt them under the new runtime. A lease is released only on evidence that it was abandoned: its scope has ended, its expiry passed without adoption, or the job behind a slot was killed. A missing piece of evidence keeps the lease; losing a merge slot by mistake costs more than keeping one too long.

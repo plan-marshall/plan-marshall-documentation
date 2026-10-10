@@ -244,11 +244,11 @@ The packages of the modules that have more than one; every other module has the 
 |link:domain-extensions/02-merge-algorithms.adoc[Domain Extensions § Provenance-Preserving Merge Algorithms]
 
 |`de.planmarshall.core.service`
-|The service interfaces the foundation declares and `pm-runtime` implements: the job runner, the secret source and plan locking. The engine reaches the runtime through them alone.
-|<<modules>>, link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes]
+|The service interfaces the foundation declares and `pm-runtime` implements: the job runner, the secret source and plan locking. The engine reaches the runtime through them alone. The locking interface (`LockManager`, `LockTransaction`) comes with the refusal of an out-of-order acquisition (`InternalFaultException`) and its audit record (`AuditEvent`, handed to an `AuditSink`) (PM-IMPL-7, link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]).
+|<<modules>>, link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes], link:store-schemas/13-leases-integrity-testing.adoc#lock-free-snapshot-reads[Store Schemas § Lock-Free Snapshot Reads, Transaction Locks & Leases] (locking)
 
 |`de.planmarshall.core.store`
-|The JSON and JSONL state stores: the `format_version` envelopes, the digests, the store layout of workspace, project and machine, and the global lock order. It also holds the path confinement to the workspace root and its worktrees (PM-SEC-2): the check that accepts a project path only when its canonical form lies inside the enrolled repository root or inside a live linked git worktree of it (`PathConfinement`, `WorkspaceRoots`), and its closed outcome with the code `path_traversal_rejected` (`ConfinementOutcome`). The machine files below the instance directory are outside this rule and have their own (link:filesystem-layout/02-machine-runtime.adoc#machine-files-outside-confinement[Filesystem Layout § Machine Files Outside the Workspace Confinement]).
+|The JSON and JSONL state stores: the `format_version` envelopes, the digests, the store layout of workspace, project and machine, and the global lock order. Implemented for PM-IMPL-7: the lock order with its keys and lock paths (`LockLevel`, `LockKey`, `LockOrder`), the atomic write of a store guarded by its sibling lock file (`AtomicStoreFile`), the lock-free read (`StoreSnapshot`), and the common lease record with its store (`LeaseOwner`, `LeaseRecord`, `LeaseCodec`, `LeaseStore`; link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]). It also holds the path confinement to the workspace root and its worktrees (PM-SEC-2): the check that accepts a project path only when its canonical form lies inside the enrolled repository root or inside a live linked git worktree of it (`PathConfinement`, `WorkspaceRoots`), and its closed outcome with the code `path_traversal_rejected` (`ConfinementOutcome`). The machine files below the instance directory are outside this rule and have their own (link:filesystem-layout/02-machine-runtime.adoc#machine-files-outside-confinement[Filesystem Layout § Machine Files Outside the Workspace Confinement]).
 |link:store-schemas.adoc[Store Schemas], link:filesystem-layout.adoc[Filesystem Layout], link:filesystem-layout/03-project-store.adoc#plan-worktree-resolution[Filesystem Layout § Plan & Worktree Resolution] (path confinement)
 
 |`de.planmarshall.core.config`
@@ -418,7 +418,7 @@ The packages of the modules that have more than one; every other module has the 
 |link:job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Execution Pipeline, Subprocesses & Outcomes]
 
 |`de.planmarshall.runtime.lock`
-|Plan locking, the implementation of the locking interface of `pm-core`.
+|Plan locking, the implementation of the locking interface of `pm-core`: the one lock manager of the runtime (`FileLockManager`, one in-process lock per key and at most one lock of the operating system per lock file), the liveness of a lease holder (`HolderLiveness`) and the stale lease sweep at runtime start (`StaleLeaseSweep`) (PM-IMPL-7, link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]). The assembly wires exactly one `FileLockManager`.
 |<<modules>>, link:store-schemas/13-leases-integrity-testing.adoc[Store Schemas § Leases, Integrity Invariants & Script Disposition]
 
 |`de.planmarshall.runtime.worker`

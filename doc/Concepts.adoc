@@ -18,4 +18,7 @@ The concepts explain *why* `PM-MCP` is built the way it is and *what* its parts 
 
 |link:concepts/harness-as-worker/README.adoc[Harness as Worker]
 |`PM-MCP` drives plans and epics; harness processes with their models are supervised workers that the server starts, offers tasks, watches, and replaces. The journey from plan-marshall to this design, the architecture, the task protocol, roles as configuration, and the delivery of skills.
+
+|link:concepts/locks-and-leases.adoc[Locks and Leases]
+|How the runtime keeps concurrent writes from losing each other or deadlocking: short locks in one total order, lock files beside the stores, reads without locks, and leases for claims that last longer than a transaction.
 |===
