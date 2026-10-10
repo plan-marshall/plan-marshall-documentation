@@ -1,0 +1,199 @@
+= Use Cases: Onboarding (UC-ONB)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Onboarding
+
+The operator makes a machine ready for `PM-MCP`: one harness to work with, the harnesses and models other plans may use, a model for every role, and the providers the machine can reach. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may later override what the machine provides.
+
+Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-5>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit.
+
+[#UC-ONB-1]
+== UC-ONB-1: Onboard a Machine
+
+Status:: `DRAFT`
+Actor:: the operator, at a terminal of the machine.
+Goal:: get from a freshly installed `PM-MCP` to a machine on which the first project can be set up, in one guided run.
+Trigger:: the operator runs the onboarding for the first time (command name open), or `pm-mcp enter` finds the machine not onboarded and names the command.
+Preconditions:: the binaries are installed (link:../specification/cli-and-security/01-cli-and-installer.adoc#installation-layout[Installation Layout]); the runtime can be started.
+Flow::
++
+[source,text]
+----
+  onboard.entry                      first run, or a later run of one aspect
+       │ first run                           │ reconfigure <aspect>
+       ▼                                     └──────────► the sub-workflow of that aspect,
+  ┌──────────────────────────┐                             then onboard.completed
+  │ onboard.first-harness    │  UC-ONB-2   no model yet: server and operator only
+  └────────────┬─────────────┘
+               ▼
+  ┌──────────────────────────┐
+  │ onboard.harness-catalogue│  UC-ONB-3   from here on a model may advise
+  └────────────┬─────────────┘
+               ▼
+  ┌──────────────────────────┐
+  │ onboard.assign-roles     │  UC-ONB-4
+  └────────────┬─────────────┘
+               ▼
+  ┌──────────────────────────┐
+  │ onboard.providers        │  UC-ONB-5
+  └────────────┬─────────────┘
+               ▼
+  onboard.completed                  names the next step: enrol and set up a project
+----
+Variations:: the operator stops at any state; the next run resumes there. A later run of one aspect starts its sub-workflow with the current values as the proposal, so the first run and a later change are the same process.
+Outcome:: one harness enrolled, the catalogue of usable harnesses and models recorded, a machine role set in which every role has a harness and a model, and the machine's providers selected.
+Open points::
+* Workflows have no machine scope: the scopes are plan, epic, workspace (one per enrolled project), and entity. Onboarding needs a scope of its own that exists before any project is enrolled.
+* Who drives it: every machine-level choice is an operator verb today, refused in a coding-agent environment. Onboarding asks the operator in the terminal; whether the web app may take part once it is paired is open.
+* One process for first run and later change (recommended, as the project setup does with `first_run` and `reconcile`), or a wizard plus separate configuration verbs.
+Requirements:: none yet for a machine-level onboarding; the parts that exist are named in each use case below.
+
+[#UC-ONB-2]
+== UC-ONB-2: Choose the First Harness
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: have one harness enrolled that the server can start workers with, so that the later steps of onboarding can use a model.
+Trigger:: <<UC-ONB-1>>, state `onboard.first-harness`.
+Preconditions:: none: this step runs before any harness is enrolled, so no state of it may need a model.
+Flow::
++
+[source,text]
+----
+  [S] = the server   [O] = the operator   [M] = a model, through a role task
+
+  [S] harness.scan             finds the executables of the harnesses the
+       │                       shipped profiles know, with their versions
+       ├── none found ──────► [S] harness.none     names how to install one
+       │                            │ recheck ──► harness.scan
+       ▼ found one or more
+  [O] harness.choose           the found harnesses, each with version,
+       │                       supported or not, worker-eligible or not
+       ▼
+  [S] harness.probe            version in the supported range;
+       │                       the harness is logged in
+       ├── fails ───────────► [S] harness.blocked  names the cause and the fix
+       │                            │ recheck ──► harness.probe
+       │                            │ choose another ──► harness.choose
+       ▼ passes
+  [O] harness.confirm          path, version and digest to be recorded
+       ▼
+  [S] harness.enrol            writes the harness enrolment
+       ▼
+  harness.done
+----
+Variations:: a harness the shipped profiles do not know is not offered; it needs its own profile first (link:../specification/client-profiles/01-profile-schema.adoc#profile-verification[Profile Verification]).
+Outcome:: one worker-eligible harness is enrolled on the machine.
+Open points::
+* Scanning the machine for harnesses is not specified: today `enrol-harness` needs the client named, and host detection only recognises the host that runs the current command.
+* Whether the probe can tell that a harness is logged in; today the harness must be logged in by its own login, and nothing checks it before the first worker starts.
+Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] (`pm-operator enrol-harness`) and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store]; the scan does not.
+
+[#UC-ONB-3]
+== UC-ONB-3: Choose the Harnesses and Models for the Work
+
+Status:: `DRAFT`
+Actor:: the operator, advised by a model.
+Goal:: decide which harnesses and which of their models the server may use for the roles of every plan.
+Trigger:: <<UC-ONB-1>>, state `onboard.harness-catalogue`, or a later reconfiguration.
+Preconditions:: <<UC-ONB-2>> done: one harness is enrolled.
+Flow::
++
+[source,text]
+----
+  [S] catalogue.scan           the found harnesses (as in harness.scan) and the
+       │                       models each one offers
+       ▼
+  [M] catalogue.advise         a role task on the enrolled harness: which
+       │                       harnesses and models suit which kind of work,
+       │                       with cost, limits and a recommendation
+       ▼
+  [O] catalogue.select         harnesses to enrol, models to allow;
+       │                       the recommendation is preselected
+       ▼
+  [S] catalogue.enrol          each further harness through harness.probe,
+       │                       harness.confirm, harness.enrol (UC-ONB-2)
+       ▼
+  [S] catalogue.record         records the allowed models per harness
+       ▼
+  catalogue.done
+----
+Variations:: the model task fails or is skipped: `catalogue.select` is shown without a recommendation. The operator allows no further harness: the catalogue holds the first harness and its models.
+Outcome:: a recorded catalogue of the enrolled harnesses and the models allowed on each.
+Open points::
+* A catalogue of the models a harness offers is not specified; the profiles know only model efforts and restricted models.
+* Which role gives the advice, and what it may read.
+Requirements:: none yet.
+
+[#UC-ONB-4]
+== UC-ONB-4: Assign Models to the Roles
+
+Status:: `DRAFT`
+Actor:: the operator, advised by a model.
+Goal:: give every role a harness, a model, and an effort from the catalogue.
+Trigger:: <<UC-ONB-1>>, state `onboard.assign-roles`, or a later reconfiguration.
+Preconditions:: <<UC-ONB-3>> done.
+Flow::
++
+[source,text]
+----
+  [S] roles.load               the roles with their class, tools and form;
+       │                       the catalogue of UC-ONB-3
+       ▼
+  [M] roles.propose            harness, model and effort per role, with the
+       │                       reason; cheapest that fits the role's class
+       ▼
+  [O] roles.review             accept all, change single roles, or give one
+       │                       model to a group of roles
+       ▼
+  [S] roles.validate           harness enrolled and eligible, class runnable,
+       │                       model allowed, effort supported
+       ├── invalid ─────────► roles.review   names the role and the reason
+       ▼ valid
+  [S] roles.write              the machine role set
+       ▼
+  roles.done                   qualification follows per project
+----
+Variations:: the model task fails: `roles.review` starts from the shipped defaults.
+Outcome:: a machine role set in which every role names an enrolled harness and an allowed model.
+Open points::
+* Today no process writes role artifacts: the operator edits them, and `pm-operator roles` only lists, shows and qualifies.
+* Qualification records are kept per project; whether onboarding grades the roles once for the machine is open.
+Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation]; the assignment process does not.
+
+[#UC-ONB-5]
+== UC-ONB-5: Choose the Providers of the Machine
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: decide which providers (git hosting and CI, code analysis, review bots) this machine can reach, how (native or through a CLI tool), and with which credentials, as the default for every project and plan.
+Trigger:: <<UC-ONB-1>>, state `onboard.providers`, or a later reconfiguration.
+Preconditions:: none beyond <<UC-ONB-1>>.
+Flow::
++
+[source,text]
+----
+  [S] providers.scan           the CLI tools found (git, gh, glab, ...) and the
+       │                       credentials already stored
+       ▼
+  [O] providers.select         the providers available on this machine and
+       │                       the variant of each (native or CLI)
+       ▼
+  [O] providers.credentials    each missing credential, entered in the
+       │                       terminal only, never through a model
+       ▼
+  [S] providers.verify         each credential and tool against its provider
+       ├── fails ───────────► providers.credentials   names the provider and the cause
+       ▼ passes
+  [S] providers.record         the machine's provider defaults
+       ▼
+  providers.done
+----
+Variations:: the operator selects no provider: projects work with what their own setup selects.
+Outcome:: the machine's providers recorded as defaults; a project's setup and a single plan may override them.
+Open points::
+* There are no machine-level provider defaults today: the CI provider is derived per project from its remote, code analysis providers are team keys of the project, the variant is chosen per project, CLI tools are enrolled per project. Only a credential has a machine-wide entry.
+* No plan-level override of a provider, a role, or a model exists.
+Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials]; the machine level does not.
