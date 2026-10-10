@@ -421,8 +421,8 @@ Roadmap: tick the `pm-mcp-core` and the "reduce `plan-marshall-mcp`" items of Mi
 . Links from documents into code (`Implementation:`, `Verified by:`) become absolute links
   `https://github.com/plan-marshall/<repository>/blob/main/<path>`; links from code and `CLAUDE.md` into documents
   become absolute links into the documentation repository. Links inside `doc/` stay relative.
-. Adapt `traced-implementation`: a change that touches code and documents is two pull requests that name each other,
-  and the documentation one merges when the code one has merged.
+. Adapt `traced-implementation`: a change that touches code and documents is made by one plan as a pull request in
+  each repository, and the plan merges the documentation one when the code one has merged.
 . Generated documents (diagrams, state tables) do not exist yet; when their generator arrives, the product build opens
   the pull request in the documentation repository, and the drift test reads the documentation at a pinned revision.
 . Remove `doc/` from `plan-marshall-mcp` and point `README.md` and `CLAUDE.md` to the new repository. This plan is in
