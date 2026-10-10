@@ -9,6 +9,9 @@ The operator makes a machine ready for `PM-MCP`: one harness to work with, the h
 
 Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-5>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app; the command line is needed only to open it. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
 
+[#consent-first]
+*Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes. A remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
+
 [#UC-ONB-1]
 == UC-ONB-1: Onboard a Machine
 
@@ -63,6 +66,11 @@ Flow::
 ----
   [S] = the server   [O] = the operator   [M] = a model, through a role task
 
+  [O] harness.consent          may the server look for harnesses on this
+       │                       machine and run their version probe?
+       ├── no ──────────────► stays at harness.consent; nothing else happens
+       │                      (skipped when the consent is remembered)
+       ▼ yes | yes, don't ask again
   [S] harness.scan             finds the executables of the harnesses the
        │                       profiles know, with their versions
        ├── none found ──────► [S] harness.none     names how to install one
@@ -86,6 +94,7 @@ Flow::
 Variations:: a harness the profiles do not know is not offered; it needs its own profile first (link:../specification/client-profiles/01-profile-schema.adoc#profile-verification[Profile Verification]).
 Outcome:: one worker-eligible harness is enrolled on the machine.
 Changes::
+* *Consent* (<<change-consent>>): the scan starts only after the operator's consent.
 * *Harness scan* (<<change-harness-scan>>): the server finds the harnesses itself.
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
@@ -102,6 +111,11 @@ Flow::
 +
 [source,text]
 ----
+  [O] catalogue.consent        may the server run the found harnesses' model
+       │                       probes and ask a model for advice? (each a
+       │                       consent of its own, shown with its cost)
+       ├── no ──────────────► stays at catalogue.consent
+       ▼ yes | yes, don't ask again
   [S] catalogue.scan           the found harnesses (as in harness.scan) and the
        │                       models each one offers
        ▼
@@ -122,6 +136,7 @@ Flow::
 Variations:: the model task fails or is skipped: `catalogue.select` is shown without a recommendation. The operator allows no further harness: the catalogue holds the first harness and its models.
 Outcome:: a recorded catalogue of the enrolled harnesses and the models allowed on each.
 Changes::
+* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
@@ -141,6 +156,9 @@ Flow::
   [S] roles.load               the roles with their class, tools and form;
        │                       the catalogue of UC-ONB-3
        ▼
+  [O] roles.consent            may a model propose the assignment? (cost shown)
+       ├── no ──────────────► roles.review, starting from the shipped defaults
+       ▼ yes | yes, don't ask again
   [M] roles.propose            harness, model and effort per role, with the
        │                       reason; cheapest that fits the role's class
        ▼
@@ -158,6 +176,7 @@ Flow::
 Variations:: the model task fails: `roles.review` starts from the shipped defaults.
 Outcome:: every role names an enrolled harness and an allowed model.
 Changes::
+* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
 
@@ -173,6 +192,10 @@ Flow::
 +
 [source,text]
 ----
+  [O] providers.consent        may the server look for CLI tools and stored
+       │                       credentials on this machine?
+       ├── no ──────────────► stays at providers.consent
+       ▼ yes | yes, don't ask again
   [S] providers.scan           the CLI tools found (git, gh, glab, ...) and the
        │                       credentials already stored
        ▼
@@ -192,6 +215,7 @@ Flow::
 Variations:: the operator selects no provider: projects work with what their own setup selects.
 Outcome:: the machine's providers recorded as defaults; a project's setup and a single plan may override them.
 Changes::
+* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
 * *Machine provider defaults* (<<change-provider-defaults>>).
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
@@ -201,6 +225,17 @@ Requirements:: the parts exist per project: link:../specification/domain-extensi
 == Changes to the Specification
 
 The changes these use cases need, each modelled as the fix of a gap. They are proposals: each is written into the requirements and specifications once its use case is `AGREED`.
+
+[#change-consent]
+=== Consent Before Acting
+
+Gap:: nothing in the specification asks before the server looks at the machine, runs a program it found, or spends model tokens; the trust model of the onboarding (<<consent-first>>) has no place to live.
+Fix::
+* Every such action has a consent kind from a closed list: `scan_harnesses` (look for harness executables and run their version probe), `probe_harness_login`, `probe_harness_models`, `scan_providers` (look for CLI tools and stored credentials), `model_advice` (a `steward` task, with its expected cost).
+* Each action's state is preceded by a consent state `<sub-workflow>.consent` with the operator links `yes`, `yes_remember`, and `no`. `no` leaves the scope in the consent state and records nothing; the state offers the same links again. The server never takes the action without one of the two yes links.
+* A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`); its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it; both are audited.
+* A consent covers its action kind, never a wider one: consent to `scan_harnesses` runs no login or model probe.
+Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc[Units, Jobs & Decisions] (the consent state as a pattern of the machine scope), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Audit Trail].
 
 [#change-machine-scope]
 === Machine Scope
