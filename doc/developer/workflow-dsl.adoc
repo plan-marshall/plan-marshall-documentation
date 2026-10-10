@@ -1,0 +1,94 @@
+= The Workflow Language: Tree, Parser and Printer
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » The Workflow Language
+
+[#packages]
+== The Packages
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+
+The workflow language lives in the module `pm-workflow` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`], in two packages. It uses `pm-core` for `OutcomeClass` and the streaming API of `jackson-core` for the instance header.
+
+[cols="1,3", options="header"]
+|===
+|Package |What it holds
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/package-info.java[`de.planmarshall.workflow.ast`]
+|The immutable tree of one unit: records, sealed interfaces and enums, from `WorkflowDefinition` down to `OutcomeTransition`. The tree checks nothing beyond its own immutability.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/package-info.java[`de.planmarshall.workflow.dsl`]
+|The text side: the package-private lexer (`WorkflowLexer`, `Token`), the parser `WorkflowParser` with its result `ParseResult`, the refusal `Diagnostic` and its `RefusalRule`, the package-private reader of the instance header (`InstanceHeaderReader`), and the printer `WorkflowPrinter`.
+|===
+
+The static verification of a unit, the merge of the multi-file plan workflow, the loader of project-owned units, the interpreter and the diagram generator build on these packages; they are not implemented yet, and what they will check is stated in the link:../specification/workflow-dsl.adoc[Workflow DSL & Engine Specification].
+
+[#tree]
+== The Tree
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+
+A parsed unit is one https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/WorkflowDefinition.java[`WorkflowDefinition`]: its id, version, scope (`WorkflowScope`), origin (`UnitOrigin`: `DEFAULT` for a unit compiled into the binary, `PROJECT` for a team's copy), the sub-workflow parameters (`ParamDecl`) and result schema, the optional instance header, the `declare` lines (`CallValue` by name) and `decide` lines (`DecisionDeclaration` by decision kind), the start state, the migrations (`StateMigration`) and the states (`StateNode` by id).
+
+* *States*: A `StateNode` carries its phase, an optional terminal outcome (`TerminalOutcome`, with the `OutcomeClass` of `pm-core`), optional `skill` and `facts` clauses, and exactly one `StateBehavior`: `InteractiveLinks`, `AutoStep`, `JobStep` (with `composite` for a `composite_job`), `ModelJob` (a `job llm` task state with its role, fan-out or role-list primitive, `ask` flag and consulted roles), `SubWorkflowCall` (with its bound `CallValue` arguments), `QuestionWait` or `TerminalState`.
+* *Links and guards*: A `LinkSpec` has its relation and form (`LinkRelation`, `LinkForm`; every relation knows its allowed forms and its default form), its free parameters (`ParamSpec` with a `ParamType`: `Text`, `Int`, `EnumOf`, `SchemaRef`, `ListOf`), an optional `GuardSpec` (a `GuardExpr` and the configuration keys it depends on), its action (`LinkAction.ExecutePrimitive`) and its transitions.
+* *Transitions*: An `OutcomeTransition` routes an outcome to a target state, with an optional `ResultGuard` and the `StepCompletion` clauses it settles.
+* *Also in the package*: `CallFrame`, one frame of a scope's call stack, and `GuardResult` (`Held`, `NotHeld`, `CouldNotEvaluate(reason)`); the parser produces neither, they are the types the engine will use.
+
+Rules every record follows:
+
+* *Immutable*: a record copies every list and map it is given in its compact constructor, so changing the caller's collection afterwards changes nothing, and the accessors return collections that refuse every change.
+* *Declaration order*: a map keyed by id (`states`, `declarations`, `decisions`, `partVersions`, `derivedFrom`, the call bindings, the bound arguments of a frame) keeps the order in which its entries were declared: it is an unmodifiable view of a `LinkedHashMap` copy, never `Map.copyOf`. The printer relies on it.
+* *Closed hierarchies*: every sealed interface lists its variants as nested records, so a `switch` over them needs no `default`, and adding a variant breaks every such `switch` at compile time.
+* *Source locations*: every node the parser reads from a source carries a `SourceLocation` (resource, line, column); two trees are compared structurally only after their locations are stripped.
+* *No validation*: a record takes what it is given; bounds, reachability and every other rule of the specification belong to the static verification.
+
+[#parsing]
+== Parsing
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+
+`WorkflowParser.parse(resourceName, source, origin)` reads one unit and returns a https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/ParseResult.java[`ParseResult`]: `Parsed` with the `WorkflowDefinition`, or `Refused` with one `Diagnostic` (rule, resource name, line, column, message). A refusal is a value; no exception leaves `parse`, and only a `null` argument throws. The origin is the caller's, because the parser cannot know where a text came from.
+
+* *Lexer*: `WorkflowLexer` cuts the source into lines, drops a comment from `#` to the end of its line, ignores indentation and blank lines, and gives every token its 1-based line and column. A word is an `INT` when it is all digits, an `IDENT` when it is lower case and starts with a letter, an `ENUM_VALUE` when it starts with a letter and contains an upper-case one, and `INVALID` otherwise; `->` ends a word, so `done->next` is three tokens. The JSON of an `instance` line stays one token, so a `#` inside it is no comment. The lexer never refuses; the parser refuses an `INVALID` token where it stands.
+* *Parser*: a recursive descent over the grammar: the header, the optional `instance` line, the `scope` clause with the `param` and `result` declarations of a sub-workflow, the `declare` and `decide` lines, `start`, `migrate`, and every state form with its links, guards, transitions, result guards and step completions. A `link` without a form takes `LinkRelation.defaultForm()`. Guards bind `not` before `and` before `or`; a guard nested deeper than 32 parentheses is refused, which bounds the recursion.
+* *Refusals*: the first refusal wins, and its `RefusalRule` is one of `STRUCTURE` (the source does not follow the grammar), `RESERVED_KEYWORD`, `MISSING_SCOPE` (a unit without a `scope` clause), `DUPLICATE_ID` (a state, a `declare` name, a decision kind, or a parameter declared twice in the file, including a sub-workflow parameter, a call argument and a link parameter) and `INSTANCE_HEADER`.
+* *Reserved keywords only where the grammar names them*: a reserved keyword is refused as an outcome name, a parameter name, an entity kind, a role name, or a segment of a state, primitive or configuration key identifier. Everywhere else the positional vocabularies stay usable: `link retry retry [noop]` and `plan.allocate-remediation-tasks` parse. The rule also binds the unit id, which is a state id: no segment of a unit id may be a reserved keyword.
+* *What the parser leaves to later stages*: identifier length bounds and every verification rule, the merge of a multi-file unit (`partVersions` and `derivedFrom` stay empty; a `derived_from` in the header is read and checked, not recorded), and the refusal of an `instance` line in a project unit.
+
+[#instance-header]
+== Reading the Instance Header
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
+
+The `instance` line of a plan instance version is one line of JSON. `InstanceHeaderReader` reads it with the streaming `JsonParser` of `jackson-core` into https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/InstanceHeader.java[`InstanceHeader`] (`planId`, `version`, `event`, `inputs`, and the JSON exactly as read) with its https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/InstanceInputs.java[`InstanceInputs`]: the configuration hash, the template and sub-unit references (`UnitRef`: unit, optional file, digest, origin), the composition rule reference (`CompositionRules`: revision, digest), the plan facts digest, and the three optional digests, empty when the member is absent or `null`.
+
+The reader checks the structure of the link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[plan instance header schema]: the required members and their JSON types, and no member named twice in any object; it ignores members it does not model, which stay in the JSON. A defect is a refusal `INSTANCE_HEADER` whose message names the member, for example `member 'inputs.templates[0].digest' of the instance header must be a string`; a header without `inputs`, such as one that carries a flat `input_digests` map, is refused. The other checks of the schema (constants, enumerations, patterns, members it does not allow) belong to the composition of the plan instance. A `jackson-core` exception is mapped to the refusal and never rethrown.
+
+[#printing]
+== Printing and the Round Trip
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
+
+`WorkflowPrinter.print(definition)` writes a tree back as canonical source: the header, the `instance` line, the scope clause with its declarations, the `declare`, `decide`, `start` and `migrate` lines, and the states in declaration order, each after a blank line, with their clauses indented by nesting. Every link names its form, even the default one, and a guard carries exactly the parentheses its precedence needs (`not (not x)` for a doubly negated operand, because the grammar has no `not not`). A range of a `text` or `int` type is printed only when both bounds are present. The printer checks nothing and prints no data the parser of one file does not record (part versions, `derived_from`).
+
+The round trip is the contract: parsing the printed source gives the same tree, source locations aside, and printing that tree again gives the same text.
+
+[#pitfalls]
+== Pitfalls
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
+
+* *Fixtures are written for the test.* A test unit below `src/test/resources/dsl/` is written for the case it covers, never copied from a default unit of the product: model-facing content lives only in `plan-marshall-mcp`, and no artifact of `pm-mcp-core` may carry it.
+* *The instance JSON is printed as read.* The header's digest must stay reproducible, so the printer writes `InstanceHeader.json()` verbatim and never re-serialises the parsed members. Code that builds a header must supply the canonical JSON itself.
+* *Keep the order.* A new map component of a record must keep declaration order like the others; `Map.copyOf` would make the printer's output depend on hashing.
+* *A new construct touches four places.* The record in `workflow.ast`, the parser, the printer, and a fixture with its expected tree; the round-trip tests fail until the printer writes what the parser reads.
+* *Reserved words in names.* A name that reads naturally can be refused because one of its segments is reserved: a unit called `question.something` or a primitive `link.check` does not parse.
+
+[#tests]
+== Tests
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+
+* `AstNodeModelTest`: defensive copies, declaration order of the maps, closed hierarchies, the enum constants.
+* `WorkflowLexerTest`: comments, blank lines, columns, token kinds, the instance-line JSON token.
+* `WorkflowParserTest`: one expected tree per valid fixture (`dsl/valid/*.pmwf`), which together cover every construct, plus source locations, declaration order, default link forms and the positional vocabularies.
+* `WorkflowParserRefusalTest`: every malformed fixture (`dsl/malformed/*.pmwf`) states its rule and line in a leading `# expect: <RULE> line <n>` comment and is refused with exactly that; inline units cover every further refusal, and the instance header reader is tested directly.
+* `WorkflowPrinterTest`: the round trip and the fixed point over every valid fixture, canonical source that prints to itself, guard precedence, and the explicit link form.
+* Helpers: `DslFixtures` reads and lists the fixtures; `AstWithoutLocations` strips the source locations so that two trees compare by structure.

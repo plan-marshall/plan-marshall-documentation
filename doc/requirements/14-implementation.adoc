@@ -120,6 +120,17 @@ All plan phase lifecycles, finalize sequences, and epic workflows must be define
 
 See the link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification], link:specification/state-catalogue.adoc[State Catalogue], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
+Implementation (the parser of the workflow DSL with its refusals naming file and line, the immutable tree of a unit, the reading of a plan instance's header, and the printer; the validation rules, the compiled invariants, the loader of project-owned units, the plan instance composition, the interpreter and the diagram generator are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowParser.java[WorkflowParser],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowPrinter.java[WorkflowPrinter],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/WorkflowDefinition.java[WorkflowDefinition]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserTest.java[WorkflowParserTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserRefusalTest.java[WorkflowParserRefusalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowPrinterTest.java[WorkflowPrinterTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/ast/AstNodeModelTest.java[AstNodeModelTest]
+
+Documentation: link:developer/workflow-dsl.adoc[Developer Guide § The Workflow Language]
+
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-1[PM-WATCH-DSL-1], link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-9[PM-WATCH-DSL-9], link:implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-1[PM-WATCH-FS-1], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-11[PM-WATCH-GEN-11], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-15[PM-WATCH-GEN-15], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-20[PM-WATCH-GEN-20], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-22[PM-WATCH-GEN-22], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-23[PM-WATCH-GEN-23], link:implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-6[PM-WATCH-TOOL-6]
 
 [#PM-IMPL-6]
