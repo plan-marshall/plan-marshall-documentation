@@ -5,7 +5,7 @@
 
 link:../Design.adoc[Design] » Onboarding Screens
 
-_Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use-cases/01-onboarding.adoc#UC-ONB-2[UC-ONB-2], link:../use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], link:../use-cases/01-onboarding.adoc#UC-ONB-4[UC-ONB-4], link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5]_
+_Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use-cases/01-onboarding.adoc#UC-ONB-2[UC-ONB-2], link:../use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], link:../use-cases/01-onboarding.adoc#UC-ONB-4[UC-ONB-4], link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5], link:../use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6]_
 
 _Relies on: link:../use-cases/01-onboarding.adoc#changes[Onboarding, Changes to the Specification] (proposed), link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
 
@@ -29,7 +29,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ plan-marshall                                   Machine: mbp-oliver   ⚙  ?   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  ① Harness  ──  ② Models  ──  ③ Roles  ──  ④ Providers  ──  ✓ Done           │
+│  ① Harness ── ② Models ── ③ Roles ── ④ Credentials ── ⑤ Providers ── ✓ Done  │
 │  ━━━━━━━━━━                                                                  │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
@@ -43,7 +43,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 └──────────────────────────────────────────────────────────────────────────────┘
 ----
 
-* *Step bar*: the four sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
+* *Step bar*: the five sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
 * *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
 * *Model at work* (`[M]` states): the content shows that a model task runs, on which harness and role, the time so far, and the expected cost; when it fails or the operator leaves it, the screen continues as the use case's variation says (without a recommendation).
 
@@ -56,13 +56,14 @@ Shown at the first run in `onboard.entry`.
 ----
   Set up this machine for plan-marshall
 
-  Four steps. Nothing on this machine is looked at, run, or changed until
+  Five steps. Nothing on this machine is looked at, run, or changed until
   you say so in that step.
 
     ① Harness     choose the coding agent the server works with first
     ② Models      choose the agents and models other plans may use
     ③ Roles       give every role an agent and a model
-    ④ Providers   the git hosts, CI and analysis services this machine uses
+    ④ Credentials where this machine keeps its tokens
+    ⑤ Providers   the git hosts, CI and analysis services this machine uses
 
   You can stop at any point; the next visit continues where you stopped.
 
@@ -234,8 +235,32 @@ The advisory of a role (ⓘ, opened in place below its row):
 * *Assign to selection…* sets harness, model, and effort for the selected rows in one go; the advisories of the rows stay.
 * *Save* is disabled while a row is marked ⚠; the header counts them.
 
+[#credential-store]
+== ④ Credentials (`store.choose`)
+
+[source,text]
+----
+  Where should this machine keep its tokens?
+
+  (•) macOS Keychain                                         ★ recommended
+      Only plan-marshall's runtime reads them without asking you; any
+      other program that tries makes macOS ask first.
+
+  ( ) Files in ~/.plan-marshall-mcp/credentials/
+      Readable by every program you run (mode 0600). Works everywhere,
+      also without a desktop session.
+
+  The choice holds until you change it in ⚙ Settings; a change moves the
+  tokens, it never leaves a copy behind.
+
+  [ Back ]                                     [ Use the macOS Keychain ]
+----
+
+* On Linux the first option is the Secret Service, with its own text: every program of the user can read it while it is unlocked. When it is not available now (locked, or no session bus over SSH), the option is shown greyed with the reason and how to fix it, and *Check again*.
+* The primary button names the store it will use.
+
 [#providers]
-== ④ Providers
+== ⑤ Providers
 
 [#providers-select]
 === Select (`providers.select`)
@@ -282,6 +307,7 @@ The advisory of a role (ⓘ, opened in place below its row):
     ✓ Harness     Claude Code 2.4.1 (+ OpenCode 1.9.0)
     ✓ Models      3 models allowed
     ✓ Roles       31 roles assigned
+    ✓ Credentials macOS Keychain
     ✓ Providers   GitHub (gh), SonarCloud
 
   Next: enrol a project and set it up.

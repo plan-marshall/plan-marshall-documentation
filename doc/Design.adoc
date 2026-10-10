@@ -31,6 +31,6 @@ The design shows how the link:UseCases.adoc[Use Cases] look and behave on the sc
 
 |link:design/02-onboarding.adoc[02-onboarding.adoc]
 |`DRAFT`
-|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5]
+|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6]
 |The onboarding screens: the frame, the consent pattern, and one screen per choice state of the onboarding workflow.
 |===

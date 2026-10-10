@@ -46,7 +46,7 @@ Design:: the design documents that show it (link:Design.adoc[Design]).
 
 |`UC-ONB`
 |link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
-|Making a machine ready: the first harness, the harnesses and models for the work, the models of the roles, the providers of the machine.
+|Making a machine ready: the first harness, the harnesses and models for the work, the models of the roles, where credentials are kept, the providers of the machine.
 
 |`UC-WEB`
 |link:use-cases/02-web-app.adoc[02-web-app.adoc]

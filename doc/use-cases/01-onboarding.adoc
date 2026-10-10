@@ -40,13 +40,17 @@ Flow::
   └────────────┬─────────────┘
                ▼
   ┌──────────────────────────┐
+  │ onboard.credential-store │  UC-ONB-6   before any credential is entered
+  └────────────┬─────────────┘
+               ▼
+  ┌──────────────────────────┐
   │ onboard.providers        │  UC-ONB-5
   └────────────┬─────────────┘
                ▼
   onboard.completed                  names the next step: enrol and set up a project
 ----
 Variations:: the operator stops at any state; the next run resumes there. A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
-Outcome:: one harness enrolled, the catalogue of usable harnesses and models recorded, every role assigned a harness and a model, and the machine's providers recorded.
+Outcome:: one harness enrolled, the catalogue of usable harnesses and models recorded, every role assigned a harness and a model, the credential store chosen, and the machine's providers recorded.
 Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Web-driven operator choices* (<<change-web-driven>>): the operator's choices of a machine-scope workflow are taken in the web app.
@@ -199,7 +203,7 @@ Status:: `DRAFT`
 Actor:: the operator.
 Goal:: decide which providers (git hosting and CI, code analysis, review bots) this machine can reach, how (native or through a CLI tool), and with which credentials, as the default for every project and plan.
 Trigger:: <<UC-ONB-1>>, state `onboard.providers`, or a later reconfiguration.
-Preconditions:: none beyond <<UC-ONB-1>>.
+Preconditions:: <<UC-ONB-6>> done: the credential store is chosen.
 Flow::
 +
 [source,text]
@@ -233,6 +237,45 @@ Changes::
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
 Design:: link:../design/02-onboarding.adoc#providers[Onboarding Screens]
+
+[#UC-ONB-6]
+== UC-ONB-6: Choose Where Credentials Are Kept
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: decide, knowingly, whether the machine keeps its credentials in the operating system's credential store or in protected files, and keep that choice until the operator changes it.
+Trigger:: <<UC-ONB-1>>, state `onboard.credential-store`, or a later reconfiguration.
+Preconditions:: none.
+Flow::
++
+[source,text]
+----
+  [S] store.detect             which stores this machine offers now:
+       │                       macOS Keychain, Linux Secret Service (session
+       │                       bus reachable, collection unlocked), files
+       ▼
+  [O] store.choose             each offered store with what protects a secret
+       │                       in it and what does not; the recommendation
+       │                       is preselected (the OS store where one is
+       │                       available, else files)
+       ├── an OS store not available now ──► [S] store.unavailable
+       │                                         names why (locked, no session
+       │                                         bus over SSH) and the fix
+       │                                         │ recheck ──► store.detect
+       ▼                                         │ choose another ──► store.choose
+  [S] store.check              writes, reads and deletes a test entry
+       ├── fails ───────────► store.unavailable
+       ▼ passes
+  [S] store.record             the chosen store, as a machine setting
+       ▼
+  store.done
+----
+Variations:: a later run that changes the store moves every entry to the new store after the operator confirmed the count, deletes each from the old one only once it reads back from the new one, and records the new store last; an interrupted move is resumed by the next run, so a secret is never in both stores after a completed move and never in neither.
+Outcome:: the machine's credential store is recorded; every credential and the enrolment integrity key are kept there.
+Changes::
+* *Credential store as an operator choice* (<<change-credential-store>>).
+Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
+Design:: link:../design/02-onboarding.adoc#credential-store[Onboarding Screens]
 
 [#changes]
 == Changes to the Specification
@@ -331,6 +374,17 @@ Fix::
 * Resolution order: shipped artifact, machine artifact, machine assignment, project artifact, plan override (<<change-plan-overrides>>); an assignment changes only its three fields of the artifact it lands on.
 * The qualification digest is computed over the effective values, so a changed assignment makes the role's qualification stale per project, as a changed artifact does today.
 Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-roles[`pm-operator roles`] (no longer "no verb that edits a role").
+
+[#change-credential-store]
+=== Credential Store as an Operator Choice
+
+Gap:: the runtime chooses the store at every start: the OS store when it is available, else the file store. On Linux a locked collection or a missing session bus (a login over SSH) makes the file store serve until the next start, so a credential entered in one session is not found in the next, and the operator never learns which store holds what.
+Fix::
+* `machine-config.json` gains `credentials.store`: `os` or `file`, written only in <<UC-ONB-6>> (and later by its `pm-operator` verb). Before it is set, no credential can be entered.
+* The runtime uses the recorded store and never another. When the recorded OS store is unavailable at start or later (a locked collection), the credentials are unavailable: `pm-operator status` and the web app report it with the cause, and a step that needs a credential raises `precondition_unmet` with `facts.reason: credential_store_unavailable` and the fix; nothing is written to the file store in its place.
+* Changing the store is a move in both directions (OS to files and files to OS), as the variation of <<UC-ONB-6>> describes; `pm-operator credentials migrate` becomes that move.
+* The choice screen states what each store protects against: the macOS Keychain lets only `pm-mcpd` read without a prompt; the Linux Secret Service lets every process of the user read an unlocked collection; the file store lets every process of the user read the files (`0600`). The residual risks of `PM-SEC-5` stay as they are.
+Affects:: link:../requirements/07-credentials.adoc[PM-CRED-2, PM-CRED-3] (no automatic fallback), link:../specification/cli-and-security/02-credentials-and-operator.adoc#_os_keyring_backends_fallback_file_store[OS Keyring Backends & Fallback File Store], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store].
 
 [#change-provider-defaults]
 === Machine Provider Defaults
