@@ -1,0 +1,48 @@
+= plan-marshall-mcp Use Cases
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../README.md[plan-marshall documentation] » Use Cases
+
+== Overview
+
+The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. How a use case looks and feels on the screen is worked out in the link:Design.adoc[Design]; how the system does it, in the link:Specification.adoc[Specification].
+
+== Conventions
+
+* *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `=== UC-<AREA>-<N>: <title>`. A number is never reused.
+* *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
+* *Status*: each use case states one of `DRAFT` (being written, open points named), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
+* *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
+
+[source,asciidoc]
+----
+[#UC-<AREA>-<N>]
+=== UC-<AREA>-<N>: <title>
+
+Status:: `DRAFT`
+Actor:: who does it (the operator, a reviewer, ...).
+Goal:: what they want to achieve, in one sentence.
+Trigger:: what makes them start.
+Preconditions:: what holds before.
+Flow:: the steps, numbered, as the actor experiences them.
+Variations:: other ways through, and what happens when something fails.
+Outcome:: what holds afterwards.
+Open points:: what is not decided yet.
+Requirements:: the requirements that serve it (link:Requirements.adoc[Requirements]).
+Design:: the design documents that show it (link:Design.adoc[Design]).
+----
+
+[#index]
+== Use Case Areas
+
+[cols="1,1,3",options="header"]
+|===
+|Area |Module |What it covers
+
+|`UC-WEB`
+|link:use-cases/01-web-app.adoc[01-web-app.adoc]
+|The web app: opening it, following plans and epics down to their parts, and designing a plan's process.
+|===

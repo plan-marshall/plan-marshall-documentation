@@ -1,0 +1,36 @@
+= Use Cases: Web App (UC-WEB)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Web App
+
+The operator works with `PM-MCP` in the browser: the web app served by the runtime (link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]). These use cases are first drafts from the discussion of the web app; their flows are still to be written.
+
+[#UC-WEB-1]
+=== UC-WEB-1: Open the Web App on the Own Machine
+
+Status:: `DRAFT`
+Actor:: the operator, at the machine the runtime runs on.
+Goal:: see and operate the runtime in the browser of this machine with one command.
+Trigger:: the operator runs `pm-operator web open`.
+Outcome:: the default browser shows the web app; the first time it is paired, afterwards it opens without pairing again.
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the behaviour is specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
+
+[#UC-WEB-2]
+=== UC-WEB-2: Drill Down into a Plan
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: follow a plan or an epic from its overview down to the part that needs attention, and understand what it is doing and why.
+Open points:: which levels the drill-down has (epic, plan, phase, step, task, job, finding, decision) and what each level shows.
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the web app as the dependable view).
+
+[#UC-WEB-3]
+=== UC-WEB-3: Design a Plan's Process
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: shape the process a plan runs, for example add a step to finalize, by arranging the building blocks the project declares, and see before it is applied whether the server accepts it.
+Open points:: where a design lives (in the project's workflow units, in one plan, or in one plan with promotion to the project); whether a plan can be designed before it starts; which building blocks are offered.
+Requirements:: none yet: no requirement lets the operator change the process of a plan.

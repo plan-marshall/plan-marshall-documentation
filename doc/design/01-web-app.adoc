@@ -1,0 +1,28 @@
+= Design: Web App
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../Design.adoc[Design] » Web App
+
+_Use cases: link:../use-cases/01-web-app.adoc#UC-WEB-1[UC-WEB-1], link:../use-cases/01-web-app.adoc#UC-WEB-2[UC-WEB-2], link:../use-cases/01-web-app.adoc#UC-WEB-3[UC-WEB-3]_
+
+_Relies on: link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
+
+Status: `DRAFT`. The sections are the subjects to work out once the use cases are agreed; none is designed yet.
+
+== Structure and Navigation
+
+How the app is organised and how one moves from the overview to a part and back.
+
+== Plan Views
+
+The views of an epic and a plan and the levels of the drill-down (link:../use-cases/01-web-app.adoc#UC-WEB-2[UC-WEB-2]).
+
+== Plan Designer
+
+Arranging the building blocks of a plan's process and showing the server's verdict on a design (link:../use-cases/01-web-app.adoc#UC-WEB-3[UC-WEB-3]).
+
+== Visual Language
+
+Layout, colours, typography, how states and attention are shown, and the light and dark themes.
