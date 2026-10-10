@@ -34,6 +34,7 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-113 |WebListener |Web listener on port %s: connection failed before a request (TLS handshake or connection setup): %s |Logged when a connection to the web listener fails before its first request, a failed TLS handshake included; one line with the class and message of the failure and no stack trace, since a client can cause it at will
 |PM_MCP-130 |SecretStoreProducer |No OS keyring usable, the file credential store serves: %s |Logged at start when neither the macOS Keychain nor the Secret Service is usable; the reason names the backend and why
 |PM_MCP-140 |LspClient |Language server (pid %s) did not end cleanly, terminating it: %s |Logged when `shutdown`/`exit` fails or the process does not end within the request timeout; the process is then terminated
+|PM_MCP-150 |WorkspaceConfinement |Project path refused with outcome '%s': %s |Logged when a project path is refused by the workspace confinement (`PM-SEC-2`); names the outcome code `path_traversal_rejected` and the reason of the refusal (`UNPARSEABLE_PATH`, `PARENT_NAME_AFTER_MISSING_PART`, `CANONICALIZATION_FAILED` or `OUTSIDE_WORKSPACE`), never the path
 |===
 
 == ERROR Level (200-299)

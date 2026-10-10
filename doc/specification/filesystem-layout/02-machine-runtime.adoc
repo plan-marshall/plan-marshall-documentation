@@ -165,3 +165,22 @@ The runtime creates every file under `<PM_MCP_BASE>` with mode `0600` and every 
 |`0600` (`-rw-------`)
 |Append-only security and transition audit log, hash-chained through each record's `prev_hash`, with its head anchored in the HMAC-protected `audit.head` and rotated files listed in `audit-index.jsonl` (same mode); the chain is verified incrementally at runtime start, and a broken chain (including a deleted, reset, or truncated log) is reported and recorded, never repaired (`PM-SEC-6`).
 |===
+
+[#machine-files-outside-confinement]
+=== Machine Files Outside the Workspace Confinement
+
+The workspace confinement of `PM-SEC-2` governs project paths: a path the runtime is given for a file, git, or build operation of a project is accepted only inside the enrolled repository root or a live linked git worktree of it. The runtime's own machine files are no project paths. They are not passed through that check, and each is governed by a rule of its own:
+
+[cols="2,3"]
+|===
+|Path |Governing rule
+
+|`<PM_MCP_BASE>` and everything below it (`machine-config.json`, `harnesses.json`, `enrolments/`, `roles/`, `profiles/`, `skills/`, `credentials/`, `projects/<project_id>/`, `state/`, `run/`, `web/`, `locks/`, `logs/`)
+|`PM-SEC-4`, as <<_file_permissions_security_attributes>> states it per path: every file is created with mode `0600` and every directory with mode `0700`, and the start check (`BaseDirectoryCheck` of `pm-runtime`) refuses the start unless `<PM_MCP_BASE>`, `enrolments/`, and `run/` are owned by the effective UID with mode `0700` and are no symbolic links, and the files of `state/` have mode `0600`.
+
+|`<PM_MCP_BASE>/enrolments/<project_id>.json` and the credential files below `<PM_MCP_BASE>/credentials/`, on every use
+|`PM-SEC-4` and `PM-CRED-3` for owner and mode (`enrolment_insecure`, `credentials_file_insecure`), and `PM-SEC-5` for the HMAC of an enrolment file (`enrolment_tampered`); a violation blocks only the project or the step concerned, never the runtime start.
+
+|The per-user service unit (systemd user unit, launchd agent), which lies outside `<PM_MCP_BASE>` at the location its platform fixes
+|The start modes of the runtime: the unit is installed and removed by `pm-operator runtime install` and `uninstall` (link:../runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime & Interaction Model Specification, Start Modes]).
+|===

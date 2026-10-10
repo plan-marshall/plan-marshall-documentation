@@ -43,8 +43,9 @@ _See Requirements:_
 
 Implemented in (link:module-structure.adoc[Module Structure Specification]):
 
-* link:module-structure.adoc#module-pm-core[`pm-core`]: the workspace, project and machine store layout
+* link:module-structure.adoc#module-pm-core[`pm-core`]: the workspace, project and machine store layout, and the confinement of a project path to the enrolled root and its live linked worktrees; a linked worktree is recognised by its registration below `.git/worktrees` of the root and the `gitdir` record that names it back (link:filesystem-layout/01-repository-workspace.adoc#linked-worktree-recognition[Recognition of a Linked Worktree by the Path Confinement])
 * link:module-structure.adoc#module-pm-provider-git[`pm-provider-git`]: the worktree lifecycle
+* link:module-structure.adoc#module-pm-runtime[`pm-runtime`]: the entry through which the daemon's operations obtain a confined project path
 
 == Parts
 

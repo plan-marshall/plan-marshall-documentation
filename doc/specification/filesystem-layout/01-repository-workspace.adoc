@@ -74,6 +74,20 @@ A plan never moves (`PM-ARCH-5`). Its worktree is only a git checkout, created f
 ** *Removal*: removed (`git.worktree-remove`, from the main checkout) when the plan leaves `finalize`, is archived, or is aborted; a removal that times out follows the partial-removal re-check (link:../timeouts/01-job-budgets-and-waits.adoc#worktree-remove-recheck[Timeouts & Budgets Specification]).
 ** *Recovery Sweep*: the project's recovery after a runtime start, and every plan-worktree enumeration, removes a baseline worktree whose plan no longer resolves or is terminal (archived or aborted), with an audit record; it never removes one whose plan is live. A `baseline-*` directory is never mistaken for a plan worktree or adopted as one.
 
+[#linked-worktree-recognition]
+=== Recognition of a Linked Worktree by the Path Confinement
+
+The path confinement of `PM-SEC-2` accepts a project path outside the enrolled repository root only inside a live linked git worktree of that root. The check reads the plain files git writes for a linked worktree and runs no git process. A directory of the live set counts as a linked worktree of the root only when all of the following hold:
+
+* *Pointer*: Its `.git` is a file that names the git directory of the worktree after the prefix `gitdir:`.
+* *Registration*: The canonical path of that git directory is a direct child of `<project_root>/.git/worktrees/`, and neither `<project_root>/.git` nor `<project_root>/.git/worktrees` is a symbolic link.
+* *Common Directory*: The `commondir` file of the git directory names `<project_root>/.git`.
+* *Back-Pointer*: The `gitdir` file of the git directory names the worktree back: the path it holds, resolved against the git directory when it is relative (the form git writes with `worktree.useRelativePaths`), is the `.git` file of that worktree.
+
+Each of the three files is a regular file, never a symbolic link, that is not empty and not larger than 8192 bytes. A path inside any other directory outside the root is refused with `path_traversal_rejected`. This holds for a directory whose git directory carries a fitting `commondir` file but lies outside `<project_root>/.git/worktrees/`, and for a second directory that points at the git directory of a registered worktree.
+
+A worktree directory moved by hand (with `mv`, not with `git worktree move`) keeps a `gitdir` record that names its old location. It is refused until `git worktree repair` has rewritten the record.
+
 [#shared-epic-worktree]
 === Shared Epic Worktree
 _Implementation watch: link:../../implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-4[PM-WATCH-FS-4], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-30[PM-WATCH-STORE-30]_
