@@ -91,6 +91,19 @@ The workflow engine must strictly validate all transition attempts and free para
 
 See the link:specification/workflow-dsl.adoc[Workflow DSL Specification], link:specification/hypermedia-format.adoc[Hypermedia Format Specification], link:specification/phase-workflows.adoc[Phase Workflows Specification], and link:specification/mcp-tools.adoc[MCP Tools Specification] for implementation details.
 
+Implementation (the domain validators and the violations they return; running them before a store is persisted is not part of it):
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/validation/ContentValidator.java[ContentValidator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/validation/ContentViolation.java[ContentViolation],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/validation/ConventionalCommitValidator.java[ConventionalCommitValidator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/validation/AsciiDocValidator.java[AsciiDocValidator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/validation/OutlineValidator.java[OutlineValidator]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/validation/ConventionalCommitValidatorTest.java[ConventionalCommitValidatorTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/validation/AsciiDocValidatorTest.java[AsciiDocValidatorTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/validation/OutlineValidatorTest.java[OutlineValidatorTest]
+
+Documentation: link:developer/primitive-spi.adoc#content-validators[Developer Guide § The Content Validators]
+
 Implementation watch: link:implementation-watch/model-work.adoc#PM-WATCH-DISP-18[PM-WATCH-DISP-18], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-54[PM-WATCH-GEN-54]
 
 [#PM-WF-7]
