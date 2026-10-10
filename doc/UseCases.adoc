@@ -12,7 +12,7 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 
 == Conventions
 
-* *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `=== UC-<AREA>-<N>: <title>`. A number is never reused.
+* *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `== UC-<AREA>-<N>: <title>`. A number is never reused.
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
 * *Status*: each use case states one of `DRAFT` (being written, open points named), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
 * *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
@@ -20,7 +20,7 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 [source,asciidoc]
 ----
 [#UC-<AREA>-<N>]
-=== UC-<AREA>-<N>: <title>
+== UC-<AREA>-<N>: <title>
 
 Status:: `DRAFT`
 Actor:: who does it (the operator, a reviewer, ...).

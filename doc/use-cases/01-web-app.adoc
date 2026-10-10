@@ -8,7 +8,7 @@ link:../UseCases.adoc[Use Cases] » Web App
 The operator works with `PM-MCP` in the browser: the web app served by the runtime (link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]). These use cases are first drafts from the discussion of the web app; their flows are still to be written.
 
 [#UC-WEB-1]
-=== UC-WEB-1: Open the Web App on the Own Machine
+== UC-WEB-1: Open the Web App on the Own Machine
 
 Status:: `DRAFT`
 Actor:: the operator, at the machine the runtime runs on.
@@ -18,7 +18,7 @@ Outcome:: the default browser shows the web app; the first time it is paired, af
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the behaviour is specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
 
 [#UC-WEB-2]
-=== UC-WEB-2: Drill Down into a Plan
+== UC-WEB-2: Drill Down into a Plan
 
 Status:: `DRAFT`
 Actor:: the operator.
@@ -27,7 +27,7 @@ Open points:: which levels the drill-down has (epic, plan, phase, step, task, jo
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the web app as the dependable view).
 
 [#UC-WEB-3]
-=== UC-WEB-3: Design a Plan's Process
+== UC-WEB-3: Design a Plan's Process
 
 Status:: `DRAFT`
 Actor:: the operator.
