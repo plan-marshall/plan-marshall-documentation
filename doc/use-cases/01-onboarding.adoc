@@ -51,6 +51,7 @@ Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Web-driven operator choices* (<<change-web-driven>>): the operator's choices of a machine-scope workflow are taken in the web app.
 Requirements:: none yet; the parts that exist are named in each use case below.
+Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens]
 
 [#UC-ONB-2]
 == UC-ONB-2: Choose the First Harness
@@ -98,6 +99,7 @@ Changes::
 * *Harness scan* (<<change-harness-scan>>): the server finds the harnesses itself.
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
+Design:: link:../design/02-onboarding.adoc#harness[Onboarding Screens]
 
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Harnesses and Models for the Work
@@ -140,6 +142,7 @@ Changes::
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
+Design:: link:../design/02-onboarding.adoc#models[Onboarding Screens]
 
 [#UC-ONB-4]
 == UC-ONB-4: Assign Models to the Roles
@@ -156,14 +159,21 @@ Flow::
   [S] roles.load               the roles with their class, tools and form;
        │                       the catalogue of UC-ONB-3
        ▼
-  [O] roles.consent            may a model propose the assignment? (cost shown)
-       ├── no ──────────────► roles.review, starting from the shipped defaults
-       ▼ yes | yes, don't ask again
-  [M] roles.propose            harness, model and effort per role, with the
-       │                       reason; cheapest that fits the role's class
+  [S] roles.default            applies the shipped default assignment to the
+       │                       catalogue: per role a harness, model and effort,
+       │                       each with its advisory (what the role does,
+       │                       what it needs, why this choice)
        ▼
-  [O] roles.review             accept all, change single roles, or give one
-       │                       model to a group of roles
+  [O] roles.consent            may a model refine the defaults for this
+       │                       machine? (cost shown)
+       ├── no ──────────────► roles.review, starting from the defaults
+       ▼ yes | yes, don't ask again
+  [M] roles.propose            departures from the defaults, each with its
+       │                       reason; no departure keeps the default
+       ▼
+  [O] roles.review             the defaults with their advisory and the
+       │                       proposed departures; accept all, change single
+       │                       roles, or give one model to a group of roles
        ▼
   [S] roles.validate           harness enrolled and eligible, class runnable,
        │                       model allowed, effort supported
@@ -173,12 +183,14 @@ Flow::
        ▼
   roles.done                   qualification follows per project
 ----
-Variations:: the model task fails: `roles.review` starts from the shipped defaults.
+Variations:: the model task fails: `roles.review` starts from the defaults. A role whose default cannot be met on this machine (no allowed model of its tier on any enrolled harness) is shown without a value and with its advisory, and must be assigned by hand.
 Outcome:: every role names an enrolled harness and an allowed model.
 Changes::
 * *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
+* *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
+Design:: link:../design/02-onboarding.adoc#roles[Onboarding Screens]
 
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Providers of the Machine
@@ -220,6 +232,7 @@ Changes::
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
+Design:: link:../design/02-onboarding.adoc#providers[Onboarding Screens]
 
 [#changes]
 == Changes to the Specification
@@ -296,6 +309,18 @@ Fix::
 * A shipped `read_only` role `steward` serves `catalogue.advise` and `roles.propose`. It reads the profiles, the catalogue, the roles with their classes, and the qualification records of the machine's projects; it submits a recommendation with a rationale, never a choice.
 * Its own harness and model are the first harness's default, set in `onboard.first-harness`.
 Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set].
+
+[#change-default-assignment]
+=== Default Role Assignment
+
+Gap:: the specification leaves the harness, model and effort of every shipped role open ("not fixed by this specification"), and nothing tells the operator what a role needs or why a model suits it; without a model's advice the operator has nothing to start from.
+Fix::
+* The release ships a default assignment: per role a *model tier* (from a closed list, for example `frontier`, `standard`, `fast`), an effort, a preferred harness, and an *advisory*: what the role does, what it needs from a model (reasoning depth, context size, tool use, speed), why this tier, and what is lost when a cheaper one is chosen.
+* Each harness profile maps the tiers to its concrete models (`headless.model_tiers`), so the default holds on any harness; `roles.default` resolves it against the catalogue: the preferred harness when it is enrolled, else the first enrolled harness that runs the role's class, and the tier's model when the catalogue allows it.
+* The advisory is shown wherever a role's assignment is shown or changed (onboarding, machine settings, a plan override), and stays beside a value the operator changed.
+* The steward's proposal (`roles.propose`) is a departure from the default with its reason, never a replacement of the advisory; the defaults work without any model.
+* The default assignment is calibrated per release from the qualification records, like the shipped thresholds; its advisory names the evidence.
+Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set], link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema].
 
 [#change-role-assignment]
 === Role Assignment

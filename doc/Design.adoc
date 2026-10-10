@@ -28,4 +28,9 @@ The design shows how the link:UseCases.adoc[Use Cases] look and behave on the sc
 |`DRAFT`
 |link:use-cases/02-web-app.adoc#UC-WEB-1[UC-WEB-1], link:use-cases/02-web-app.adoc#UC-WEB-2[UC-WEB-2], link:use-cases/02-web-app.adoc#UC-WEB-3[UC-WEB-3]
 |The web app as a whole: its structure and navigation, the plan views, the plan designer, and its visual language.
+
+|link:design/02-onboarding.adoc[02-onboarding.adoc]
+|`DRAFT`
+|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5]
+|The onboarding screens: the frame, the consent pattern, and one screen per choice state of the onboarding workflow.
 |===
