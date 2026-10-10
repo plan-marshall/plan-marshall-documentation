@@ -43,8 +43,9 @@ A single store is replaced by one atomic rename, so a reader sees it whole, befo
   4 digests  the sidecar of the scope takes the new
              sizes and SHA-256 from the journal
                  |
-  5 close    the journal deleted and its directory
-             forced to disk
+  5 close    the audit records the write owes handed
+             over, then the journal deleted and its
+             directory forced to disk
 
   roll forward, for every target of the journal:
     the store has the new size and SHA-256  ->  applied already, left alone
@@ -53,8 +54,9 @@ A single store is replaced by one atomic rename, so a reader sees it whole, befo
                                                          before the append, block appended once
     neither                                 ->  invariant violation: nothing is applied,
                                                 the journal and every store stay as they are
-  then: digests written from the journal, journal and staged files deleted,
-        one audit record transaction_rolled_forward
+  then: digests written from the journal, one audit record
+        transaction_rolled_forward and the records the journal owes handed over,
+        journal and staged files deleted
 ----
 
 The journal is the point of no return. Before it is on disk, nothing the stores show has changed, and what the write staged is debris that the recovery removes. Once it is on disk, the write is decided, and the recovery completes it, it never undoes it. Completing is possible because the journal records where every target is headed: the recovery tells an applied target from a pending one by its size and SHA-256, so it can run any number of times and never applies a target twice. For an append the journal also records the size of the store before the append; the recovery cuts the store back to that size before it appends the block again, so an append that was cut off half-way is neither lost nor doubled.
@@ -65,6 +67,16 @@ A commit that fails part-way does not tidy up after itself. It leaves exactly wh
 
 The recovery of a scope runs under the scope's lock, like a write, and touches only files the scope owns: the staged files it removes lie in the directories of that scope, so it never removes the staged file of a transaction another scope has in flight.
 
+[#audit-delivery]
+== Audit Records of a Store Change
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A roll-forward, the repair of a torn tail and a reconciliation each leave an audit record. Each of them also removes the very condition that made the record due: after a roll-forward there is no journal left, after a repair no torn tail, after a reconciliation the derived store is in place. A record handed to the audit log only after that would be lost for good if the process stopped, or the audit log could not be written, in between, because nothing would ever produce it again.
+
+The record is therefore owed before the change and given up only once the audit log has accepted it. Its intent lies in a file that survives a crash: the journal itself for a roll-forward and for the record a transaction owes, such as that of a reconciliation; a small intent file beside the JSONL store for a tail repair. The journal is deleted, and the intent file removed, only after the audit log accepted every record they owe. If the audit log refuses one, the change itself still counts, and the record stays owed; the next recovery of the scope, or the next repair of the store, hands it over again before it is done.
+
+Delivery is thus at least once, never at most once. A record handed over again carries the id of the transaction or repair it belongs to, so the audit log, or whoever reads it, drops the second copy.
+
 [#writes-across-scopes]
 == Writes Across Scopes
 _Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
@@ -73,7 +85,7 @@ Some writes go beyond one scope: they change the stores of a scope and, with the
 
 Instead it is written in a fixed order. The authoritative store, the one that records what happened, comes first; every further store is derived from it. Each step is a transaction of its own, under the lock of its own store, and the lock is given back before the next step begins, so no step holds the locks of two stores.
 
-A crash between two steps leaves the later stores behind the authoritative one, never the other way round. The recovery closes that gap by derivation: a reconciler of the write reads the authoritative store and applies each later write that is not in place yet, under the lock of the store it writes. Every derived write it applies leaves one audit record `cross_scope_reconciled`; a reconciler that finds everything in place changes nothing and records nothing. The store layer supplies the ordered write and the place for the reconcilers; each flow that writes across scopes brings its own steps and its own reconciler.
+A crash between two steps leaves the later stores behind the authoritative one, never the other way round. The recovery closes that gap by derivation: a reconciler of the write reads the authoritative store and applies each later write that is not in place yet, under the lock of the store it writes. Every derived write it applies leaves one audit record `cross_scope_reconciled`, owed in the journal of that write (<<audit-delivery>>); a reconciler that finds everything in place changes nothing and records nothing. The store layer supplies the ordered write and the place for the reconcilers; each flow that writes across scopes brings its own steps and its own reconciler.
 
 [#append-only-logs]
 == Append-Only Logs
@@ -81,7 +93,7 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7], link:../Requireme
 
 A JSONL store is history: it grows by appends and is never rewritten. An append writes its records in one write at the end of the file and forces the file to disk, and every record ends with a newline. A last line without a newline is therefore not a record but the trace of an append that was cut off: a torn tail.
 
-The torn tail is repaired by the next append, under the lock of the store and before it writes: it cuts the file back to the end of its last complete line and leaves an audit record `jsonl_tail_repaired` with the number and the SHA-256 of the bytes it cut off. Nothing before the last newline is ever touched. A complete line that does not parse, or that declares another format version, stays where it is and is reported with its line number, while the other records of the store stay readable.
+The torn tail is repaired by the next append, under the lock of the store and before it writes: it cuts the file back to the end of its last complete line and leaves an audit record `jsonl_tail_repaired` with the number and the SHA-256 of the bytes it cut off, owed in an intent file beside the store until the audit log accepted it (<<audit-delivery>>). Nothing before the last newline is ever touched. A complete line that does not parse, or that declares another format version, stays where it is and is reported with its line number, while the other records of the store stay readable.
 
 A reader never repairs. Without the lock it may meet an append in progress; it sees it as a torn tail, never as a record, and leaves it to the next writer. An append that is part of a scope's transaction repairs the tail when it stages, so the size before the append that the journal records is the size after the repair.
 
