@@ -297,11 +297,12 @@ The records of local trust and browser access (link:../runtime-model/01-processe
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["device_id", "label", "secret_sha256", "created_at", "last_used_at"],
+        "required": ["device_id", "label", "paired_by", "secret_sha256", "created_at", "last_used_at"],
         "additionalProperties": false,
         "properties": {
           "device_id": { "type": "string", "pattern": "^dev-[0-9a-f]{12}$", "description": "identifiers.adoc, device_id; unique in the store, never reused." },
-          "label": { "type": "string", "minLength": 1, "maxLength": 64, "description": "From pm-operator web pair --label, else the device_id; display only." },
+          "label": { "type": "string", "minLength": 1, "maxLength": 64, "description": "From pm-operator web pair --label, else the device_id; local for a device paired through pm-operator web open; display only." },
+          "paired_by": { "type": "string", "enum": ["pair", "open"], "description": "The verb that issued the redeemed pairing code. While the store holds a device with open, pm-operator web open opens the app without pairing again (cli-and-security, web-open)." },
           "secret_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the UTF-8 device secret (pmw_...); the secret itself is returned once at pairing and never stored." },
           "created_at": { "type": "string", "format": "date-time" },
           "last_used_at": { "type": "string", "format": "date-time", "description": "Last authenticated request, written at most once per write interval (timeouts.adoc#device-last-used-granularity); older than the device idle expiry (timeouts.adoc#device-idle-expiry) expires the device." }

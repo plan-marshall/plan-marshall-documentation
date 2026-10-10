@@ -71,7 +71,7 @@ pm-operator (terminal)
   pm-operator client install|update|remove|status        host bundles (Client Bundle Installer)
   pm-operator web enable|disable [--lan]           [op]  web access of the runtime
   pm-operator web pair [--label <label>]           [op]  pairing code, URL, and QR code
-  pm-operator web open                             [op]  pair and open the local browser
+  pm-operator web open [--pair]                    [op]  open the web app in the local browser, pairing it when needed
   pm-operator web devices list|revoke <id>|revoke --all
                                                    [op]  paired devices
   pm-operator roles list|show|qualify ...          [op]  effective role set and role qualification (Operator Channel Isolation)
