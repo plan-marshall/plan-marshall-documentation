@@ -97,7 +97,7 @@ item.
 
 |link:implementation-watch/runtime-model.adoc[Runtime Model]
 |`RUN`
-|17
+|18
 |link:specification/runtime-model.adoc[Runtime & Interaction Model Specification]
 
 |link:implementation-watch/cli-and-security.adoc[CLI & Security]

@@ -22,6 +22,8 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-30 |SecretStoreProducer |Credential store '%s' active, service name '%s' |Logged at start with the one active credential backend (`keychain`, `secret-service` or `file`) and the keyring service name of the instance
 |PM_MCP-40 |LspClient |Language server '%s' started (pid %s, position encoding %s) |Logged when a language server of the LSP pool answered `initialize`; names the executable, its process id and the negotiated position encoding
 |PM_MCP-50 |StaleLeaseSweep |Stale lease sweep of '%s' finished: %s kept, %s orphaned, %s removed |Logged when the stale lease sweep of a lease store has finished, with the store and how many leases it kept, marked orphaned and removed
+|PM_MCP-51 |ServiceUnitInstaller |Service unit '%s' installed for daemon '%s' |Logged when `pm-operator runtime install` has written the per-user service unit and the service manager has loaded it; names the unit file and the daemon it starts
+|PM_MCP-52 |ServiceUnitInstaller |Service unit '%s' uninstalled |Logged when `pm-operator runtime uninstall` has removed the per-user service unit and the service manager has unloaded it, also when no unit was present; names the unit file. Not logged when the unload ended the runtime that the service had started
 |===
 
 == WARN Level (100-199)
@@ -47,4 +49,5 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-210 |SocketBinding |Socket '%s' could not be secured or recorded, exiting with code 77 |Logged when the bound socket cannot be set to mode `0600` or `state/runtime.json` cannot be written; the runtime exits with code `77`
 |PM_MCP-230 |CredentialsResource |Credential store '%s' failed: %s |Logged when a request of `/api/v1/credentials/{key}` fails in the backend (locked keyring, insecure or invalid credential file, keyring error); never contains the secret
 |PM_MCP-250 |FileLockManager |Lock order violation: '%s' requested while holding %s |Logged when a lock is requested against the total lock order; the request is refused with the internal fault `lock_order_violation`, nothing is acquired, and a `lock_order_violation` audit record is written
+|PM_MCP-251 |ServiceUnitInstaller |Service manager command '%s' failed: %s |Logged when a step of the service manager fails during install or uninstall of the per-user service unit; names the step (`load`, `disable` or `unload`) and the failure (the command with its exit code and output, or why it could not run), never an environment value; the failure is reported to the caller
 |===

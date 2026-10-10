@@ -29,14 +29,14 @@ When the test names a class of yours:
 * Do not add an annotation or an unused framework field to pass the test.
 
 == What Lives in `pm-runtime`
-_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requirements.adoc#PM-CRED-2[PM-CRED-2], link:../Requirements.adoc#PM-CRED-3[PM-CRED-3]_
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requirements.adoc#PM-CRED-2[PM-CRED-2], link:../Requirements.adoc#PM-CRED-3[PM-CRED-3], link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
 
 [cols="1,3", options="header"]
 |===
 |Package |Content
 
 |`…runtime.start`
-|The start sequence up to the socket bind (`StartupSequence`): the singleton lock, the removal of a stale socket and runtime record, the check of the base directory and its permissions, and the runtime token. `NativeLibraryPath` and `PosixModes` are its helpers.
+|The start sequence up to the socket bind (`StartupSequence`): the singleton lock, the removal of a stale socket and runtime record, the check of the base directory and its permissions, and the runtime token. `NativeLibraryPath` and `PosixModes` are its helpers. Beside it the per-user service unit of the service-managed start mode: `ServiceUnitFile` renders, writes and removes the launchd LaunchAgent or the systemd user unit, `ServiceManager` loads and unloads it through `launchctl` or `systemctl --user` over the `ProcessCall` seam (tests use a recording fake, never the real service manager), and `ServiceUnitInstaller` combines both into install and uninstall, doing the file work before every step that can stop the service.
 
 |`…runtime.credentials`, `…credentials.dbus`
 |The credential stores behind `SecretStore` (macOS Keychain through FFM, Linux Secret Service over D-Bus, the file store), the selection of the one active store, and the keyring service name.
