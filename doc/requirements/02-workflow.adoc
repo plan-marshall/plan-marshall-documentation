@@ -269,6 +269,17 @@ Multi-step domain sub-processes must be modeled as reusable, parameterized compo
 
 See the link:specification/workflow-dsl.adoc[Workflow DSL Specification], link:specification/phase-workflows.adoc[Phase Workflows Specification], link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/state-catalogue.adoc[State Catalogue], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
+Implementation (the `scope subworkflow` header with its `param` and `result` declarations, the `call` states with their bound arguments, the result guards on call-site transitions, and the call frame type, parsed into and printed from the immutable tree; the call stack, the call-graph and exit-contract checks, and `git.commit_and_push` are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowParser.java[WorkflowParser],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowPrinter.java[WorkflowPrinter],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/WorkflowDefinition.java[WorkflowDefinition]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserTest.java[WorkflowParserTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserRefusalTest.java[WorkflowParserRefusalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowPrinterTest.java[WorkflowPrinterTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/ast/AstNodeModelTest.java[AstNodeModelTest]
+
+Documentation: link:developer/workflow-dsl.adoc[Developer Guide § The Workflow Language]
+
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-24[PM-WATCH-DSL-24], link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-25[PM-WATCH-DSL-25], link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-28[PM-WATCH-DSL-28]
 
 [#PM-WF-17]
