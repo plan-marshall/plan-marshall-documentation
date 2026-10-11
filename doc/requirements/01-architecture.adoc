@@ -123,7 +123,15 @@ The runtime must run continuously and recover deterministically from crashes, wh
 
 See the link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/workflow-dsl/02-units-jobs-decisions.adoc#job-state-binding[Workflow DSL Specification, Job State Entry & Binding], and link:specification/timeouts/02-runtime-leases-operator-web.adoc#runtime-lifecycle[Timeouts & Budgets Specification] (drain timeout, start timeout, project recovery wait, lease expiry) for implementation details.
 
-Implementation watch: link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-1[PM-WATCH-RUN-1], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-2[PM-WATCH-RUN-2], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-5[PM-WATCH-RUN-5]
+Implementation (the start at login through the per-user OS service manager, as far as the runtime carries it: the unit file rendered, written, replaced and removed, and loaded and unloaded through `launchctl` and `systemctl --user`; the API request and the operator verbs `pm-operator runtime install|uninstall`, and every other bullet, are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ServiceUnitFile.java[ServiceUnitFile],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ServiceManager.java[ServiceManager],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ServiceUnitInstaller.java[ServiceUnitInstaller]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/start/ServiceUnitFileTest.java[ServiceUnitFileTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/start/ServiceManagerTest.java[ServiceManagerTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/start/ServiceUnitInstallerTest.java[ServiceUnitInstallerTest]
+
+Implementation watch: link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-1[PM-WATCH-RUN-1], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-2[PM-WATCH-RUN-2], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-5[PM-WATCH-RUN-5], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-18[PM-WATCH-RUN-18]
 
 [#PM-ARCH-8]
 === PM-ARCH-8: Server-Driven Continuation & Connection Independence
