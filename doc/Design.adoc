@@ -38,4 +38,9 @@ The design shows how the link:UseCases.adoc[Use Cases] look and behave in the we
 |`DRAFT`
 |link:use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], and every use case with a text
 |The two languages, the glossary of words that are never translated, how texts are written, and the keys and packs of the message catalogue.
+
+|link:design/04-terminal-client.adoc[04-terminal-client.adoc]
+|`DRAFT`
+|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-9[UC-ONB-9], link:use-cases/02-web-app.adoc#UC-WEB-1[UC-WEB-1]
+|The terminal client `pm-operator`: its commands and arguments, the levels machine, project and plan, how a state is rendered and answered, a transcript of every state of the onboarding and of `start`, and their texts in English and German.
 |===

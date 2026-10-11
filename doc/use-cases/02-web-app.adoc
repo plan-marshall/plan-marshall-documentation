@@ -63,6 +63,7 @@ Changes::
 * *Loopback `Host` without the port* (<<change-loopback-host>>).
 * *A fresh code after a redemption* (<<change-fresh-code>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
+Design:: link:../design/04-terminal-client.adoc#t-start[Terminal Client, `start`]
 
 [#UC-WEB-2]
 == UC-WEB-2: Drill Down into a Plan
@@ -92,9 +93,9 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 
 Gap:: `web open` opens a browser on this machine only and, without one, prints the URL; it knows no SSH session, no copy key, and no way to another device but `web pair` and `web enable --lan`.
 Fix::
-* `pm-operator start [--pair]` is `web open` with the flow of <<UC-WEB-1>>; `web open` stays as its other name.
+* `pm-operator start [--auto] [--pair] [--no-wait]` is `web open` with the flow of <<UC-WEB-1>>; `web open` stays as its other name. On a machine that is not onboarded it first offers the onboarding (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); `--auto` runs it automatically.
 * It recognises an SSH session by `SSH_CONNECTION` or `SSH_TTY`, then opens no browser and shows the forward command built from the user name and the machine's host name.
-* It stays in the terminal until `q` and offers the keys of `start.wait`; a key it cannot serve (no clipboard path) is not shown. Without an interactive terminal it prints the ways in once and exits.
+* It stays in the terminal until `q` and offers the keys of `start.wait`; a key it cannot serve (no clipboard path) is not shown. With `--no-wait` it prints the ways in once and exits. Like every operator verb it runs only in an interactive terminal, because it issues a pairing code.
 * Other devices only on the operator's yes (`o`, then confirmation): it then enables the LAN listener as `web enable --lan` does, with the same certificate and fingerprint, and shows the QR code of the pairing URL.
 Affects:: link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer] (command listing), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
 

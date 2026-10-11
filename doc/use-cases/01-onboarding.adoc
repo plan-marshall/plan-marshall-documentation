@@ -74,7 +74,7 @@ Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
 Requirements:: none yet; the parts that exist are named in each use case below.
-Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens]
+Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens], link:../design/04-terminal-client.adoc[Terminal Client]
 
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
@@ -179,6 +179,11 @@ Flow::
        │                       the first supported one preselected
        ├── add another (under "Advanced") ──► harness.add
        ▼
+  [O] harness.probe-consent    may the server run the login probe of the
+       │                       chosen harness? (its command, or a minimal
+       │                       headless call and its token cost)
+       ├── no ──────────────► stays at harness.probe-consent
+       ▼ yes | yes, don't ask again   (skipped when remembered)
   [S] harness.probe            version in the supported range; the harness
        │                       is logged in; each check ✓ or ✗ with its cause
        ├── fails ───────────► [S] harness.blocked  names the cause and the fix
@@ -484,7 +489,7 @@ Gap:: every machine-level choice is a `pm-operator` verb today; the web app is s
 Fix::
 * The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app as forms, and `pm-operator onboard` as an interactive terminal dialogue. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
 * A choice is an operator act in either: audited with channel `web` and the `device_id`, or channel `cli`; never relayed by a model and never taken through MCP elicitation. The terminal keeps the operator checks of `pm-operator` (an interactive terminal, no coding-agent environment).
-* Every aspect also has a direct verb for scripts and later changes (`pm-operator config language|harness|roles|credentials|providers|plan-defaults`), which runs the aspect's sub-workflow with its arguments as the choices and stops at the first state that needs a choice it was not given.
+* Every aspect also has a direct verb for scripts and later changes (`pm-operator config language|harness|models|roles|credentials|providers|plan-defaults`), which runs the aspect's sub-workflow with its arguments as the choices and asks at the first state that needs a choice it was not given, or with `--no-input` stops there (link:../design/04-terminal-client.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]). Like every operator verb it runs in an interactive terminal only.
 * Command names, options, and identifiers are the same in every language; only the texts are translated (<<change-i18n>>).
 Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
@@ -550,7 +555,7 @@ Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile S
 
 Gap:: a harness must be logged in through its own login, and nothing checks it before the first worker starts.
 Fix::
-* A profile field `headless.auth_probe`: an argument vector and the exit codes that mean logged in and logged out. `harness.probe` runs it; `logged_out` leads to `harness.blocked` with the login command of the harness.
+* A profile field `headless.auth_probe`: an argument vector and the exit codes that mean logged in and logged out. `harness.probe` runs it after the consent `probe_harness_login` of `harness.probe-consent`; `logged_out` leads to `harness.blocked` with the login command of the harness.
 * A harness whose profile has no `auth_probe` is probed by one minimal headless call of the profile's `launch` form; its token cost is shown before it runs.
 Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema].
 

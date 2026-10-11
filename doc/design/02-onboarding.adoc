@@ -9,7 +9,7 @@ _Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use
 
 _Relies on: link:../use-cases/01-onboarding.adoc#changes[Onboarding, Changes to the Specification] (proposed), link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
 
-Status: `DRAFT`. Each state is designed for both clients: the web app (a wireframe) and the terminal dialogue of `pm-operator onboard` (a transcript). The sketches are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
+Status: `DRAFT`. Each state is designed for both clients: the web app here (a wireframe), and the terminal dialogue of `pm-operator onboard` in link:04-terminal-client.adoc[Terminal Client] (a transcript of every state, with its texts). The sketches are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
 
 == Principles
 
@@ -50,19 +50,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 * *Step bar*: the seven sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
 * *One route*: the onboarding is one route of the app (`/onboarding`) that renders whichever state the server reports; the app has no route per state, so it cannot show a state the server is not in. A done step opened from the step bar is shown read-only beside the current one.
 * *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
-* *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title.
-+
-[source,text]
-----
-$ pm-operator onboard
-[2/7] Harness · Choose the harness to start with
-
-  1) Claude Code   2.4.1   ~/.local/bin/claude         ✓ supported
-  2) OpenCode      1.9.0   /opt/homebrew/bin/opencode  ✓ supported
-     Codex         0.31.2  /opt/homebrew/bin/codex     ✗ cannot run workers
-
-Check Claude Code? [Enter]   other: 1-2   a) add another   l) look again   ?
-----
+* *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title (link:04-terminal-client.adoc#state-frame[Terminal Client, The Frame of a State]).
 * *Model at work* (`[M]` states): the content shows that a model task runs, on which harness and role, the time so far, and the expected cost; when it fails or the operator leaves it, the screen continues as the use case's variation says (without a recommendation).
 
 [#start]
@@ -90,17 +78,7 @@ Check Claude Code? [Enter]   other: 1-2   a) add another   l) look again   ?
 
 * *Decide everything for me…* is the automatic run (<<auto>>); it opens its consent first.
 
-Terminal:
-
-[source,text]
-----
-$ pm-operator start
-plan-marshall is running. This machine is not set up yet.
-
-  g) guided, seven steps, nothing happens without your yes   [Enter]
-  a) decide everything for me, and show what was decided
-  w) open the web app instead      (browser opened · c copy URL)
-----
+Terminal: link:04-terminal-client.adoc#t-start-first[Terminal Client, transcript].
 
 [#consent]
 == Consent
@@ -129,19 +107,7 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
   [ Not now ]                                       [ Look for harnesses ]
 ----
 
-Terminal:
-
-[source,text]
-----
-Look for harnesses on this machine?
-  looks for   claude, opencode, codex, agy
-  in          your PATH, ~/.local/bin, /Applications, /opt/homebrew/bin
-  runs        <program> --version on each one found
-  never       reads other files, starts a session, uses the network
-  cost        none
-
-y) yes   r) yes, and don't ask again   n) not now
-----
+Terminal: link:04-terminal-client.adoc#t-harness-consent[Terminal Client, transcript].
 
 * *Not now* (link `no`): the screen stays and shows "Nothing was done." under the title, with the same two buttons. The step bar does not move.
 * The remember choice is a choice inside the screen, not a third button, so the primary button stays one action: `yes` or `yes_remember` by the choice.
@@ -171,15 +137,7 @@ y) yes   r) yes, and don't ask again   n) not now
 
 * The screen switches to the chosen language at once, before the button is pressed, so the operator sees what it will look like.
 
-Terminal:
-
-[source,text]
-----
-[1/7] Language
-  This app and pm-operator    1) English   2) Deutsch ← from your system
-  What models write and read  s) same as above ←   e) English   d) Deutsch
-Use Deutsch for both? [Enter]   other: 1-2, then s/e/d
-----
+Terminal: link:04-terminal-client.adoc#t-language[Terminal Client, transcript].
 
 [#harness]
 == ② Harness
@@ -493,16 +451,7 @@ The advisory of a role (ⓘ, opened in place below its row):
 * The preselection is the shipped default; each line says in a few words what the variant does, and *Why?* beside an axis explains its consequences.
 * A variant that cannot run on this machine is greyed with its reason (`Branch and Pull Request` without a provider).
 
-Terminal:
-
-[source,text]
-----
-[7/7] Plans · How should plans run on this machine?
-  Landing  1) Branch and Pull Request ←  2) Commit on main  3) Files only
-  Method   t) Test first ←               a) Tests after
-  Asking   e) every phase   k) key points ←   q) only questions
-Use these defaults? [Enter]   change: e.g. "2 a q"
-----
+Terminal: link:04-terminal-client.adoc#t-defaults[Terminal Client, transcript].
 
 [#auto]
 == Automatic Run (`auto.consent`, `auto.result`)
@@ -527,26 +476,7 @@ The consent lists everything the run does, in the form of <<consent>>, in one li
                                                  [ Finish ]
 ----
 
-Terminal:
-
-[source,text]
-----
-$ pm-operator onboard --auto
-This will look for harnesses and CLI tools, run their version and login
-probes, and use the defaults for everything else. No model is asked.
-Go ahead? [y/N] y
-
-  ✓ Language     Deutsch, models too          (from your system)
-  ✓ Harness      Claude Code 2.4.1            (the only supported one)
-  ✓ Models       3 models on 2 harnesses      (all found)
-  ✓ Roles        default assignment           (31 roles)
-  ✓ Credentials  macOS Keychain               (available here)
-  ✓ Providers    GitHub via gh                (gh logged in)
-  – SonarCloud   skipped: no token            pm-operator config providers
-  ✓ Plans        Pull Request · Test first · key points
-
-Change any of it: pm-operator config <language|harness|roles|…>
-----
+Terminal: link:04-terminal-client.adoc#t-auto[Terminal Client, transcript].
 
 [#icons]
 == Harness Icons
@@ -586,5 +516,4 @@ Sources: link:https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIM
 == Open Points
 
 * *Enrol a project* needs the project enrolment in the web app; today it is the CLI verb `pm-operator enrol`.
-* The terminal transcripts of the screens not sketched here (catalogue, roles table, credential store, providers) follow the same rules: a list per table, a key per link, the preselection on `Enter`.
 

@@ -30,6 +30,37 @@ Options:: (1) Switch `plan-marshall-mcp` to private when the work package starts
 Recommendation:: 2. It keeps the repository public for as long as planned, and the tests prove the mechanism either way.
 Blocks:: the work package `default-units-and-drift-tests` of `plan-marshall-mcp`, and the wording of the Milestone 3 exit.
 
+[#cli-design]
+== The Terminal Client
+
+The open points of link:../design/04-terminal-client.adoc#open-points[Terminal Client, Open Points] that wait for the operator.
+
+[#cli-json-pipe]
+=== `--json` into a Pipe
+
+Question:: May a read-only operator verb run when only its standard input is a terminal, so that `pm-operator config show --json | jq` works?
+Why it is open:: The operator checks require `System.console().isTerminal()`, which is true only when standard input and standard output are both a terminal (link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation], item 2).
+Options:: (1) Keep the check for every operator verb; `--json` is for reading on the screen. (2) For read-only operator verbs require only standard input to be a terminal; keep both for every verb that changes state.
+Recommendation:: 2. The operator is still present at the keyboard, and nothing changes state.
+Blocks:: the package `command-tree` of `pm-mcp-clients`, which would correct item 2.
+
+[#cli-keys-german]
+=== Keys of a Prompt in German
+
+Question:: Do the keys of a prompt stay the English mnemonics in every language (`y) Ja`), or come from the catalogue (`j) Ja`)?
+Options:: (1) The same keys in every language, part of the command surface like options. (2) Keys from the catalogue per language.
+Recommendation:: 1. Scripts, transcripts and support answers stay the same in every language; `Enter` takes the preselection in most states anyway.
+Blocks:: the package `cli-onboarding` of `pm-mcp-clients`.
+
+[#cli-project-roles]
+=== A Role Assignment per Project
+
+Question:: Does a project get a role assignment of its own (harness, model, effort per role), between the machine assignment and a plan's override?
+Why it is open:: The resolution order of link:../use-cases/01-onboarding.adoc#change-role-assignment[Role Assignment] has a machine assignment and a plan override but none per project; a project departs only through a whole role artifact, so `pm-operator config roles --project` can show but not write.
+Options:: (1) No; a project departs through its role artifacts. (2) A project assignment `role-assignments.json` in the project's machine store, written like the machine's.
+Recommendation:: 2, so that the three levels behave alike for every aspect.
+Blocks:: the specification of the machine scope, and `config roles --project` in `cli-onboarding`.
+
 == Tools and Machines
 
 [#python-for-differential-tests]
