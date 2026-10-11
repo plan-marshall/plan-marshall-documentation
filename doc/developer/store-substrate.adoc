@@ -1,0 +1,272 @@
+= Store Substrate
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » Store Substrate
+
+The store substrate is the part of the package `de.planmarshall.core.store` of `pm-core` in https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`] that every store of a scope is read and written through: the format refusal and the strict reading of a document, the append path of a JSONL store, the transaction journal of a scope with its recovery, the digest sidecar with its verification, and the ordered write across scopes. Why the stores work this way is explained in link:../concepts/store-integrity.adoc[Concepts § Store Integrity]; the locks the substrate runs under are described in link:locks-and-leases.adoc[Developer Guide § Locks and Leases].
+
+[cols="1,3", options="header"]
+|===
+|Type |What it does
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[`StoreRefusal`], `StrictJson`
+|The refusal of a store document or record, and the strict reading every store codec shares (see <<format-versions>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JsonlStoreFile.java[`JsonlStoreFile`]
+|The one append path of a JSONL store, with the repair of a torn tail (see <<jsonl-stores>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/TransactionJournal.java[`TransactionJournal`], `TransactionId`, https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/DigestSidecar.java[`DigestSidecar`], `StoreDigest`
+|The documents of the journal and the digest sidecar (see <<documents>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JournalScope.java[`JournalScope`], `JournalScopeType`, https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeTransaction.java[`ScopeTransaction`]
+|A scope that writes through a journal, and one write to its stores (see <<scope-transaction>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JournalRecovery.java[`JournalRecovery`]
+|The roll-forward of a stopped transaction (see <<recovery>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeIntegrity.java[`ScopeIntegrity`]
+|The verification of the digests under the lock, the report without it, and the re-baseline (see <<digests>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/OrderedWrite.java[`OrderedWrite`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/CrossScopeReconciler.java[`CrossScopeReconciler`]
+|The write across scopes in its fixed order, and the seam of its reconciliation (see <<ordered-writes>>).
+|===
+
+[#format-versions]
+== Format Versions and Refusals
+_Requirements: link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+A reader of a store document or record accepts exactly the current `format_version` of its file kind. What it does not accept it throws as a `StoreRefusal`, an unchecked exception with:
+
+* `outcome()`: one of the closed `StoreRefusal.Outcome` values `ABSENT`, `UNREADABLE`, `FORMAT_OUTDATED` and `FORMAT_NEWER`, each with its wire name in `code()` (`absent`, `unreadable`, `format_outdated`, `format_newer`);
+* `file()`: the refused file;
+* `found()`: the version the content declares, empty when the file is absent or unreadable;
+* `current()`: the current version of the file kind.
+
+The message names the file and both versions. A refusal is never repaired: no reader migrates or rewrites what it refuses. The factories are `absent(file, current)`, `unreadable(file, current, detail, cause)` and `ofVersion(file, found, current)`, which picks outdated or newer from the two versions.
+
+`StrictJson` is the package-private reading every codec of `core.store` shares, built on the streaming API of `jackson-core`. `StrictJson.read(file, document, current, reader)` first checks the version (`requireCurrentVersion`: a JSON object with exactly one integer `format_version`, equal to the current one), then lets the codec's reader read the object, and refuses anything that follows it. Whatever the codec throws through the helpers, or the parser throws, becomes a `StoreRefusal` naming the file.
+
+A new codec follows the shape of `DigestSidecar`, the smallest one:
+
+. Declare `public static final int FORMAT_VERSION` and write it first with `generator.writeNumberField(FIELD_FORMAT_VERSION, FORMAT_VERSION)`, using `StrictJson.factory()` for the generator.
+. Read with `StrictJson.read(file, document, FORMAT_VERSION, Codec::readDocument)`. In `readDocument`, move from field to field with `nextField(parser, seen)`, which refuses a field that appears twice; skip `format_version`, which was checked already; read every value with its typed helper (`string`, `nullableString`, `integer`, `instant`, `nullableInstant`, `requireObject`, `requireArray`); and throw `undeclared(field)` in the `default` branch.
+. After the loop, call `requireFields(seen, "<object>", …)` for the required fields, and turn an `IllegalArgumentException` of the record's constructor into `unreadable(message, cause)`.
+. Write an instant with `writeInstant`, so it has the one shape `instant` reads: `Instant.toString()`, UTC with `Z`.
+
+A codec outside `core.store` cannot use `StrictJson`; a new store codec belongs in this package.
+
+Tests: `StoreRefusalTest` (all four outcomes with file, found and current version), the refusal cases of `LeaseCodecTest`, `TransactionJournalTest` and `DigestSidecarTest`.
+
+[#jsonl-stores]
+== JSONL Stores
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+A `JsonlStoreFile` binds a JSONL store file to the `LockKey` that guards it. Every method that writes or reads under the lock refuses a transaction that does not hold the key with `InternalFaultException` (reason `store_lock_not_held`), before it touches the file.
+
+* `append(transaction, records, auditSink)`: refuses an empty block or one that does not end with a newline (`IllegalArgumentException`), repairs a torn tail as `repairTail` does, then writes the whole block in one write on a channel opened with `StandardOpenOption.APPEND` and forces the file to disk. The first append creates the file, readable and writable by its owner only; the directory must exist.
+* `repairTail(transaction, auditSink)`: if the last line has no newline, cuts the file back to the end of the last complete line, forces it to disk and hands `AuditEvent.jsonlTailRepaired` to the sink. A file that ends with a newline, is empty or does not exist is left alone and nothing new is recorded. Before the cut the record is owed in the intent file `<store>.audit-intent` beside the store (`auditIntentFile()`), written by atomic rename and forced to disk; the intent is deleted once the sink accepted every record it owes, and every later `repairTail` (so every `append`) hands what it still owes over again (<<audit-records>>).
+* `read(transaction)` reads under the lock, `snapshot()` without it. Neither repairs. Both return a `Content`: the complete lines with their line numbers, counted from 1, and apart from them the byte offset of a torn tail, never a record.
+* `Content.decode(formatVersion, decoder)` checks each line for the current `format_version` and then hands it to the decoder. It returns one `Entry` per line: `Accepted` with the value, or `Refused` with the `StoreRefusal`. A refused line does not stop the lines after it.
+
+A JSONL store of a scope is appended to through its `ScopeTransaction` (<<scope-transaction>>), not through `append` directly; `append` is for the JSONL stores outside a scope, under their own key.
+
+*Known limitation, leaf keys:* a leaf key names the store file itself (`logs/audit.jsonl`, a plan's `mcp/mailbox.jsonl`), and on POSIX closing any channel on a file releases every lock of the operating system the process holds on it. An append or a repair under a leaf key therefore drops the OS lock that the lock manager took on that file, and only the in-process lock of the key remains. Such a store is safe only while every writer of it runs in the one runtime that holds the in-process lock, which is what a package that builds a store on a leaf key has to rely on.
+
+Tests: `JsonlStoreFileTest`.
+
+[#documents]
+== Journal and Sidecar Documents
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+`TransactionJournal` is the record of the journal document:
+
+[source,json]
+----
+{"format_version": 2, "transaction_id": "...", "scope_type": "plan", "scope_id": "...", "created_at": "...",
+ "targets": [{"path": "...", "mode": "append", "staged_path": "...", "size_before": 120, "new_size": 160, "new_sha256": "..."}],
+ "owed_events": [{"event": "cross_scope_reconciled", "category": "store", "outcome": "succeeded",
+                  "details": {"reconciliation": "...", "store": "...", "transaction_id": "..."}}]}
+----
+
+* `transaction_id` is a `TransactionId`: a lower-case UUID of version 7, so ids sort by time. `TransactionId.ofSuffix(fileName)` recognises it as the last name segment of a staged file, which is how the recovery tells a staged file from any other.
+* `scope_type` is the wire name of a `JournalScopeType` (`plan`, `epic`, `workspace`, `lessons`); `scope_id` is the plan or epic id and `null` for the other two, enforced in both directions.
+* `targets` is never empty. A `Target` has its `Mode` (`REPLACE`, `APPEND`), its paths relative to the path base of the scope, `sizeBefore` and the `StoreDigest` of the store once applied. An `APPEND` target without `sizeBefore` is refused when the record is built and when the document is read; a `REPLACE` target may omit it.
+* `owed_events` lists the audit records the transaction hands over once its targets are applied (`ScopeTransaction.owe`), possibly none. An owed record is an `AuditEvent` whose detail values are strings, integers or lists of strings (`OwedAuditEvents`); version 1, which had no owed records, is refused as `format_outdated`.
+
+`DigestSidecar` is the record of the sidecar document `{"format_version": 1, "stores": {"<relative path>": {"size", "sha256"}}}`. Its entries are kept and written in the sorted order of their paths, so the same digests give the same bytes. `DigestSidecar.load(file)` reads the file without a lock and returns an empty sidecar when it does not exist; `with(path, digest)` returns a copy with one entry changed. `StoreDigest` is `(size, sha256)` with `of(bytes)` (SHA-256 in lower-case hex) and `matches(bytes)`.
+
+Neither type decides anything: the journal is written by `ScopeTransaction` and read by `JournalRecovery`, and the sidecar is written only through the journal.
+
+Tests: `TransactionJournalTest`, `DigestSidecarTest`.
+
+[#scope-transaction]
+== Writing a Scope Transaction
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A `JournalScope` says where a scope's journal and sidecar lie, which directories it owns, which key guards it, and the path base its store paths are relative to. Its factories follow the per-project machine store `projects/<project_id>/` below the base directory of the runtime:
+
+[cols="1,2,2,2,2", options="header"]
+|===
+|Factory |Path base |Journal |Sidecar |Lock key
+
+|`JournalScope.plan(base, projectId, planId)`
+|`plans/<plan_id>/`
+|`mcp/transaction-journal.json`
+|`mcp/digests.json`
+|`LockKey.plan`
+
+|`JournalScope.epic(base, projectId, epicId)`
+|`epics/<epic_id>/`
+|`transaction-journal.json`
+|`digests.json`
+|`LockKey.epic`
+
+|`JournalScope.workspace(base, projectId)`
+|the project store root
+|`workspace/mcp/transaction-journal.json`
+|`workspace/mcp/digests.json`
+|`LockKey.workspace`
+
+|`JournalScope.lessons(base, projectId)`
+|`lessons/`
+|`.transaction-journal.json`
+|`.digests.json`
+|`LockKey.lessonStore`
+|===
+
+The workspace owns only `workspace/` and `pending/` below its path base, never `plans/` or `epics/`; every other scope owns its path base. `resolve(relativePath)` refuses a path that is absolute or leaves the path base.
+
+A write to the stores of a scope:
+
+[source,java]
+----
+var scope = JournalScope.plan(base, projectId, planId);
+try (var transaction = lockManager.openTransaction()) {
+    transaction.acquire(scope.lockKey());
+    var write = ScopeTransaction.open(transaction, scope, auditSink, clock);
+    write.replace("mcp/status.json", status);
+    write.append("logs/work.jsonl", records);
+    write.commit();
+}
+----
+
+`open` refuses a transaction that does not hold the scope's key (`InternalFaultException`, `store_lock_not_held`). `replace` and `append` collect the targets; they refuse a second target for the same path, the journal or the sidecar of the scope, a path outside the directories the scope owns, and, for `append`, a block that is empty or does not end with a newline. `commit()` runs the five steps:
+
+. *Stage*: every replaced store to `<store>.tmp.<transaction id>`, every appended block to `<store>.append.<transaction id>`, each forced to disk. Before an append is staged, the tail of its store is repaired (`JsonlStoreFile.repairTail`), so the size before the append is the repaired size.
+. *Journal*: the journal, written by `AtomicStoreFile` with a temporary file named after the transaction id, and forced with its directory.
+. *Apply*: every staged file renamed over its store (`ATOMIC_MOVE`), every staged block appended and its staged file deleted; then the directories of the stores are forced.
+. *Digests*: the sidecar with the new digest of every target; the other entries stay.
+. *Close*: the records the transaction owes handed to the sink, then the journal deleted and its directory forced. If the sink refuses a record, the commit returns with its data complete and leaves the journal, which the next recovery closes after handing the records over.
+
+A transaction is committed once. A commit that fails throws (`UncheckedIOException` for a file that cannot be written) and leaves its journal and staged files for the recovery; it is not tried again. A commit while the journal of an earlier transaction is still open is refused with `IllegalStateException` before anything is written: the scope is recovered first. `ScopeTransaction` creates no directory: the directories of the stores exist before the commit.
+
+`transactionId()` is generated when the transaction is opened; `owe(event)` adds an audit record to the journal, carrying that id, which the transaction hands over at the close (<<audit-records>>).
+
+Tests: `JournalScopeTest`, `ScopeTransactionTest`.
+
+[#recovery]
+== Recovery
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`JournalRecovery.recover(transaction, scope, auditSink)` runs under the key of the scope (refused otherwise) and answers with one of three outcomes:
+
+* `NothingToRecover(deletedStagedFiles)`: there is no journal. Staged files that a transaction left before it journaled are deleted: every regular file in the scope's owned directories whose name ends in `.tmp.<transaction id>` or `.append.<transaction id>`.
+* `RolledForward(journal, applied)`: every target was applied already or is applied now: a replace by renaming its staged file, an append by cutting its store back to `size_before` and appending the staged block. A target is applied already when its store has the size and SHA-256 the journal records. Then the sidecar takes the digests of the journal, one `transaction_rolled_forward` record and the records the journal owes are handed to the sink, and only then the journal and the staged files are deleted. If the sink refuses a record, the outcome is the same, but the journal stays; the next recovery finds every target applied and hands the records over again. `applied` lists the targets this recovery applied.
+* `InvariantViolation(journal, stores)`: a target is neither applied nor appliable. It is appliable when applying its staged file yields the digest the journal records: the staged bytes of a replace have it, and the store of an append cut to its `size_before`, followed by the staged block, has it. A missing or changed staged file, and an append store that is shorter than, or differs from, what it was before the append, make it violating. Every target is checked before the first is applied, so nothing is applied, and the journal and every store stay as they are; `stores` names the violating stores in the order of the journal.
+
+A journal or a sidecar of another format version, or one that is unreadable, propagates as `StoreRefusal`, and the journal is left in place. A recovery of a consistent scope changes no byte and records nothing.
+
+What the caller does with an `InvariantViolation`, raising the `integrity_breach` condition on the scope, is not built yet; nor is the call of the recovery at runtime start and on the first call to a scope. Until then `ScopeIntegrity` (<<digests>>) is the caller that runs it.
+
+Tests: `JournalRecoveryTest`.
+
+[#digests]
+== Verifying and Re-Baselining Digests
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`ScopeIntegrity` decides only under the scope's key, and only after the recovery of the scope has run:
+
+* `verify(transaction, scope, relativePath, auditSink)` runs `JournalRecovery.recover` and compares one store with its sidecar entry. The answer is a `Verification`: `Verified(store, digest)`; `Mismatch(store, recorded, current)`, with `current` empty for a deleted store, the evidence of an edit outside a transaction; `Untracked(store)` when the sidecar has no entry; or the recovery's `InvariantViolation`, and then nothing was compared.
+* `verifyAll(transaction, scope, auditSink)` does the same for every entry of the sidecar, in the sorted order of the paths, or answers with the `InvariantViolation` alone.
+* `snapshot(scope, relativePath)` takes no lock and decides nothing. It returns a `StoreSnapshot`: `DIGEST_UNVERIFIED` while the journal of the scope exists or when the content differs from the sidecar entry, `VERIFIED` when it matches, `UNCHECKED` when the sidecar has no entry.
+* `rebaseline(transaction, scope, relativePath, auditSink)` accepts an edit: after the recovery it opens a `ScopeTransaction` that replaces the store by its own current bytes, so the new digest is recorded through the journal like any other, and then returns `verifyAll` of the scope. A store that does not exist is refused with `IllegalArgumentException`, and nothing is journaled.
+
+Raising `integrity_breach` on a `Mismatch` and the operator command `pm-operator accept-edit` that calls `rebaseline` are not built yet (link:../specification/store-schemas/13-leases-integrity-testing.adoc#store-digest-verification[Store Schemas Specification § Store Digest Verification]).
+
+Tests: `ScopeIntegrityTest`.
+
+[#ordered-writes]
+== Ordered Writes and Reconcilers
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+An `OrderedWrite` is a list of `WriteStep(key, write)`, the authoritative store first. `run(lockManager)` opens one lock transaction per step, acquires that step's key, runs its write and closes the transaction before the next step, so no step holds the keys of two stores. What a step throws propagates once its transaction is closed, and the steps after it do not run.
+
+`OrderedWrite.reconcile(lockManager, reconcilers, auditSink)` runs the `CrossScopeReconciler`s in their order, passes each the sink, and returns every `Reconciliation(name, store)` they applied. It records nothing itself: each derived write owes its `cross_scope_reconciled` record on its own `ScopeTransaction` (`OrderedWrite.oweReconciled(write, reconciliation)`), so the record is in the journal before the derived store changes and is delivered with the transaction or by the next recovery of its scope. It is meant to run after the journals of the project's scopes were rolled forward.
+
+The substrate knows no concrete flow. A package that adds a write across scopes:
+
+. Builds its `OrderedWrite`: the authoritative store first, then every store derived from it, each step a write of its own store under its own key (a `ScopeTransaction` for a scope's stores).
++
+[source,java]
+----
+new OrderedWrite(List.of(
+        new OrderedWrite.WriteStep(planScope.lockKey(), transaction -> writePlan(transaction)),
+        new OrderedWrite.WriteStep(lessonScope.lockKey(), transaction -> claimLesson(transaction))))
+    .run(lockManager);
+----
+. Implements a `CrossScopeReconciler` for it, `reconcile(lockManager, auditSink)`: read the authoritative store under its key; for each derived store, check under that store's key whether the derived write is in place and apply it if not, one `ScopeTransaction` per store, opened with the given sink, on which it calls `OrderedWrite.oweReconciled` before the commit; return a `Reconciliation` for every write applied, and nothing when everything is in place.
+. Adds the reconciler to the list passed to `reconcile`, and proves the flow with a crash-point test (<<testing>>).
+
+Running `reconcile` at runtime start belongs to the runtime start sequence, which does not call it yet.
+
+Tests: `OrderedWriteTest`.
+
+[#audit-records]
+== Audit Records
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+The substrate hands three records to the `AuditSink`, all of category `store` and outcome `succeeded`, built by the factories of https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[`AuditEvent`], which also hold the detail keys:
+
+* `jsonl_tail_repaired` (`AuditEvent.jsonlTailRepaired`), from `JsonlStoreFile` and the staging of an append: the store, the number and SHA-256 of the bytes cut off, and the id of the repair (a `TransactionId` generated for it) as `transaction_id`.
+* `transaction_rolled_forward` (`AuditEvent.transactionRolledForward`), from `JournalRecovery`: the type and id of the scope, the transaction id and the paths of the journal's targets. A scope without an id (workspace, lesson store) has no `scope_id` detail.
+* `cross_scope_reconciled` (`AuditEvent.crossScopeReconciled`), owed by the scope transaction of a derived write: the reconciliation rule, the store it wrote and the id of that transaction.
+
+Each record is delivered at least once. A durable intent holds it from before the mutation that makes its cause disappear until `AuditSink.append` returned: the transaction journal for a roll-forward and for the records a transaction owes, the intent file `<store>.audit-intent` for a tail repair. `OwedAuditEvents.deliver` hands the owed records over in their order and stops at the first one the sink refuses with `UncheckedIOException` (the failure `AuditSink.append` declares); the intent then keeps what was not handed over, the data outcome is reported as if nothing had happened, and the warning `PM_MCP-160` (`AUDIT_RECORD_DEFERRED`) names the record, its transaction id and the intent. The next recovery of the scope, or the next repair of the store, hands the records over again. A record handed over again carries the same `transaction_id`, by which the audit store or a reader drops the duplicate. A process that stops between the mutation and the append leaves the intent in the same way.
+
+The audit store that turns the records into lines of the audit log, and drops a duplicate by its transaction id, is not part of the substrate.
+
+Tests: `AuditEventTest`.
+
+[#testing]
+== Testing with Crash Points
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+A crash is tested in-process. `ScopeTransaction` and `OrderedWrite` each take a package-private `StepHook`, called at every boundary; production passes `StepHook.NONE`:
+
+* `ScopeTransaction.StepHook.after(step, target)` is called after each `STAGE` and each `APPLY` of a target (with its index), after `JOURNAL` and after `DIGESTS`; only the close follows the last one.
+* `OrderedWrite.StepHook.after(step)` is called after each step, once its transaction is closed, the authoritative step being 0.
+
+A test stops the write by throwing from the hook at one boundary. Because nothing in the write path removes a staged file or the journal, the files are then exactly what a killed process leaves. The test opens a new lock transaction, as after a restart, runs `JournalRecovery` (and `OrderedWrite.reconcile` for a flow), and asserts the stores, the sidecar, the absence of journal and staged files, and the audit records. `JournalRecoveryTest` runs this over every boundary of a commit with two replaces and one append; `OrderedWriteTest` stops a flow of an authoritative and two derived stores, each in a scope of its own, between its writes. Every such test has a matched control: a recovery or reconciliation of a consistent state changes nothing and records nothing.
+
+Two fixtures of the `pm-core` tests in `de.planmarshall.core.store` serve them:
+
+* `RecordingLockManager`: a `LockManager` that takes no lock of the operating system, records every key acquired and every transaction opened, and answers `holds` for the keys a transaction acquired until it is closed. It asserts no lock order; a test of the order uses `FileLockManager`.
+* `RecordingAuditSink`: keeps the records it is handed, in their order; `withoutTransactionIds` compares records whose id a test cannot know in advance.
+* `FailingAuditSink`: refuses its first appends with `UncheckedIOException` (`refusing(n)`), or stops the caller there as a killed process (`stopping(n)`), and records the appends after them. The delivery tests of `JournalRecoveryTest`, `JsonlStoreFileTest` and `OrderedWriteTest` use it.
+
+The hooks are package-private, so a crash-point test lives in the package `de.planmarshall.core.store`.
+
+[#pitfalls]
+== Pitfalls
+_Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+* *Never write a scope store outside a `ScopeTransaction`.* An `AtomicStoreFile.write` or a `JsonlStoreFile.append` on a store of a scope changes it without its digest, and the next locked verification reports the change as an edit outside the runtime. The sidecar itself is written only by the digests step and the roll-forward.
+* *Never decide a breach lock-free.* `ScopeIntegrity.snapshot` and `StoreSnapshot` report `DIGEST_UNVERIFIED`, which may be a transaction in flight. Only `verify` and `verifyAll`, under the scope's key and after the recovery, decide.
+* *An append journal entry always carries `size_before`.* Without it the recovery could not tell an applied append from a torn one, and would append the block a second time. `TransactionJournal.Target` refuses an `APPEND` target without it, both when it is built and when it is read; keep it that way when the journal changes.
+* *Never clean up a staged file or the journal in a `finally`.* A clean-up that runs on an exception changes what a stopped write leaves: a killed process runs no `finally`, so the cleanup would hide from the in-process crash tests exactly the state the recovery must handle. Leave everything to the recovery.
+* *Never leave a file named like a staged file in a scope's directories.* The recovery deletes every file in the owned directories whose name ends in `.tmp.<transaction id>` or `.append.<transaction id>` when no journal names it.
+* *Create the directories first.* Neither `ScopeTransaction` nor `JsonlStoreFile` creates a directory; whoever creates the scope does.
+* *An audit append after the mutation can be lost.* Once a store mutation is done, the condition that produced its record is gone: a recovery finds no journal, a repair no torn tail, a reconciler the derived store in place. A record appended only after the mutation is therefore lost for good when the process stops, or the sink fails, in between. Owe the record in a durable intent before the mutation (`ScopeTransaction.owe`, the journal, the intent file of a JSONL store), remove the intent only after `AuditSink.append` returned, and let the next recovery or repair replay it; never catch a refused append and drop the record.

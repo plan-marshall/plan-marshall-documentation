@@ -51,18 +51,6 @@ destination holds at most a duplicate notice and never none. Matched control: a 
 leaves the finding uncarried and the resumed carry-out carries it once.
 Source:: design review.
 
-[#PM-WATCH-STORE-49]
-=== PM-WATCH-STORE-49: An append journal entry without `size_before` is rejected
-
-Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#transaction-journal[Store Schemas § Transaction Journal],
-link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]
-Hazard:: A journal entry of mode `append` without its truncation point cannot be rolled forward: recovery either
-appends the staged block a second time or cannot tell the applied state from the torn one.
-Guard:: Schema test: a journal target with `mode: append` and no integer `size_before` is rejected when the journal is
-written; crash-injection test: an append torn after the journal write is truncated to `size_before` and appended once
-at recovery. Matched control: a `replace` target without `size_before` is accepted.
-Source:: design review.
-
 == Scope Session Log (`sessions.jsonl`)
 
 [#PM-WATCH-STORE-1]

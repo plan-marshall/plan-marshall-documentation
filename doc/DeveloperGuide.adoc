@@ -27,4 +27,7 @@ The developer guide describes how the implemented system is built, extended and 
 
 |link:developer/locks-and-leases.adoc[Locks and Leases]
 |The lock manager and the total lock order, the keys and lock files, the atomic write and the lock-free read of a store, the lease store and the stale lease sweep: the types, how to use and extend them, their pitfalls and their tests.
+
+|link:developer/store-substrate.adoc[Store Substrate]
+|How a store is read and written: the format refusal and the strict reading of a codec, the JSONL append with its tail repair, the transaction journal of a scope with its recovery, the digest sidecar with its verification and re-baseline, the ordered write across scopes with its reconcilers, the audit records, the crash-point tests and the pitfalls.
 |===

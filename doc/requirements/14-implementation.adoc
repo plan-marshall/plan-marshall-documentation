@@ -52,6 +52,21 @@ The system must separate internal persistence formats from model-facing wire rep
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/hypermedia-format.adoc[Hypermedia Format & TOON Encoding Specification], and link:specification/identifiers.adoc[Identifier Registry] for implementation details.
 
+Implementation (the `format_version` bullet for the store documents and records of the package `core.store`: the refusal that names the file with the version found and the current one, the strict reading every store codec shares, and the per-record refusal of a JSONL store): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StrictJson.java[StrictJson],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LeaseCodec.java[LeaseCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/TransactionJournal.java[TransactionJournal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/DigestSidecar.java[DigestSidecar],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JsonlStoreFile.java[JsonlStoreFile]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[StoreRefusalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LeaseCodecTest.java[LeaseCodecTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/TransactionJournalTest.java[TransactionJournalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/DigestSidecarTest.java[DigestSidecarTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JsonlStoreFileTest.java[JsonlStoreFileTest]
+
+Documentation: link:concepts/store-integrity.adoc#format-versions[Concepts § Store Integrity, Format Versions], link:developer/store-substrate.adoc#format-versions[Developer Guide § Store Substrate, Format Versions and Refusals]
+
 Implementation watch: link:implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-1[PM-WATCH-CLIENT-1], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-45[PM-WATCH-STORE-45]
 
 [#PM-IMPL-3]
@@ -131,7 +146,7 @@ Persisted stores must preserve defect-driven data integrity invariants, detect o
 * The system must implement three-way file footprint reconciliation in `references.json` comparing (1) declared files, (2) structured deliverable-derived files (partitioned into three disjoint sets: expected modifications, conditional modifications, and read-only references), and (3) git-realized modified files pairwise by symmetric difference in both directions; a realized footprint whose recorded state is not `measured` must be reported as indeterminate, never as clean.
 * The system must apply a lesson to a plan by claiming it in the lesson store when the plan is created, never by moving the lesson file: the claim is turned into an in-file retirement (`applied`) only when the plan ends `merged`, and released when it ends `returned`, `handed_back`, `no_change`, or `aborted` or is deleted (`delete-plan`), so a plan deletion never needs to carry a lesson back.
 * The system must serve read-only store queries from lock-free atomic file snapshots.
-* The system must hold short transaction locks only for the duration of one transaction and acquire all locks in one total order: workspace -> plan locks (lexicographic by `plan_id`) -> epic locks (lexicographic by `epic_id`) -> `epics-worktree` -> lesson store (`<PM_MCP_BASE>/projects/<project_id>/locks/lessons.lock`, held for lesson id allocation and every lesson write) -> local configuration (`locks/local-config.lock`) -> derived facts (`locks/derived-facts.lock`) -> build timings (`locks/build-timings.lock`) -> task queue (`locks/queue.lock`, held for queue task and worker records) -> machine store locks (alphabetical by lock path, the per-project enrolment locks lexicographic by `project_id`) -> leaf locks (audit log, plan mailboxes, digest sidecars; nothing is acquired after a leaf lock). The lock manager must assert this order on every acquisition and refuse an out-of-order acquisition as `internal_fault` with an audit record, covered by a unit test.
+* The system must hold short transaction locks only for the duration of one transaction and acquire all locks in one total order: workspace -> plan locks (lexicographic by `plan_id`) -> epic locks (lexicographic by `epic_id`) -> `epics-worktree` -> lesson store (`<PM_MCP_BASE>/projects/<project_id>/locks/lessons.lock`, held for lesson id allocation and every lesson write) -> local configuration (`locks/local-config.lock`) -> derived facts (`locks/derived-facts.lock`) -> build timings (`locks/build-timings.lock`) -> task queue (`locks/queue.lock`, held for queue task and worker records) -> machine store locks (alphabetical by lock path, the per-project enrolment locks lexicographic by `project_id`) -> leaf locks (audit log, plan mailboxes; nothing is acquired after a leaf lock); a digest sidecar takes no lock of its own, because it is written only through the transaction journal under its scope's lock. The lock manager must assert this order on every acquisition and refuse an out-of-order acquisition as `internal_fault` with an audit record, covered by a unit test.
 * The system must guard every store that is replaced by atomic rename with a sibling lock file, never with a lock on the store file itself; only the append-only stores that carry their own leaf lock (the audit log and the plan mailboxes) may be locked directly.
 * The system must represent long-lived coordination claims (merge mutex, review-bot rate windows, build slots, model slots, and task leases per worker generation, `PM-WORK-2`) as persisted lease records that are claimed and released under a short transaction lock and never held as OS locks while other locks are acquired.
 * The system must place workspace, plan, epic, epic worktree, lesson store, local configuration, derived facts, build timings, and task queue locks at fixed paths of the per-project machine store outside the directories they protect (`<PM_MCP_BASE>/projects/<project_id>/locks/`), so that no worktree or per-worktree copy ever splits a lock.
@@ -139,7 +154,7 @@ Persisted stores must preserve defect-driven data integrity invariants, detect o
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
-Implementation (the lock order with its assertion, the lock manager, the sibling lock files and the atomic write, the lock-free snapshot read that reports a digest mismatch as unverified, the common lease record with its store, and the stale lease sweep; the digests and their verification, the transaction journal, the footprint reconciliation, the lesson claims, the four lease stores with their own documents, the task leases, and the wiring of the lock manager into the daemon are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockLevel.java[LockLevel],
+Implementation (the lock order with its assertion, the lock manager, the sibling lock files and the atomic write, the lock-free snapshot read that reports a digest mismatch as unverified, the common lease record with its store, the stale lease sweep, the shared format refusal, the JSONL append with its tail repair, the per-scope transaction journal with its roll-forward recovery, the digest sidecar with its verification under the lock and its re-baseline, and the ordered write across scopes with its reconciler seam; the `integrity_breach` condition, `accept-edit`, the concrete cross-scope flows, the footprint reconciliation, the lesson claims, the four lease stores with their own documents, the task leases, and the wiring of the lock manager, the recovery and the reconcilers into the daemon are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockLevel.java[LockLevel],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockKey.java[LockKey],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockOrder.java[LockOrder],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/LockManager.java[LockManager],
@@ -151,7 +166,16 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LeaseStore.java[LeaseStore],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/FileLockManager.java[FileLockManager],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/HolderLiveness.java[HolderLiveness],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/StaleLeaseSweep.java[StaleLeaseSweep]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/lock/StaleLeaseSweep.java[StaleLeaseSweep],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JsonlStoreFile.java[JsonlStoreFile],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/TransactionJournal.java[TransactionJournal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeTransaction.java[ScopeTransaction],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JournalRecovery.java[JournalRecovery],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/DigestSidecar.java[DigestSidecar],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeIntegrity.java[ScopeIntegrity],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/OrderedWrite.java[OrderedWrite],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/CrossScopeReconciler.java[CrossScopeReconciler]
 
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockOrderTest.java[LockOrderTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockKeyTest.java[LockKeyTest],
@@ -163,9 +187,19 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/FileLockManagerTest.java[FileLockManagerTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/FileLockManagerTwoProcessIT.java[FileLockManagerTwoProcessIT],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/HolderLivenessTest.java[HolderLivenessTest],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/StaleLeaseSweepTest.java[StaleLeaseSweepTest]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/lock/StaleLeaseSweepTest.java[StaleLeaseSweepTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[StoreRefusalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/AuditEventTest.java[AuditEventTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JsonlStoreFileTest.java[JsonlStoreFileTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/TransactionJournalTest.java[TransactionJournalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/DigestSidecarTest.java[DigestSidecarTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JournalScopeTest.java[JournalScopeTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeTransactionTest.java[ScopeTransactionTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JournalRecoveryTest.java[JournalRecoveryTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeIntegrityTest.java[ScopeIntegrityTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/OrderedWriteTest.java[OrderedWriteTest]
 
-Documentation: link:concepts/locks-and-leases.adoc[Concepts § Locks and Leases], link:developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]
+Documentation: link:concepts/locks-and-leases.adoc[Concepts § Locks and Leases], link:concepts/store-integrity.adoc[Concepts § Store Integrity], link:developer/locks-and-leases.adoc[Developer Guide § Locks and Leases], link:developer/store-substrate.adoc[Developer Guide § Store Substrate]
 
-Implementation watch: link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-24[PM-WATCH-GEN-24], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-46[PM-WATCH-GEN-46], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-64[PM-WATCH-PHASE-64], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-10[PM-WATCH-STORE-10], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-11[PM-WATCH-STORE-11], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-22[PM-WATCH-STORE-22], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-43[PM-WATCH-STORE-43], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-44[PM-WATCH-STORE-44], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-47[PM-WATCH-STORE-47], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-49[PM-WATCH-STORE-49]
+Implementation watch: link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-24[PM-WATCH-GEN-24], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-46[PM-WATCH-GEN-46], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-64[PM-WATCH-PHASE-64], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-10[PM-WATCH-STORE-10], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-11[PM-WATCH-STORE-11], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-22[PM-WATCH-STORE-22], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-43[PM-WATCH-STORE-43], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-44[PM-WATCH-STORE-44], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-47[PM-WATCH-STORE-47]
 

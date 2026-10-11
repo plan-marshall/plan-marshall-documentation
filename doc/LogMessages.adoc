@@ -3,7 +3,7 @@
 :toclevels: 2
 :nofooter:
 
-All messages are defined in `de.planmarshall.core.log.PmMcpLogMessages` (module `pm-core`) with prefix `PM_MCP`; every module logs through it, today the classes of `pm-runtime` and of the assembly `pm-mcp-server`.
+All messages are defined in `de.planmarshall.core.log.PmMcpLogMessages` (module `pm-core`) with prefix `PM_MCP`; every module logs through it, today the classes of `pm-core`, of `pm-runtime` and of the assembly `pm-mcp-server`.
 Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 
 == INFO Level (001-099)
@@ -39,6 +39,7 @@ Identifier ranges: INFO 001-099, WARN 100-199, ERROR 200-299.
 |PM_MCP-140 |LspClient |Language server (pid %s) did not end cleanly, terminating it: %s |Logged when `shutdown`/`exit` fails or the process does not end within the request timeout; the process is then terminated
 |PM_MCP-150 |WorkspaceConfinement |Project path refused with outcome '%s': %s |Logged when a project path is refused by the workspace confinement (`PM-SEC-2`); names the outcome code `path_traversal_rejected` and the reason of the refusal (`UNPARSEABLE_PATH`, `PARENT_NAME_AFTER_MISSING_PART`, `CANONICALIZATION_FAILED` or `OUTSIDE_WORKSPACE`), never the path
 |PM_MCP-151 |StaleLeaseSweep |Lease '%s' in '%s' orphaned: its holder (pid %s) is no longer alive |Logged for each lease the stale lease sweep marks orphaned because the runtime that served it is no longer alive; names the lease key, the lease store and the process id of the dead holder
+|PM_MCP-160 |OwedAuditEvents |Audit record '%s' of transaction '%s' not handed over, kept owed in '%s': %s |Logged when the audit sink refuses the record of a completed store mutation (a roll-forward, a JSONL tail repair or a reconciliation); names the event, its transaction id and the durable intent that keeps it owed (the transaction journal or `<store>.audit-intent`). The data outcome is unchanged, and the next recovery or repair hands the record over again
 |===
 
 == ERROR Level (200-299)
