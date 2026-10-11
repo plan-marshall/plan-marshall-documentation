@@ -1,0 +1,48 @@
+= Workflow Verification
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Concepts.adoc[Concepts] » Workflow Verification
+
+A workflow unit is a text a team can read, review and change. What keeps a changed unit from breaking the process is not trust in the change, but a check that every unit has to pass before it runs. Two checks exist today: the static verifier, which reads the unit as a tree, and the transition fuzzer, which walks it under concrete guard values. How the code implements them is in link:../developer/workflow-dsl.adoc#verification[Developer Guide § Static Verification] and link:../developer/workflow-dsl.adoc#fuzzer[§ Transition Fuzzer].
+
+== Why a Team's Unit Stays Server-Enforced
+_Requirements: link:../Requirements.adoc#PM-WF-1[PM-WF-1], link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
+
+The process a project runs is meant to be owned by its team, as files in the repository. That only works if the guarantees of the process do not depend on every edit being right. The answer is a verifier compiled into the binary: a unit is checked against rules no file can change, so a unit that breaks one is refused whatever its file says.
+
+The verifier answers with values, not with an exception. Every violation names its rule, the state it concerns, and the file and line it stands at, and one run reports every violation of the unit, not only the first. A team that changed a unit gets one list of everything to fix, each item pointing at its line.
+
+The verifier also takes nothing from where it runs: the primitives a unit may name and the state names of earlier releases are handed to it. The same unit gives the same verdict in a build test and at runtime.
+
+== What the Checks Guarantee
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
+
+A unit that passes the verifier has these properties:
+
+* *It names only what exists.* Every primitive it runs, in a step, a job, a link, a `facts` clause or a `predicate:` guard, is a compiled primitive, and every link asks the model for exactly the free text its primitive declares, with the same bounds.
+* *No outcome falls through.* Every outcome a step, a job or a link can produce is routed exactly once: none is forgotten, none is invented, none is routed twice. An outcome that nothing handles cannot strand a plan.
+* *Every state can be entered and left.* Every state is reachable from the start, and every state that is not terminal has a way out: to a terminal state, or, in the workspace unit that never ends, back to its start. The engine's own exits count: a sub-workflow's link state can always step out, and a task can always be lost.
+* *Links can be told apart.* No two links of a state share an identifier, and none hides the `step_out` the engine adds.
+* *Released states survive.* A state name that an earlier release shipped is still a state, or is migrated to one, so a plan that rests in it can continue after an upgrade.
+
+Two states are exempt from reachability by design: the abort terminals `plan.aborted` and `epic.aborted`. Nothing in a unit leads to them, because only the operator's abort does.
+
+== Why Reachability Is Graph Reachability
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
+
+A guard can depend on configuration, and the unit names the configuration keys a guard reads. It does not name the values those keys can take: they belong to the configuration, not to the tree. The verifier therefore treats every transition as possible and asks only whether a path exists in the graph. It never evaluates a guard, never enumerates configuration values, and never asks whether a primitive can actually produce an outcome.
+
+That makes the check sound for what it claims and silent about the rest. A state no transition reaches is found. A state that only a particular guard value strands is not.
+
+== What the Fuzzer Adds
+_Requirements: link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
+
+The fuzzer looks at exactly what the graph cannot see: guards. It takes a unit that passed the verifier and walks it many times. Each walk draws a value for every guard atom of the unit (`in_worktree`, `has_open_findings`, `all_tasks_completed` and every `predicate:` primitive), follows only the exits that hold under those values, and moves at random among them. A state that is not terminal and has no holding exit is a dead state: in that situation the process would stop with nowhere to go. The fuzzer reports it with the walk's assignment, so the report shows how to get there.
+
+A link state whose only link is guarded by `in_worktree` passes the verifier, because the link exists; the fuzzer finds the dead state as soon as a walk draws `in_worktree=false`. The same unit with that guard removed gives no report.
+
+The walk is seeded. The same seed over the same unit gives the same report, so a dead state found once is found again, and a test can rely on it.
+
+The fuzzer evaluates the atoms as true or false. It does not model the engine's third result for a guard that cannot be evaluated, the conditions the engine raises over a state, or the jobs a state binds; those stay with the engine.
