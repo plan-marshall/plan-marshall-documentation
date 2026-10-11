@@ -172,7 +172,7 @@ The decision points are closed; a state that takes a decision of the table write
 |`FIX`, `SUPPRESS`, `ACCEPT`
 
 |`question.adjudicate` (`adjudicate.decisions`, one record per question of the set)
-|`server_rule` `question.check-adjudication`, or `quorum`
+|`server_rule` `adjudicate.check`, or `quorum`
 |the question's
 |Every vote's confidence against the declared score, the agreeing votes against the listed roles (`unit`, `adjudicate-decisions.pmwf`)
 |the agreed option, or `null` (the escalation reason)
