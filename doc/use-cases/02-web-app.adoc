@@ -63,7 +63,7 @@ Changes::
 * *Loopback `Host` without the port* (<<change-loopback-host>>).
 * *A fresh code after a redemption* (<<change-fresh-code>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
-Design:: link:../design/04-terminal-client.adoc#t-start[Terminal Client, `start`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-start[Terminal Client, `start`]
 
 [#UC-WEB-2]
 == UC-WEB-2: Drill Down into a Plan

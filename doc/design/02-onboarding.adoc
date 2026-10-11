@@ -9,7 +9,7 @@ _Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use
 
 _Relies on: link:../use-cases/01-onboarding.adoc#changes[Onboarding, Changes to the Specification] (proposed), link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
 
-Status: `DRAFT`. Each state is designed for both clients: the web app here (a wireframe), and the terminal dialogue of `pm-operator onboard` in link:04-terminal-client.adoc[Terminal Client] (a transcript of every state, with its texts). The sketches are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
+Status: `DRAFT`. Each state is designed for both clients: the web app here (a wireframe), and the terminal dialogue of `pm-operator onboard` in link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc[Terminal Client] (a transcript of every state, with its texts). The sketches are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
 
 == Principles
 
@@ -50,7 +50,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 * *Step bar*: the seven sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
 * *One route*: the onboarding is one route of the app (`/onboarding`) that renders whichever state the server reports; the app has no route per state, so it cannot show a state the server is not in. A done step opened from the step bar is shown read-only beside the current one.
 * *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
-* *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title (link:04-terminal-client.adoc#state-frame[Terminal Client, The Frame of a State]).
+* *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#state-frame[Terminal Client, The Frame of a State]).
 * *Model at work* (`[M]` states): the content shows that a model task runs, on which harness and role, the time so far, and the expected cost; when it fails or the operator leaves it, the screen continues as the use case's variation says (without a recommendation).
 
 [#start]
@@ -78,7 +78,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 
 * *Decide everything for me…* is the automatic run (<<auto>>); it opens its consent first.
 
-Terminal: link:04-terminal-client.adoc#t-start-first[Terminal Client, transcript].
+Terminal: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-start-first[Terminal Client, transcript].
 
 [#consent]
 == Consent
@@ -107,7 +107,7 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
   [ Not now ]                                       [ Look for harnesses ]
 ----
 
-Terminal: link:04-terminal-client.adoc#t-harness-consent[Terminal Client, transcript].
+Terminal: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-harness-consent[Terminal Client, transcript].
 
 * *Not now* (link `no`): the screen stays and shows "Nothing was done." under the title, with the same two buttons. The step bar does not move.
 * The remember choice is a choice inside the screen, not a third button, so the primary button stays one action: `yes` or `yes_remember` by the choice.
@@ -137,7 +137,7 @@ Terminal: link:04-terminal-client.adoc#t-harness-consent[Terminal Client, transc
 
 * The screen switches to the chosen language at once, before the button is pressed, so the operator sees what it will look like.
 
-Terminal: link:04-terminal-client.adoc#t-language[Terminal Client, transcript].
+Terminal: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-language[Terminal Client, transcript].
 
 [#harness]
 == ② Harness
@@ -451,7 +451,7 @@ The advisory of a role (ⓘ, opened in place below its row):
 * The preselection is the shipped default; each line says in a few words what the variant does, and *Why?* beside an axis explains its consequences.
 * A variant that cannot run on this machine is greyed with its reason (`Branch and Pull Request` without a provider).
 
-Terminal: link:04-terminal-client.adoc#t-defaults[Terminal Client, transcript].
+Terminal: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-defaults[Terminal Client, transcript].
 
 [#auto]
 == Automatic Run (`auto.consent`, `auto.result`)
@@ -476,7 +476,7 @@ The consent lists everything the run does, in the form of <<consent>>, in one li
                                                  [ Finish ]
 ----
 
-Terminal: link:04-terminal-client.adoc#t-auto[Terminal Client, transcript].
+Terminal: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#t-auto[Terminal Client, transcript].
 
 [#icons]
 == Harness Icons
