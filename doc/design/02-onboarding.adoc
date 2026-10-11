@@ -48,6 +48,7 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 ----
 
 * *Step bar*: the seven sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
+* *One route*: the onboarding is one route of the app (`/onboarding`) that renders whichever state the server reports; the app has no route per state, so it cannot show a state the server is not in. A done step opened from the step bar is shown read-only beside the current one.
 * *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
 * *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title.
 +
@@ -558,7 +559,7 @@ Where a harness is shown (the harness list, the role assignment, a worker in the
 * *Trademark.* Where the icon is hosted does not change the trademark question. EU law lets a third party use a mark to identify or refer to the proprietor's goods in accordance with honest practices (Art. 14(1)(c) EUTMR); commentary holds this applies to logos as to word marks. The makers' own rules are narrower: Anthropic's terms for Claude Code allow stating in plain text that a product runs Claude Code and require written permission for other uses of its names or logos; Google's brand rules forbid any use that suggests affiliation or endorsement.
 * *Privacy.* A browser that loads an icon from the maker's server sends the operator's IP address there on every view. A German court awarded damages for exactly this with web fonts loaded from Google (LG München I, 3 O 17493/20, 20 January 2022), holding that a local copy was possible. It would also break the content security policy of the web listener.
 
-*Consequence for the design.* The browser never loads from a maker's server; the runtime fetches once, on consent, and serves the icon itself, which avoids the privacy and policy problem and keeps the copyright position of embedding (the copy stays on the operator's machine and is not redistributed). The trademark question remains for every icon, bundled or fetched, and needs each maker's terms checked or permission asked; until then the monogram is the safe default.
+*Consequence for the design.* Until the legal question is settled every harness is shown with its monogram. The browser never loads from a maker's server; the runtime fetches once, on consent, and serves the icon itself, which avoids the privacy and policy problem and keeps the copyright position of embedding (the copy stays on the operator's machine and is not redistributed). The trademark question remains for every icon, bundled or fetched, and needs each maker's terms checked or permission asked; until then the monogram is the safe default.
 
 Sources: link:https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md[Simple Icons disclaimer]; link:https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance[Claude Code, Legal and compliance]; link:https://about.google/brand-resource-center/guidance/[Google Brand Resource Center]; link:https://www.hoganlovells.com/en/publications/from-bestwater-to-prussian-palaces-cjeu-provides-further-clarity-for-online-framing-of-copyright-protected-content[Hogan Lovells on BestWater and C-392/19]; link:https://www.lexisnexis.com/en-gb/legal/news/court-of-justice-confirms-the-expansion-of-the-fair-use-trade-mark-defence-inditex-v-buongiorno-myalert[Inditex v Buongiorno on Art. 14 EUTMR]; link:https://www.dr-datenschutz.de/schadensersatz-urteil-google-fonts-und-die-dsgvo/[LG München I on Google Fonts].
 
@@ -586,5 +587,4 @@ Sources: link:https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIM
 
 * *Enrol a project* needs the project enrolment in the web app; today it is the CLI verb `pm-operator enrol`.
 * The terminal transcripts of the screens not sketched here (catalogue, roles table, credential store, providers) follow the same rules: a list per table, a key per link, the preselection on `Enter`.
-* How the app looks between the screens: one route per state, or one route for the onboarding that renders whichever state the server reports.
-* Whether the step bar lets the operator look at a done step while the process stands in a later one.
+

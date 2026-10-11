@@ -29,6 +29,8 @@ How the texts of the web app and the command-line binaries are written, kept, an
 |the instructions of the units and roles, which stay in English
 |===
 
+The few texts of `pm-mcp` (the relay's errors, which the host and its model read) stay in English for now, whatever the interface language.
+
 A question a model asks the operator is in the model language; the frame around it (buttons, the deadline, the recommendation label) is in the interface language.
 
 [#glossary]
@@ -68,6 +70,7 @@ A word not in the glossary is translated. A new domain word is added here before
 * *Short.* A title is one line; the explanation under it at most two sentences; detail goes behind _Why?_.
 * *No blame, no alarm.* An error says what failed, the answer received, and the fix; a "no" by the operator is never shown as an error.
 * *The same text in both clients.* A text is written once and used by the web app and the terminal; a text that only one client needs has a key only that client uses.
+* *German addresses the operator with _du_*, throughout and in every client; the imperative of a button follows it ("Suche nach Harnesses", "Prüfe erneut").
 * *Arguments, not concatenation.* Every variable part is an argument of the message (`{harness}`, `{count, plural, one {# role} other {# roles}}`), so that a translation can reorder it.
 
 [#keys]
@@ -81,5 +84,4 @@ A word not in the glossary is translated. A new domain word is added here before
 
 == Open Points
 
-* German form of address: _du_ or _Sie_. Developer tools differ; one form is used throughout.
-* Whether `pm-mcp`'s few texts (relay errors shown by the host) follow the interface language or stay English, since the host's model reads them.
+* Enrolling a project in the web app and its texts, once the project enrolment has a use case.
