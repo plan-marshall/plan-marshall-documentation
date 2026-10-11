@@ -85,6 +85,5 @@ Open points that an implementation settles are watch items; they are listed here
 * link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-3[PM-WATCH-MOD-3]: the build order of `pm-e2e`.
 * link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-4[PM-WATCH-MOD-4]: one TOON encoder in `pm-api`, or a JSON-only API; to be decided before the API contract of `/api/v1`.
 * link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-5[PM-WATCH-MOD-5]: which token the consumers' CI uses once a publishing repository is private.
-* link:../implementation-watch/module-structure.adoc#PM-WATCH-MOD-8[PM-WATCH-MOD-8]: the key of the findings registry.
 
 Unproven, not undecided: that Dependabot reads the registry in `pm-mcp-clients` and `plan-marshall-mcp` with the organisation secret, that it picks up a release of the parent, and that a release of `cui-quarkus-parent` reaches `pm-mcp-parent` (link:../roadmap.adoc[Roadmap], Milestone 1, the item on changes reaching the consumers).

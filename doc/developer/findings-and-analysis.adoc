@@ -1,0 +1,144 @@
+= Findings and Code Analysis
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » Findings and Code Analysis
+
+[#types]
+== The Two Packages
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+The provider-neutral contracts of findings and code analysis live in the foundation `pm-core` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`], in two packages. `de.planmarshall.core.findings` holds the normalized finding and the contracts every producer of findings implements; `de.planmarshall.core.analysis` holds the code analysis provider and its result. `core.analysis` depends on `core.findings` (the scope of an analysis and its issues are findings types) and never the reverse. Both packages hold declarations, serialization and validation only: the provider modules make the calls to a provider, and the store and the workflow write what is observed. Why the contracts live in `pm-core` and not in provider modules is stated in link:../specification/module-structure.adoc#findings-analysis-contracts[Module Structure § Findings & Code-Analysis Contracts].
+
+[cols="1,1,3", options="header"]
+|===
+|Type |Package |What it does
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/Finding.java[`Finding`]
+|`core.findings`
+|One finding as the findings ledger records it: a record with exactly the members of the ledger record, in schema order, with nested records for the object-valued members. Its constructor refuses every rule the schema states. It has no codec; writing the ledger is not part of this package.
+
+|`FindingSourceKind`, `Severity`, `FindingStatus`, `Resolution`, `ScopeClass`, `TransmitOutcome`, `TransmitReason`, `ResolveState`, `FindingPhase`
+|`core.findings`
+|The closed enumerations of the ledger record, each constant with its name on the wire (`wireName()`, `fromWireName(String)`). The values are those of the code and of the schema, not repeated here.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/FindingScope.java[`FindingScope`]
+|`core.findings`
+|A commit, or a pull request at a commit: the scope of a fetch and the target of an analysis (see <<scope-and-key>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/FindingSourceKey.java[`FindingSourceKey`]
+|`core.findings`
+|The key a finding source and a finding responder are registered under (see <<scope-and-key>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/FindingSource.java[`FindingSource`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/FindingResponder.java[`FindingResponder`], `Disposition`
+|`core.findings`
+|The two contracts a provider module implements: fetch the findings of a scope, and answer a finding on its provider with the disposition of triage and a reason.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/findings/FindingRegistry.java[`FindingRegistry`]
+|`core.findings`
+|The sources and responders of a runtime by key.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisResult.java[`AnalysisResult`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisResultCodec.java[`AnalysisResultCodec`]
+|`core.analysis`
+|One observation of one code analysis provider for one target, and its canonical JSON line (see <<analysis-result>>).
+
+|`AnalysisStatus`
+|`core.analysis`
+|The closed status of the wait dimension `analysis_status` an observation is mapped to.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/CodeAnalysisProvider.java[`CodeAnalysisProvider`]
+|`core.analysis`
+|The contract of a code analysis provider: `id()`, and the two operations `status(target)` and `issues(target)`.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisCallResult.java[`AnalysisCallResult`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisOutcome.java[`AnalysisOutcome`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/Completeness.java[`Completeness`]
+|`core.analysis`
+|The result of a call to a provider with its closed outcome and, for the issues, their completeness (see <<outcomes>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/CodeAnalysisProviderRegistry.java[`CodeAnalysisProviderRegistry`]
+|`core.analysis`
+|The code analysis providers of a runtime by id.
+|===
+
+[#scope-and-key]
+== Scope and Registry Key
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
+
+`FindingScope(kind, commitSha, prNumber)` is built through `FindingScope.commit(sha)` or `FindingScope.pullRequest(sha, number)`. The commit is 40 or 64 lower-case hexadecimal digits; the number is set for a pull request only and is at least 1. The same type is the scope of `FindingSource.fetch` and the target of `CodeAnalysisProvider.status` and `issues`, so one value describes what is asked about across both packages.
+
+`FindingSourceKey(kind, provider)` is built through `FindingSourceKey.of(kind)` or `FindingSourceKey.analysis(providerId)`. `kind` is a `FindingSourceKind`, the closed `source` vocabulary of the findings store; `provider` is set for `ANALYSIS` only and matches the provider id pattern, which `FindingSourceKey.isProviderId(value)` checks and which the analysis result, the finding and the analysis registry share. The key mirrors the store's invariant (`provider` iff `source` is `analysis`): a finding is fetched and answered under the key it is stored under, and two code analysis providers are two keys.
+
+[#implementing]
+== Implementing a Provider
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
+
+A provider module implements the contracts and is registered by the assembly; `pm-core` names no provider.
+
+* *A source of findings* implements `FindingSource`: `key()` returns its `FindingSourceKey`, and `fetch(scope)` returns the normalized findings of the scope in the provider's order. Every finding it returns carries the key's `source`, and for `analysis` the key's `provider`.
+* *An answer to findings* implements `FindingResponder` under the same key as the source whose findings it answers: `respond(finding, disposition, reason)`.
+* *A code analysis provider* implements `CodeAnalysisProvider`: `id()` returns its provider id; `status(target)` answers the operation `analysis.status` with an `AnalysisCallResult<AnalysisResult>`, built through `AnalysisCallResult.status(outcome, value)`; `issues(target)` answers `analysis.issues` with an `AnalysisCallResult<List<Finding>>`, built through `AnalysisCallResult.issues(outcome, value, completeness)`. The issues are findings of the source `analysis` with the provider's id as `provider` and the provider's key of each issue as `provider_ref.issue_key`. A provider that also files its issues in the findings ledger implements a `FindingSource` under `FindingSourceKey.analysis(id)` beside it.
+
+The registries take their members in the constructor: `new FindingRegistry(sources, responders)` and `new CodeAnalysisProviderRegistry(providers)`. Nothing is discovered on the classpath; the assembly produces each registry from the provider modules it wires, and a test constructs it with fixtures. Both registries are immutable. A second member under the same key (sources and responders each), a second provider under the same id, and a provider id outside the pattern are refused with `IllegalArgumentException`. `source(key)`, `responder(key)` and `find(id)` answer `Optional`; an unregistered key or id is empty, which is not an outcome of an operation. `CodeAnalysisProviderRegistry.ids()` answers the registered ids in the order they were passed.
+
+[#analysis-result]
+== The Analysis Result and Its Codec
+_Requirements: link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+`AnalysisResult` is one line of `analysis.jsonl`: its components are exactly the members of the schema of the link:../specification/store-schemas/03-findings-and-review-records.adoc#analysis-result[analysis result record], in schema order, with the quality gate (`Gate`, at most 256 conditions), its conditions (`Condition`) and the closed `CountStatus`, `GateResult` and `Comparator` nested in it. The new issues of an observation are not part of the record; they are findings with the source `analysis` and the same provider.
+
+The compact constructor refuses a violation with an `IllegalArgumentException` naming the rule, and a missing required member with a `NullPointerException` naming the member. Beside the structural rules (`format_version` 1, the provider id pattern, the length bounds of the provider's strings, counts at least 0, `new_code_issue_count` null iff `count_status` is `indeterminate`) it checks the consistency of status, gate and count:
+
+* `passed` requires a measured count of 0 and a gate that is null or passed;
+* `gate_failed` requires a failed gate;
+* `findings` requires a count above 0 and no failed gate;
+* an `indeterminate` count requires the status `undecidable`, unless the status is `running` or `not_run`.
+
+A result that breaks one of them is never built. The record has a builder (`AnalysisResult.builder()`, `toBuilder()`).
+
+`AnalysisResultCodec.write(result)` produces exactly one shape: one JSON object, UTF-8, no trailing line break, every member present and in schema order, an absent value as `null`, `observed_at` as `Instant.toString()` writes it. `AnalysisResultCodec.read(line)` accepts exactly that shape: only declared members, each once, all present, each with its one JSON type, `format_version` exactly 1, an instant only in that spelling, nothing after the object. A line that breaks a rule of the record is refused like a malformed one, so a line that was read is written again byte for byte. The codec works on the streaming API of `jackson-core`, without `jackson-databind` and without reflection, and carries its own small strict-reading helpers instead of those of `core.store`, on which the two packages must not depend.
+
+[#outcomes]
+== Outcomes and Completeness
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
+
+Both operations answer with one closed `AnalysisOutcome`: `OK` or one of the transport outcomes shared with the other provider contracts (link:../specification/job-runtime/01-pipeline-and-subprocesses.adoc#outcome-derivation[Job Runtime § Outcome Derivation]); the values are those of the enum. There is no outcome for an unknown target, a refusal or a rate limit. `AnalysisCallResult` checks on construction that
+
+* an `OK` result carries a value, and a transport outcome carries neither a value nor a completeness (it counts as `undecidable` in the wait);
+* a result of `analysis.status` (an `AnalysisResult`) carries no completeness;
+* an `OK` result of `analysis.issues` (a list of findings) carries a `Completeness`; an incomplete read makes the observation's `count_status` `indeterminate`.
+
+`AnalysisCallResult.issues` copies the list it is given.
+
+[#schema-tests]
+== The Schema Tests
+_Requirements: link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+Two tests check the code against the JSON schemas this repository states, read from a checkout of the documentation repository:
+
+* https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/analysis/AnalysisResultSchemaTest.java[`AnalysisResultSchemaTest`] validates every line `AnalysisResultCodec` writes for its fixtures against the schema of the analysis result record (JSON Schema draft 2020-12, `com.networknt:json-schema-validator`, test scope).
+* https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/findings/FindingSchemaParityTest.java[`FindingSchemaParityTest`] asserts that the record components of `Finding` and of its nested records are the members of the schema of the findings ledger record in schema order, and that every enumeration of the record equals the `enum` of its member, `FindingSourceKind` against `source` included.
+
+The helper https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/SpecificationDocument.java[`SpecificationDocument`] finds the checkout through the system property `pm.documentation.root`, which the surefire configuration of `pm-core` passes from the Maven property of the same name. Its default is `../plan-marshall-documentation` beside the repository's root; a build from a linked worktree, where that path does not resolve, passes `-Dpm.documentation.root=<path>`. When the checkout is absent the two tests are aborted through a JUnit assumption whose message names the missing path, so they show as skipped, never as passed. Inside a present checkout, a missing document or schema block is a failure. CI does not check the documentation repository out beside the code, so the schema tests run there as skipped until it does.
+
+[#pitfalls]
+== Pitfalls
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
+
+* *Register under the store's key, not under a provider name.* A source is found by the `source` value the store records and, for `analysis`, by the provider id; a key of its own (a provider name, a review-bot name) would fetch findings under one key and store them under another. Build the key with `FindingSourceKey.of(kind)` or `FindingSourceKey.analysis(id)`, and make every returned finding carry the same `source` and `provider`.
+* *Nothing in `pm-core` names a provider.* No class of `pm-core` depends on a provider package `de.planmarshall.provider..`, and no class, package or member name contains `github`, `gitlab`, `sonar` or `codeql`, ignoring case. The single exemption are the constants `GITHUB_PR` and `GITLAB_MR` of `FindingSourceKind`: their names are fixed by the store's closed `source` vocabulary (`github_pr`, `gitlab_mr`) and name the kind of producer of a finding, not a provider identity. A constant of the same name in any other type is not exempt. A provider's name belongs in its provider module and in the configuration, never in the foundation.
+* *The two packages stay declarations, serialization and validation.* No class of `core.findings` or `core.analysis` depends on `java.net.http`, `javax.net`, `de.cuioss.http` or a class of `java.net` other than `URI`, calls a writing, creating, moving, copying or deleting method of `java.nio.file.Files`, uses `FileOutputStream`, `FileWriter`, `RandomAccessFile` or `FileChannel`, or depends on `de.planmarshall.core.store`. The call to a provider belongs to the provider module, the write of the ledger and of `analysis.jsonl` to the store and the workflow.
+
+The second and the third pitfall are enforced by ArchUnit tests over the main classes of `pm-core` (see <<tests>>); each applies its rule to control fixtures on which it must fail, so a rule that matches nothing is noticed.
+
+[#tests]
+== Tests
+_Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+* `FindingTest`, `FindingScopeTest`, `FindingSourceKeyTest`: one refusing test per rule of the record, the scope and the key, and accepted fixtures.
+* `FindingsContractTest`, `FindingRegistryTest`: the contracts with fixture implementations; registration by key, duplicate keys refused, unregistered and other-provider keys empty.
+* `AnalysisResultTest`, `AnalysisResultCodecTest`: every consistency and structural rule; the byte-identical round trip of every fixture and each refusal of the reader.
+* `AnalysisCallResultTest`, `CodeAnalysisProviderTest`, `CodeAnalysisProviderRegistryTest`: the rules of the call result, every outcome through both operations, and the registry.
+* `AnalysisResultSchemaTest`, `FindingSchemaParityTest`: the schema checks of <<schema-tests>>.
+* https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/guard/ProviderNeutralityArchTest.java[`ProviderNeutralityArchTest`]: the neutrality rule on the main classes, the exemption as one constant of the test, the proof that without it the rule fails on exactly the two exempt constants, and the controls `GitHubNamedFixture` and `ExemptionScopeFixture`.
+* https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/guard/AnalysisBoundaryArchTest.java[`AnalysisBoundaryArchTest`]: the boundary rule on the two packages and the controls `HttpClientFixture`, `FileWriteFixture` and `StoreDependencyFixture`.
