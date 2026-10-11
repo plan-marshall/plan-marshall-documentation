@@ -28,6 +28,9 @@ The developer guide describes how the implemented system is built, extended and 
 |link:developer/locks-and-leases.adoc[Locks and Leases]
 |The lock manager and the total lock order, the keys and lock files, the atomic write and the lock-free read of a store, the lease store and the stale lease sweep: the types, how to use and extend them, their pitfalls and their tests.
 
+|link:developer/runtime-lifecycle.adoc[Runtime Lifecycle]
+|The package `runtime.start` of `pm-runtime`: the start steps with the bounded verification, the drain, the per-project recovery with its steps, the periodic sweep and the relay version check; the seams through which later packages join them, the killed-runtime fixture and the cold-start guard, and the pitfalls.
+
 |link:developer/store-substrate.adoc[Store Substrate]
 |How a store is read and written: the format refusal and the strict reading of a codec, the JSONL append with its tail repair, the transaction journal of a scope with its recovery, the digest sidecar with its verification and re-baseline, the ordered write across scopes with its reconcilers, the audit records, the crash-point tests and the pitfalls.
 

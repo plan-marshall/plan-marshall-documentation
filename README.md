@@ -14,6 +14,7 @@ holds no code and builds no artifact.
 | [Roadmap](doc/roadmap.adoc) | The delivery staging |
 | [Concepts](doc/Concepts.adoc) | Why the system is built the way it is |
 | [Developer Guide](doc/DeveloperGuide.adoc) | How the implemented system is built, extended and tested |
+| [User Guide](doc/UserGuide.adoc) | How the implemented system is installed, configured and operated |
 | [Log Messages](doc/LogMessages.adoc) | The log message reference |
 
 The code lives in [plan-marshall-mcp](https://github.com/plan-marshall/plan-marshall-mcp) (the daemon assembly and

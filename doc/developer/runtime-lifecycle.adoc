@@ -1,0 +1,130 @@
+= Runtime Lifecycle
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » Runtime Lifecycle
+
+[#types]
+== The Types
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+The lifecycle of the runtime is plain Java in the package `de.planmarshall.runtime.start` of the library module `pm-runtime` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`]. It holds no Quarkus type: the assembly `pm-mcp-server` constructs the types and calls them from its `StartupEvent` observer, its signal handlers and its requests (link:assembly-boundary.adoc[The Assembly Boundary]). Why the lifecycle works this way is explained in link:../concepts/runtime-lifecycle.adoc[Concepts § Runtime Lifecycle].
+
+[cols="1,3", options="header"]
+|===
+|Type |What it does
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/StartupSequence.java[`StartupSequence`]
+|Steps 1 to 5 of the start: the singleton lock (`RuntimeLock`), the removal of a stale socket and runtime record under it, the directory check (`BaseDirectoryCheck`), the bounded verification, and a fresh token (`RuntimeTokenFile`). Its outcome is `Ready` (the held lock and the outcome of the audit chain verification), `LockHeld` or `Refused` (exit code `77`).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/AuditChainVerification.java[`AuditChainVerification`]
+|The seam of the bounded verification (step 4): `verify()` answers `Intact`, `Broken(diagnostic)` or `NotVerified(reason)`. On `Broken` the sequence logs `PM_MCP-152`, hands an `audit_chain_broken` record (`category: security`, `outcome: failed`, `details{diagnostic}`) to its `AuditSink`, and goes on. `NONE` answers `NotVerified("no audit chain")`.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/RuntimeDrain.java[`RuntimeDrain`]
+|The drain: `drain()` runs once, every further call waits for the first and gets its `Outcome` (exit code `0`, the participants that got quiet, what was terminated, the failures). `isDraining()` is `true` from the first call on and serves `facts.runtime: draining`. The drain timeout runs on the `Clock` it is given.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/DrainParticipant.java[`DrainParticipant`]
+|The seam of the drain: `stopAdmitting()`, `endIdle()`, `awaitQuiet(deadline)`, `terminateRemaining()` and `close()`, called in that order on every participant.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/DrainTimeout.java[`DrainTimeout`]
+|Reads `drain_timeout_seconds` of `<PM_MCP_BASE>/machine-config.json` with `jackson-core`: `600` when the file or the key is absent, `0` and up as given, and `600` with `PM_MCP-154` for a negative or non-integer value or a file that is unreadable or not one JSON object (link:../user/operator.adoc#drain-timeout-seconds[User Guide § drain_timeout_seconds]).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ProjectRecovery.java[`ProjectRecovery`]
+|The per-project recovery: `startBackgroundPass()` after the bind, `awaitRecovered(projectId)` for the first call addressing a project, answering `Recovered(outcome)`, `Recovering` after `RECOVERY_WAIT` (10 seconds) or `NotEnrolled`, and `isRecovered(projectId)` for the periodic sweep. The recoveries run on the `Executor` it is given.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/EnrolledProjects.java[`EnrolledProjects`]
+|The seam that lists the enrolled project ids, the population of the recovery and of the sweep. `NONE` lists none.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/RecoveryStep.java[`RecoveryStep`]
+|The seam of one recovery step: a `Name` (the ten steps in their order) and `run(projectId)` answering `Done(report)` or `Failed(reason)`. `notImplemented(name)` is the no-op step that reports `not implemented in this runtime`.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/LeaseRecoveryStep.java[`LeaseRecoveryStep`]
+|Step `LEASES`: the project-selecting stale lease sweep over every lease store it is given (link:locks-and-leases.adoc#sweep[Locks and Leases § The Stale Lease Sweep]), with the caller's `AbandonmentEvidence`; `AbandonmentEvidence.NONE` finds none, so nothing is released.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/JournalRollForwardStep.java[`JournalRollForwardStep`]
+|Step `JOURNAL_ROLL_FORWARD`: for each scope of `ProjectScopes`, a transaction on the `LockManager` that acquires the scope key and calls `JournalRecovery.recover` (link:store-substrate.adoc[Store Substrate]). An invariant violation, a refused store or an I/O failure is a failure of its scope; the step goes on with the next scope and then fails, listing every failed scope.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/CrossScopeReconciliationStep.java[`CrossScopeReconciliationStep`]
+|Step `CROSS_SCOPE_RECONCILIATION`: every `CrossScopeReconciler` of `ProjectReconcilers` with the `LockManager` and the `AuditSink`; a refused or unreadable store fails the step and the remaining reconcilers do not run.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/PeriodicSweep.java[`PeriodicSweep`]
+|The periodic sweep: `start(executor)` schedules a run every `INTERVAL` (3600 seconds), `runOnce(now)` runs every `SweepStep` for every enrolled project that `recovered` accepts with `olderThan = now − PENDING_ENTRY_MAX_AGE` (86400 seconds) and answers a `Summary` (swept, skipped, failed), and `stop()` cancels the schedule for the drain.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/SweepStep.java[`SweepStep`]
+|The seam of one sweep step: `PENDING_ENTRY_RECORDS` and `FENCED_SESSION_GENERATIONS`, `run(projectId, olderThan)` answering a `RecoveryStep.Outcome`; `notImplemented(name)` is the no-op step.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/RelayVersionCheck.java[`RelayVersionCheck`]
+|The relay version check: `observe(relayVersion)` with the value of the `PM-MCP-Relay-Version` header (`HEADER`) of every relayed request, and `mismatch()` with the latest `Mismatch` (relay version, runtime version, `pm-operator drain`) for `pm-operator status` alone (link:../user/operator.adoc#relay-version-mismatch[User Guide § Relay Version Mismatch]).
+|===
+
+Every log message of the package is a `LogRecord` of `PmMcpLogMessages`, `PM_MCP-53` to `PM_MCP-57`, `PM_MCP-152` to `PM_MCP-159` and `PM_MCP-252` (link:../LogMessages.adoc[Log Messages]).
+
+[#seams]
+== The Seams
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+Most of what the lifecycle drives does not exist yet: the audit trail, the enrolment store, jobs, workers, the pending store, the task queue. Each is a seam with a default that does nothing harmful, so the lifecycle runs today and a later package fills its part without touching the orchestration:
+
+[cols="1,2,2", options="header"]
+|===
+|Seam |Default |Filled by
+
+|`AuditChainVerification`
+|`NONE`: no chain to verify
+|the audit trail, with the incremental verification of `logs/audit.head`, the rotation index and the `prev_hash` chain
+
+|`DrainParticipant`
+|no participant
+|jobs, workers, the LSP pool and the web listener, each a participant; the web listener is passed last, so it closes last
+
+|`EnrolledProjects`
+|`NONE`: no project
+|the enrolment store
+
+|`RecoveryStep`
+|`notImplemented(name)` for the seven steps other than leases, roll-forward and reconciliation
+|the package that owns the step's store or component: one `RecoveryStep` with that `Name`
+
+|`LeaseRecoveryStep.AbandonmentEvidence`
+|`NONE`: never abandoned
+|the stores that know a scope is terminal, archived or gone, a lease expired without adoption, or a slot's job was recorded `killed`
+
+|`JournalRollForwardStep.ProjectScopes`
+|`NONE`: no scope
+|the per-project machine store: the plan, epic and workspace scopes and the lesson store of a project
+
+|`CrossScopeReconciliationStep.ProjectReconcilers`
+|`NONE`: no reconciler
+|each store that writes across scopes registers its reconciler
+
+|`SweepStep`
+|`notImplemented(name)` for both steps
+|the pending store (one audit record per removed record) and the task queue (under the queue lock)
+|===
+
+`ProjectRecovery` takes one step per `Name` and refuses two steps with the same name; it sorts them by `Name`, so the order in which they are passed does not matter. A new step is therefore a new `Name` constant at its place in the order of the specification, not a new list position. A step reports a failure as `Failed`, never as an exception; one that throws anyway is recorded as the failed step of its project, so a broken step cannot leave callers waiting.
+
+[#tests]
+== Tests
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7], link:../Requirements.adoc#PM-TECH-3[PM-TECH-3]_
+
+The unit tests run on the JVM with fakes and a test clock: `StartupSequenceTest`, `RuntimeDrainTest`, `DrainTimeoutTest`, `ProjectRecoveryTest`, `LeaseRecoveryStepTest`, `JournalRollForwardStepTest`, `CrossScopeReconciliationStepTest`, `PeriodicSweepTest` and `RelayVersionCheckTest`. The fixtures `ProviderLeaseStores` (a merge-queue and a review-bot lease store, each with a lease, and the assertion that both are byte-identical) and `RecoveryStepFixtures` are shared by them.
+
+*The killed-runtime fixture.* A crash cannot be simulated in the test JVM, because a killed process must really lose its locks and its memory. `KilledRuntimeFixture` starts `RuntimeChildProcess` in a JVM of its own with the `java` and the class path of the test JVM, waits for a named marker line on its standard output, and kills it with `SIGKILL` (`Process.destroyForcibly()`) in the middle of a lifecycle step; the next instance then runs in the test JVM against the same base. Every wait is bounded (`PROCESS_BOUND`, 30 seconds), and the fixture is closed after every test, also a failed one, which kills a child still alive. The child has one mode per step (`startup`, `drain`, `recovery`, `leases`, `rollforward`, `ordered-write`, `sweep`, `version`); a new lifecycle step adds its mode there. The killed-runtime tests run under `-Pintegration-tests`: `BoundedVerificationKilledRuntimeIT`, `RuntimeDrainKilledRuntimeIT`, `ProjectRecoveryKilledRuntimeIT`, `RecoveryStepsKilledRuntimeIT`, `PeriodicSweepKilledRuntimeIT` and `RelayVersionCheckKilledRuntimeIT`. Each test uses its own base from `TestBases`.
+
+*The cold-start guard.* `StartupColdStartIT` runs steps 1 to 5 with the `NONE` audit chain on fresh bases with 0 and with 300 enrolled projects (an enrolment file and a store directory each, written by the test). After five warm-up runs of each population it measures fifteen runs each, alternating, every run on a clean base. The seeded files and directories are forced to disk before the timed region, because step 5 ends in an `fsync` that would otherwise also pay for the seeding's write backlog. The comparison (`ColdStartComparison`) requires the lower quartiles of the two populations to agree within half the larger one plus 5 ms: noise on a shared machine only adds time, so the fast end of each population is the robust measure. A control makes the pass non-vacuous: after a start on a seeded base no seeded file has a new access time, while a file read on purpose has one. The test logs the medians as the JVM figure; on a developer machine both populations had a median of about 5 to 6 ms, agreeing within about 0.5 ms.
+
+[#pitfalls]
+== Pitfalls
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+* *Never add work that grows with the projects to the start.* Step 4 reads no enrolment, plan or job file; such work belongs in the per-project recovery or where the file is used. `StartupSequenceTest` and the control of `StartupColdStartIT` fail for a seeded file that is read.
+* *Steps 2 to 5 run only under the singleton lock.* Never remove the socket or the runtime record, or write the token, before `RuntimeLock.tryAcquire` has succeeded: a runtime without the lock could unlink the live holder's socket.
+* *Decide an admission under the participant's own lock, and re-read `isDraining()` there.* The drain sets its flag before it calls any participant; a participant that checks the flag outside its admission lock can admit a job between the check and the flag, which then outlives the drain unsupervised.
+* *Never release a merge-queue or review-bot lease in a drain participant.* A participant releases only its build and model slots and task leases, in `terminateRemaining()`. `RuntimeDrainTest` asserts the provider lease stores byte-identical after a drain.
+* *Claim a recovery with `computeIfAbsent`, never with `containsKey` and `put`.* "Recover once, whichever trigger comes first" is a claim on a shared slot; a separate check and act lets the lazy trigger and the background pass both run the steps. Only the installer of the future runs it, and the bounded wait (`Future.get` with a timeout) never cancels it. Across processes the singleton lock rules out two runtimes recovering one base.
+* *Decide "record once" by the result of one `Set.add`.* `RelayVersionCheck` writes the audit record of a relay version only from the request whose insert into its concurrent set succeeded; a lookup followed by an insert would let a busy relay write it many times. A refused record removes the version again, so the next request retries.
+* *A recovery or sweep step reports, it does not throw.* Return `Failed` with a reason; a `StoreRefusal` or `UncheckedIOException` that escapes is still caught, but loses the report of the step.
+* *Select only on positive evidence.* A recovery or sweep step never removes or releases on a name that fails to parse, and excludes the reserved entries of its directory by construction (the sweep rule of `RecoveryStep` and `SweepStep`).
