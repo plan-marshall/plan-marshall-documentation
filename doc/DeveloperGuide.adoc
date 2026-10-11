@@ -41,5 +41,5 @@ The developer guide describes how the implemented system is built, extended and 
 |The provider-neutral findings and code-analysis contracts of `pm-core`: the finding record, its scope and registry key, how a provider module implements and registers a source, a responder or a code analysis provider, the analysis result with its strict codec, the outcomes of the two operations, the schema tests against the documentation checkout, and the pitfalls with the guards that enforce them.
 
 |link:developer/workflow-dsl.adoc[The Workflow Language]
-|The immutable tree of a workflow unit, the lexer and parser with their refusals, the reading of a plan instance's header, the printer and the round trip: the packages, their rules and pitfalls, and their tests.
+|The immutable tree of a workflow unit, the lexer and parser with their refusals, the reading of a plan instance's header, the printer and the round trip, the static verifier with its checks and exemptions, and the seeded transition fuzzer that finds dead states: the packages, their rules and pitfalls, and their tests.
 |===
