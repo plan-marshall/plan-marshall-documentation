@@ -38,7 +38,7 @@ The proof is a sidecar beside the file, `<PM_MCP_BASE>/enrolments/<project_id>.j
   "hmac":   "<lowercase-hex HMAC-SHA-256 over the exact canonical bytes>" }
 ----
 
-The HMAC is computed under the enrolment integrity key, an operator-lane secret that only the runtime reads. Where the machine has an OS keyring, the key is the keyring entry of the instance under the fixed account `enrolment-integrity-key`; on a host without a keyring it is the file `<PM_MCP_BASE>/state/enrolment-hmac.key`, which must belong to the running user and carry no permission bit outside `0600`. The key is 256 random bits, created by the first write that needs it (an enrolment or a re-baseline) and never replaced. It appears in no log record and no message, and a key that exists but cannot be read (a key file with a foreign owner or a broader mode, a key that does not decode, a failing keyring) is a failure of its own, never mistaken for a key that does not exist yet.
+The HMAC is computed under the enrolment integrity key, an operator-lane secret that only the runtime reads. Where the machine has an OS keyring, the key is the keyring entry of the instance under the fixed account `enrolment-integrity-key`; on a host without a keyring it is the file `<PM_MCP_BASE>/state/enrolment-hmac.key`, which must belong to the running user and carry no permission bit outside `0600`. The key is 256 random bits, created by the first write that needs it and never replaced. The key file is created atomically: the key is written to a temporary file in the same directory with mode `0600` and synced, published under its name by a hard link that never replaces an existing file, and the directory is synced, so a crash leaves the complete key or no key file. An enrolment creates the key only when no key exists and no enrolment file exists. A key that is absent while enrolment files exist, typically because the key backend was switched between the keyring and the key file, would strand every enrolment written under the other one; the enrolment is therefore refused as `enrolment_tampered`, with a reason that names the key-source switch and the command `pm-operator accept-edit enrolment <project_id>` of the first enrolled project, and nothing is written. The re-baseline is the operator's explicit act and is the write that creates the key over existing enrolments (<<rebaseline>>). The key appears in no log record and no message, and a key that exists but cannot be read (a key file with a foreign owner or a broader mode, a key that does not decode, a failing keyring) is a failure of its own, never mistaken for a key that does not exist yet, and never replaced.
 
 The size and the SHA-256 serve the operator: they are what a re-baseline shows as recorded against current (<<rebaseline>>). The HMAC serves the runtime: without the key nobody can produce the HMAC of an edited file, so an edit made behind the runtime, however carefully the size and SHA-256 are adjusted to match, is detected.
 
@@ -66,6 +66,8 @@ Before the runtime uses anything in an enrolment it runs the enrolment check und
 
 The per-use checks come first because they say whether the file can be trusted to be the operator's at all. A file that another user owns, or that other users may read or write, or a symbolic link that points somewhere else, is refused as `enrolment_insecure`; a narrower mode such as `0400` passes. The checks read the file's own attributes and never follow a link. They complement the audit of `<PM_MCP_BASE>`, `enrolments/` and `run/` at runtime start: that audit refuses the start, these checks refuse only the project.
 
+When step 5 finds no key at all, the reason of the refusal names a switch of the key source between the keyring and the key file as the usual cause.
+
 An `enrolment_tampered` refusal names the operator command that resolves it, `pm-operator accept-edit enrolment <project_id>`: the operator reviews the file and re-baselines it (<<rebaseline>>). Until then nothing in the file is trusted. Both integrity refusals are logged and recorded in the audit log with the project and the reason; an audit log that cannot be written does not lift the refusal.
 
 [#isolation]
@@ -79,6 +81,8 @@ Every project has its own file, its own sidecar and its own lock, and the check 
 _Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
 
 An edit the operator meant is accepted by re-baselining the file: the runtime writes a new sidecar record over the file as it is now, and leaves the file itself unchanged. It does so only for a file that exists, passes the per-use checks and reads strictly as an enrolment of its project, so a re-baseline never blesses a file the runtime could not use. It reports what the old sidecar recorded, the size and SHA-256 the operator is to compare, and the new values; when no readable old record exists, there is nothing recorded to show. The re-baseline is an operator act and is recorded in the audit log.
+
+After a switch of the key source, the first re-baseline creates the new key; every other enrolment, written under the old key, then fails its check with an HMAC mismatch naming its own project, and is re-baselined the same way, one by one.
 
 [#residual-risk]
 == Residual Risk
