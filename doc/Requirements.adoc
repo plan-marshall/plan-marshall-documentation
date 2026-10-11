@@ -90,7 +90,7 @@ Project umbrella prefix: `PM-`
 |`PM-TEST`
 |Quality Assurance & Testing Strategy
 |link:requirements/12-testing.adoc[12-testing.adoc]
-|link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/module-structure.adoc[module-structure.adoc]
+|link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/runtime-model.adoc[runtime-model.adoc]
 
 |`PM-CLIENT`
 |Client Profiles & Dynamic Translation
