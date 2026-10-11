@@ -123,7 +123,7 @@ The runtime creates every file under `<PM_MCP_BASE>` with mode `0600` and every 
 
 |`<PM_MCP_BASE>/state/enrolment-hmac.key`
 |`0600` (`-rw-------`)
-|Enrolment HMAC key on hosts without an OS keyring only; its residual risk is documented with the enrolment integrity (`PM-SEC-5`).
+|Enrolment HMAC key on hosts without an OS keyring only; its residual risk is documented with the enrolment integrity (link:../../concepts/enrolment.adoc#residual-risk[Concepts § Enrolment, Residual Risk]; `PM-SEC-5`).
 
 |`<PM_MCP_BASE>/projects/` and every `<project_id>/` below it
 |`0700` (`drwx------`)

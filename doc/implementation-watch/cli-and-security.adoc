@@ -313,27 +313,23 @@ Source:: design review.
 
 Anchor:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[CLI & Security § Enrolment, Lifecycle Gate & Release],
 link:../specification/store-schemas/11-enrolment-store.adoc#project-store-identity[Store Schemas § Project Store Identity]
-Hazard:: An unenrol that runs while plans, epics, or jobs are live leaves them without an enrolment, and a re-enrolment
-from a different root silently adopts another checkout's plans, ledger, and findings.
-Guard:: `unenrol` with a non-terminal plan, a non-terminal epic, and a running job is each refused naming them; a
-permitted `unenrol` leaves `<PM_MCP_BASE>/projects/<project_id>/` byte-identical; re-enrolling the same `project_id`
-from a different root is refused with `project_store_root_mismatch`; control: re-enrolling from the recorded root
-reuses the store.
+Hazard:: A re-enrolment from a different root silently adopts another checkout's plans, ledger, and findings. (The
+unenrol half is guarded: link:../developer/enrolment-store.adoc#pitfalls[Developer Guide § Enrolment Store, Pitfalls].)
+Guard:: Re-enrolling the same `project_id` from a different root is refused with `project_store_root_mismatch`;
+control: re-enrolling from the recorded root reuses the store.
 Source:: design review.
 
 [#PM-WATCH-CLI-25]
 === PM-WATCH-CLI-25: The lifecycle gate is a release constant, and only a pilot passes a closed gate
 
 Anchor:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[CLI & Security § Enrolment, Lifecycle Gate & Release] (Lifecycle gate)
-Hazard:: A gate that a configuration key, an environment variable, or an edited enrolment file can open lets a
-pre-Stage-4 release create plans everywhere, and a release that ships with the constant in the wrong position either
-blocks every project or opens the lifecycle before its exit criteria are met.
+Hazard:: A scope creation that bypasses the gate, or reads an enrolment that was not verified, lets a pre-Stage-4
+release create plans everywhere. (The gate decision, its compiled position and the HMAC over `pilot` are guarded:
+link:../developer/enrolment-store.adoc#pitfalls[Developer Guide § Enrolment Store, Pitfalls].)
 Guard:: With the gate constant closed: `start.create-scope` in a project enrolled without `--pilot` is refused
-`lifecycle_closed` and creates nothing, and in a project enrolled with `--pilot` it creates the scope; `pilot` is
-covered by the enrolment HMAC, so an enrolment file edited to `pilot: true` outside the operator verb is refused
-`enrolment_tampered`; re-running `enrol` without `--pilot` refuses later scope creations while the project's live
-plans continue. With the gate constant open: both projects create scopes, and the flag has no effect. A release test
-asserts the position of the constant against the release's Stage 4 status.
+`lifecycle_closed` and creates nothing, and in a project enrolled with `--pilot` it creates the scope; re-running
+`enrol` without `--pilot` refuses later scope creations while the project's live plans continue. With the gate
+constant open: both projects create scopes.
 Source:: design review.
 
 [#PM-WATCH-CLI-29]

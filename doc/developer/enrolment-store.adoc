@@ -1,0 +1,173 @@
+= Enrolment Store
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../DeveloperGuide.adoc[Developer Guide] » Enrolment Store
+
+The enrolment store is split between the foundation `pm-core` and the library module `pm-runtime` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`]: the package `de.planmarshall.core.store` holds the typed record, its codec, the sidecar record, the store and the lifecycle gate, and holds no key; the package `de.planmarshall.runtime.enrolment` holds the integrity key, the HMAC, the per-use checks, the check and the operator writes. Why the enrolment works this way is explained in link:../concepts/enrolment.adoc[Concepts § Enrolment].
+
+[#types]
+== The Types
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-4[PM-SEC-4], link:../Requirements.adoc#PM-SEC-5[PM-SEC-5], link:../Requirements.adoc#PM-MIG-1[PM-MIG-1]_
+
+[cols="1,1,3", options="header"]
+|===
+|Type |Package |What it does
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ProjectEnrolment.java[`ProjectEnrolment`]
+|`de.planmarshall.core.store`
+|The enrolment of one project: every field of the closed schema typed, every name with a fixed set of values a closed enum, every value validated in the compact constructors (see <<schema-and-codec>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentCodec.java[`EnrolmentCodec`]
+|`de.planmarshall.core.store`
+|The strict reader of an enrolment file and the writer of its canonical bytes (see <<schema-and-codec>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[`EnrolmentSidecar`]
+|`de.planmarshall.core.store`
+|The sidecar record `{format_version, size, sha256, hmac}` and its strict codec; it holds no key and computes no HMAC (see <<schema-and-codec>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentStore.java[`EnrolmentStore`]
+|`de.planmarshall.core.store`
+|The paths, the listing, and the reads and writes of the file and its sidecar under the project's lock (see <<store>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LifecycleGate.java[`LifecycleGate`]
+|`de.planmarshall.core.store`
+|The compiled lifecycle gate and its decision per enrolment (see <<lifecycle-gate>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[`StoreRefusal`]
+|`de.planmarshall.core.store`
+|Besides the format refusals, the outcomes `ENROLMENT_TAMPERED` (`enrolment_tampered`) and `ENROLMENT_INSECURE` (`enrolment_insecure`) with their factories (see <<check>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/LiveWork.java[`LiveWork`]
+|`de.planmarshall.core.service`
+|The live work of a project (non-terminal plans and epics, running jobs), which refuses an `unenrol`; implemented by the runtime from its lease and scope records (see <<operator-writes>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[`AuditEvent`]
+|`de.planmarshall.core.service`
+|One factory per enrolment event (see <<audit-records>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentKey.java[`EnrolmentKey`]
+|`de.planmarshall.runtime.enrolment`
+|The integrity key, from the keyring or the key file (see <<integrity-key>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentHmac.java[`EnrolmentHmac`]
+|`de.planmarshall.runtime.enrolment`
+|The HMAC-SHA-256 over the canonical bytes, its constant-time verification, and the sidecar record of a set of bytes.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentFileCheck.java[`EnrolmentFileCheck`]
+|`de.planmarshall.runtime.enrolment`
+|The per-use checks of a file: no symbolic link, the running user as owner, no permission bit outside `0600` (see <<check>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[`EnrolmentCheck`]
+|`de.planmarshall.runtime.enrolment`
+|The enrolment check that returns a verified `ProjectEnrolment` or refuses (see <<check>>).
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[`Enrolments`]
+|`de.planmarshall.runtime.enrolment`
+|The operator writes `enrol`, `unenrol` and the re-baseline of `accept-edit enrolment` (see <<operator-writes>>).
+|===
+
+Nothing in the daemon calls these types yet: the operator verbs and their endpoints, the check in the project's recovery and before verify-not-resolve, the gate in the bootstrap's scope creation, and a `LiveWork` over the runtime's records come with the packages that wire them.
+
+[#schema-and-codec]
+== Schema and Codec
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-MIG-2[PM-MIG-2], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+`ProjectEnrolment` is the schema. Its nested records (`Wrapper`, `PinnedFile`, `HostTool`, `Build`, `Argv`, `ProviderVerification`, `ProjectScript`, `Binding`, `ArgumentSchema`, `LanguageServer`) and enums (`WrapperName`, `HostToolName`, `Interpreter`, `BuildSystem`, `Provider`, `WorkerKind`, `ContainerEngine`, …) carry the patterns, closed name sets and bounds; an instance that exists is one the schema admits. `project_root` is a normalized absolute path, an argument vector has at least one element and at most one module-argument group, a wrapper `pw` is run by `python3` and every other wrapper by none, a project script has a budget of at least ten seconds, a budget at least one second. What only the enrolment verb can decide (shell metacharacters in an argument vector, a write path below `<PM_MCP_BASE>`, a refused environment name) is not checked here.
+
+The maps are copied into a stable order in the constructor (the declaration order of an enum key, the natural order of a string key). `EnrolmentCodec.write` relies on that: it writes every field, defaults included, in the order of the schema, so the same enrolment always gives the same bytes. Those are the bytes the HMAC is computed over; never compute it over bytes from anywhere else.
+
+`EnrolmentCodec.read(file, content)` and `EnrolmentSidecar.read(file, content)` read through `StrictJson` like every codec of the package (link:store-substrate.adoc#format-versions[Store Substrate § Format Versions and Refusals]): the version first (`format_outdated` or `format_newer` naming the file), every field at most once, no undeclared field at any level of nesting, every required field, one JSON type per field. The optional fields `pilot`, `container_engine`, `released_at` and the `interpreter` of a host tool read as their defaults when absent. A `StoreRefusal` from the sidecar names the sidecar file.
+
+`EnrolmentSidecar` pairs a `StoreDigest` (size and SHA-256) with the HMAC, 64 lowercase hexadecimal digits. `matches(content)` compares the size and SHA-256 only; the HMAC is the runtime's to verify.
+
+[#store]
+== The Store
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`EnrolmentStore(base)` names the paths below the base directory: `file(projectId)` is `enrolments/<project_id>.json`, `sidecar(projectId)` is `enrolments/<project_id>.json.hmac`, and `lockKey(projectId)` is `LockKey.enrolment(base, projectId)`, the lock file `locks/enrolments/<project_id>.lock` of the machine store level, ordered by project id (link:locks-and-leases.adoc[Developer Guide § Locks and Leases]). A project id outside the identifier pattern is refused before it becomes part of a path. The store does not create `enrolments/`.
+
+* `projectIds()` lists the enrolled projects without a lock: every file `<project_id>.json` with a valid id; sidecars, temporary files and anything else are not enrolments, and a missing directory lists none.
+* `readFile` and `readSidecar` return the exact bytes, empty when the file does not exist; `decode(projectId, content)` reads them as the project's enrolment and refuses one whose `project_id` is not the name of its file as `unreadable`; `decodeSidecar` reads a sidecar record.
+* `write(transaction, enrolment, sidecar)` writes the canonical bytes, then the sidecar, each through `AtomicStoreFile`. It refuses a sidecar whose size and SHA-256 are not those of the canonical bytes, before anything is written.
+* `writeSidecar(transaction, projectId, sidecar)` replaces only the sidecar: the re-baseline.
+* `remove(transaction, projectId)` deletes the file and its sidecar, nothing else, forces the directory to disk, and reports whether either existed.
+
+Every read and write takes the transaction and refuses it as an internal fault unless it holds the project's own lock; the lock of another project does not count.
+
+[#lifecycle-gate]
+== The Lifecycle Gate
+_Requirements: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1], link:../Requirements.adoc#PM-MIG-5[PM-MIG-5]_
+
+`LifecycleGate.RELEASE` is the gate of the release. Its position is the private constant `OPEN_IN_THIS_RELEASE`, `false` today; the constructor is package-private, so only the release constant and the tests of the open position build a gate. `decide(enrolment)` returns `LIFECYCLE_CLOSED` (`lifecycle_closed`) for a released enrolment, `ADMITTED` for an open gate or a pilot, and `LIFECYCLE_CLOSED` otherwise. It takes a verified enrolment: read it through `EnrolmentCheck`, never with `EnrolmentStore.decode` alone, or an edited `pilot: true` would open the gate.
+
+[#integrity-key]
+== The Integrity Key
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-5[PM-SEC-5]_
+
+`EnrolmentKey(store, stateDirectory, user, random)` reads the key from the active `SecretStore`. Where that is a keyring, the key is the entry `CredentialAccount.global("enrolment-integrity-key")`; where it is the fallback file store, it is the file `<state>/enrolment-hmac.key`, read only after `EnrolmentFileCheck` passed it. The key is 32 random bytes kept base64url without padding.
+
+* `read()` is tri-state: the key, empty when it does not exist, or a `SecretStoreException` when it exists and cannot be read (an insecure or malformed key file, a failing keyring). Never treat the exception as an absent key.
+* `readOrCreate()` is the path of a write: it creates the key where none exists, the key file with `CREATE_NEW` and mode `0600`, so of two writers that race for it one creates it and the other reads it.
+* A failure is logged as `PM_MCP-260` naming the source and the reason code (link:../LogMessages.adoc[Log Messages]); the key itself is never in a record or a message.
+
+One instance serves the runtime: its methods are synchronized, and that is what keeps two first writes from creating two keys in a keyring.
+
+[#check]
+== The Enrolment Check
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-4[PM-SEC-4], link:../Requirements.adoc#PM-SEC-5[PM-SEC-5]_
+
+`EnrolmentCheck.verify(transaction, projectId)` acquires the project's lock in the caller's transaction (it may hold it already) and returns the verified `ProjectEnrolment`. The order of its steps is the one of link:../concepts/enrolment.adoc#check[Concepts § Enrolment, The Check]: per-use checks of file and sidecar, the pair, the sidecar record, size and SHA-256, the HMAC, the enrolment. It throws:
+
+* `StoreRefusal` as `ENROLMENT_INSECURE`, naming the file and the reason from `EnrolmentFileCheck` (a symbolic link, a foreign owner with both user names, a mode broader than `0600` with both modes);
+* `StoreRefusal` as `ENROLMENT_TAMPERED`, whose message names the reason and the command `pm-operator accept-edit enrolment <project_id>`; the reasons are the constants of `EnrolmentCheck` (`sidecar without its enrolment file`, `enrolment file without its sidecar`, `size or SHA-256 differs from the sidecar record`, `HMAC differs from the sidecar record`, `the integrity key does not exist`);
+* `StoreRefusal` as `absent` when neither file nor sidecar exists, and as `unreadable`, `format_outdated` or `format_newer` for the sidecar or the file;
+* `SecretStoreException` when the key exists and cannot be read.
+
+The two integrity refusals are logged (`PM_MCP-161`, `PM_MCP-162`) and handed to the `AuditSink`; when the sink fails, its exception is added to the refusal as suppressed and the refusal is thrown all the same.
+
+[#operator-writes]
+== The Operator Writes
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-MIG-1[PM-MIG-1], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+`Enrolments` opens its own transaction per write and acquires the project's lock in it. Each write is logged and audited after the transaction closed.
+
+* `enrol(enrolment, pilot)` writes the enrolment with `pilot` taken from the argument alone and `released_at` cleared, with the sidecar `EnrolmentHmac.sidecar(key.readOrCreate(), EnrolmentCodec.write(written))`. When the key cannot be read or created, nothing is written. Logs `PM_MCP-60`, audits `enrolment_written`.
+* `unenrol(projectId)` asks `LiveWork.of(projectId)` while it holds the lock. Live work throws `Enrolments.ScopeActiveException` (`CODE` `scope_active`), naming each item as `<kind> <id>`, after logging `PM_MCP-163` and auditing `unenrol_refused`; nothing is removed. Otherwise it removes file and sidecar and, if either existed, logs `PM_MCP-61` and audits `enrolment_removed`.
+* `rebaseline(projectId)` reads the file (`absent` if there is none), runs the per-use checks on it, decodes it strictly, reads the old sidecar record where one is readable, and writes a new sidecar over the current bytes. It returns `Enrolments.Rebaseline(file, recorded, current)`, the values the operator's display shows; `recorded` is empty without a readable old record. Logs `PM_MCP-62`, audits `enrolment_rebaselined`.
+
+[#audit-records]
+=== Audit Records
+
+[cols="1,1,1,2", options="header"]
+|===
+|Event |Category |Outcome |Details
+
+|`enrolment_tampered` |`security` |`refused` |`project_id`, `reason`
+|`enrolment_insecure` |`security` |`refused` |`project_id`, `reason`
+|`enrolment_written` |`operator` |`succeeded` |`project_id`
+|`enrolment_removed` |`operator` |`succeeded` |`project_id`
+|`enrolment_rebaselined` |`operator` |`succeeded` |`project_id`
+|`unenrol_refused` |`operator` |`refused` |`project_id`, `reason` (`scope_active`)
+|===
+
+The operator command that resolves a tampered enrolment is named by the refusal, not by its audit record. The names and keys are constants of `AuditEvent`; use the factories, never build an enrolment record by hand.
+
+[#pitfalls]
+== Pitfalls
+
+* *Unenrol must not strand live work.* An `unenrol` that runs while the project has a non-terminal plan, a non-terminal epic or a running job leaves that work without its enrolment. Ask `LiveWork` under the project's enrolment lock, in the same transaction as the removal, and remove only the file and its sidecar: the project's machine store stays byte for byte. Guarded by `EnrolmentsTest` (a live plan, epic and job each named in the refusal; a permitted `unenrol` leaves `projects/<project_id>/` byte-identical).
+* *The gate must not be openable from outside the release.* A gate that a configuration key, an environment variable or an edited enrolment file could open would let a release before Stage 4 create plans everywhere. Keep the position a compiled constant, never read it from configuration, and feed `decide` only verified enrolments. Guarded by `LifecycleGateTest` (the release constant is closed; a non-pilot refused `lifecycle_closed`, a pilot admitted; open position admits both) and `EnrolmentCheckTest` (an enrolment edited to `pilot: true` with a forged size and SHA-256 is refused by its HMAC).
+* *Compute the HMAC over the canonical bytes.* Bytes re-serialized by another writer, or read and written through a tolerant parser, differ from the canonical ones, and every check fails. Use `EnrolmentCodec.write` and `EnrolmentHmac.sidecar` together, as `Enrolments.enrol` does.
+* *Never read an absent key from an exception.* A key file that is insecure or malformed is a `SecretStoreException`; a caller that turns it into "no key yet" creates a second key and makes every enrolment tampered.
+* *Decide the integrity under the lock.* `EnrolmentStore.projectIds()` is lock-free and only lists; everything a decision rests on goes through `EnrolmentCheck.verify` in a transaction that holds the project's lock.
+
+[#tests]
+== Tests
+
+The store tests run on the JVM against a `@TempDir` base: in `pm-core` under the recording lock manager of the package's tests, in `pm-runtime` under the real `FileLockManager`.
+
+* `pm-core`: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentCodecTest.java[`EnrolmentCodecTest`] (canonical bytes, closed schema per nesting level, format refusals naming the enrolment file and the sidecar file), https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentStoreTest.java[`EnrolmentStoreTest`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LifecycleGateTest.java[`LifecycleGateTest`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[`StoreRefusalTest`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/LiveWorkTest.java[`LiveWorkTest`], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/AuditEventTest.java[`AuditEventTest`].
+* `pm-runtime`: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentKeyTest.java[`EnrolmentKeyTest`] (keyring and key file, the three read outcomes, logged without the key), https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentHmacTest.java[`EnrolmentHmacTest`] (known-answer vectors), https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentFileCheckTest.java[`EnrolmentFileCheckTest`] (`0600` passes, a broader mode, a symbolic link and a foreign owner are refused), https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[`EnrolmentCheckTest`] (every refusal with its untouched control, logged and audited, another project unaffected), https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[`EnrolmentsTest`].
