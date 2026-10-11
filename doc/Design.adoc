@@ -8,7 +8,7 @@ link:../README.md[plan-marshall documentation] » Design
 
 == Overview
 
-The design shows how the link:UseCases.adoc[Use Cases] look and behave in the web app and in the terminal: the views, what they show, how one moves between them, the interactions, and the visual language. It is the counterpart of the link:Specification.adoc[Specification] for what a person sees; the specification states what the system does behind it, and a design never contradicts it.
+The design shows how the link:UseCases.adoc[Use Cases] look and behave in the web app and in the terminal: the views, what they show, how one moves between them, the interactions, and the visual language. It is the counterpart of the link:Specification.adoc[Specification] for what a person sees; the specification states what the system does behind it, and a design never contradicts it. The design of the terminal client is the specification of its implementation and lives with its code, in link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc[`pm-mcp-clients`, Terminal Client]; the documents here show the web app and what both clients share.
 
 == Conventions
 
@@ -38,4 +38,5 @@ The design shows how the link:UseCases.adoc[Use Cases] look and behave in the we
 |`DRAFT`
 |link:use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], and every use case with a text
 |The two languages, the glossary of words that are never translated, how texts are written, and the keys and packs of the message catalogue.
+
 |===

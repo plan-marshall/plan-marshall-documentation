@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Onboarding
 
-The operator makes a machine ready for `PM-MCP`: the languages it speaks, one harness to work with, the harnesses and models other plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides.
+The operator makes a machine ready for `PM-MCP`: the languages it speaks, one harness to work with, the harnesses and models other plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
 
 Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app or in the terminal: both render the same states, and each use case is designed for both. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
 
@@ -17,6 +17,9 @@ Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the on
 
 [#consent-first]
 *Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes. A remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
+
+[#machine-defaults]
+*The machine sets defaults, not final values.* Every value the onboarding records is the default of every project, and a project may set its own: the model language, the allowed models, the role assignment, the providers, and the plan defaults. Only what is a fact of the machine itself has no project value: the interface language (the operator's own), the enrolled harnesses (the programs installed here, with their paths and digests), and the credential store (where this machine keeps its secrets). A plan overrides what <<change-plan-overrides>> names.
 
 [#UC-ONB-1]
 == UC-ONB-1: Onboard a Machine
@@ -74,7 +77,7 @@ Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
 Requirements:: none yet; the parts that exist are named in each use case below.
-Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens]
+Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc[Terminal Client]
 
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
@@ -179,6 +182,11 @@ Flow::
        │                       the first supported one preselected
        ├── add another (under "Advanced") ──► harness.add
        ▼
+  [O] harness.probe-consent    may the server run the login probe of the
+       │                       chosen harness? (its command, or a minimal
+       │                       headless call and its token cost)
+       ├── no ──────────────► stays at harness.probe-consent
+       ▼ yes | yes, don't ask again   (skipped when remembered)
   [S] harness.probe            version in the supported range; the harness
        │                       is logged in; each check ✓ or ✗ with its cause
        ├── fails ───────────► [S] harness.blocked  names the cause and the fix
@@ -484,7 +492,7 @@ Gap:: every machine-level choice is a `pm-operator` verb today; the web app is s
 Fix::
 * The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app as forms, and `pm-operator onboard` as an interactive terminal dialogue. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
 * A choice is an operator act in either: audited with channel `web` and the `device_id`, or channel `cli`; never relayed by a model and never taken through MCP elicitation. The terminal keeps the operator checks of `pm-operator` (an interactive terminal, no coding-agent environment).
-* Every aspect also has a direct verb for scripts and later changes (`pm-operator config language|harness|roles|credentials|providers|plan-defaults`), which runs the aspect's sub-workflow with its arguments as the choices and stops at the first state that needs a choice it was not given.
+* Every aspect also has a direct verb for scripts and later changes (`pm-operator config language|harness|models|roles|credentials|providers|plan-defaults`), which runs the aspect's sub-workflow with its arguments as the choices and asks at the first state that needs a choice it was not given, or with `--no-input` stops there (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]). Like every operator verb it runs in an interactive terminal only.
 * Command names, options, and identifiers are the same in every language; only the texts are translated (<<change-i18n>>).
 Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
@@ -550,7 +558,7 @@ Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile S
 
 Gap:: a harness must be logged in through its own login, and nothing checks it before the first worker starts.
 Fix::
-* A profile field `headless.auth_probe`: an argument vector and the exit codes that mean logged in and logged out. `harness.probe` runs it; `logged_out` leads to `harness.blocked` with the login command of the harness.
+* A profile field `headless.auth_probe`: an argument vector and the exit codes that mean logged in and logged out. `harness.probe` runs it after the consent `probe_harness_login` of `harness.probe-consent`; `logged_out` leads to `harness.blocked` with the login command of the harness.
 * A harness whose profile has no `auth_probe` is probed by one minimal headless call of the profile's `launch` form; its token cost is shown before it runs.
 Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema].
 
@@ -572,7 +580,8 @@ Gap:: nothing records which models a harness offers or which of them the operato
 Fix::
 * A machine store `<PM_MCP_BASE>/model-catalogue.json`: per enrolled harness the allowed models, each with its source (`probe` or `operator`) and the time it was recorded.
 * The models of a harness come from a profile field `headless.models_probe` (an argument vector whose output lists them) where the harness can list them; otherwise the operator enters the model ids in `catalogue.select`.
-* Role validation gains `model_not_allowed`: a role names a model the catalogue does not allow on its harness.
+* A project may allow its own models (<<machine-defaults>>): a project catalogue in its machine store `<PM_MCP_BASE>/projects/<project_id>/model-catalogue.json`, chosen from the models the enrolled harnesses offer, replaces the machine's allowed models for that project; without one the machine's apply.
+* Role validation gains `model_not_allowed`: a role names a model the effective catalogue (the project's, else the machine's) does not allow on its harness.
 Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
 
 [#change-steward-role]
@@ -602,7 +611,8 @@ Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#defau
 Gap:: no process writes a role's harness, model and effort; the operator edits artifacts, and a machine artifact replaces the shipped one as a whole, so it would stop following shipped changes of the role's other fields.
 Fix::
 * A machine store `<PM_MCP_BASE>/role-assignments.json`: per role name only `harness`, `model` and `effort`. `roles.write` writes it; the operator may still write whole artifacts.
-* Resolution order: shipped artifact, machine artifact, machine assignment, project artifact, plan override (<<change-plan-overrides>>); an assignment changes only its three fields of the artifact it lands on.
+* A project assignment of the same form in the project's machine store, `<PM_MCP_BASE>/projects/<project_id>/role-assignments.json` (<<machine-defaults>>), written by the same sub-workflow run for that project; a role it does not name keeps the machine's value.
+* Resolution order: shipped artifact, machine artifact, machine assignment, project artifact, project assignment, plan override (<<change-plan-overrides>>); an assignment changes only its three fields of the artifact it lands on.
 * The qualification digest is computed over the effective values, so a changed assignment makes the role's qualification stale per project, as a changed artifact does today.
 Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-roles[`pm-operator roles`] (no longer "no verb that edits a role").
 
