@@ -103,7 +103,7 @@ A consent is never implied: no argument but `--consent <kind>` answers a consent
 [#level-model]
 === Machine, Project, Plan
 
-The onboarding records machine values; a project and a plan may say otherwise (link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1]). The terminal addresses a level with one option and shows, for every value, the level it comes from.
+The onboarding records machine values, and they are defaults, not final values: a project may set its own for every aspect but the three that are facts of the machine (the interface language, the enrolled harnesses, the credential store), and a plan overrides what its overrides allow (link:../use-cases/01-onboarding.adoc#machine-defaults[Onboarding, The machine sets defaults]). The terminal addresses a level with one option and shows, for every value, the level it comes from.
 
 [cols="2,2,2,2",options="header"]
 |===
@@ -121,12 +121,12 @@ The onboarding records machine values; a project and a plan may say otherwise (l
 
 |`models`
 |the model catalogue
-|—
+|the project's allowed models, from those the enrolled harnesses offer (`projects/<project_id>/model-catalogue.json`)
 |—
 
 |`roles`
 |the machine role assignment
-|shown; a project's own value comes from its role artifact, which the operator edits
+|the project's role assignment (`projects/<project_id>/role-assignments.json`)
 |override per role (`overrides.json`)
 
 |`credentials`
@@ -141,11 +141,11 @@ The onboarding records machine values; a project and a plan may say otherwise (l
 
 |`plan-defaults`
 |landing, method, asking
-|method and asking (`local-config.json`); landing shown with origin `team`, changed through the project setup
+|method and asking (`local-config.json`); landing with origin `team`, kept with the team's configuration and changed through the project setup
 |bound at its start; shown, not changed later
 |===
 
-A dash is not a level of that aspect: `config harness --project p` is refused with usage exit code `2` and the text that names the levels the aspect has.
+A dash is not a level of that aspect: `config harness --project p` is refused with usage exit code `2` and the text that names the levels the aspect has. The project column of `language` holds only the model language, since the interface language is the operator's.
 
 [#addressing]
 === Addressing a Level
@@ -1171,6 +1171,36 @@ Keep the machine's language? [Enter]   other: 2-3   ?   › 3
 ✓ Models write Deutsch in pm-mcp-clients (overrides machine: English)
 ----
 
+[#t-config-project-roles]
+==== A Project's Own Roles (`config roles --project`)
+
+[source,text]
+----
+$ pm-operator config roles --project pm-mcp-clients
+Roles · project pm-mcp-clients · Give every role a harness and a model
+  The machine's assignment applies to all 31 roles here.
+
+    1) Claude Code · opus-5.5      7 roles   from machine
+    2) Claude Code · sonnet-5.5   16 roles   from machine
+    3) OpenCode · qwen-coder       8 roles   from machine
+
+Keep the machine's assignment? [Enter]   e) adjust roles   ?   › e
+    …
+    14) qgate       read_only   OpenCode     qwen-coder  —        from machine
+    …
+Select roles to assign: numbers or ranges, a) all shown   ?n advisory   b) back   › 14
+  Harness   1) Claude Code ← from machine: OpenCode   2) OpenCode   › 1
+  Model     1) opus-5.5   2) sonnet-5.5               › 2
+  Effort    1) low   2) medium   3) high              › 2
+    14) qgate       read_only   Claude Code  sonnet-5.5  medium   ✎ project
+
+Save 1 role for pm-mcp-clients? [Enter]   e) adjust more   d) reset to the machine's   b) back   ?   › ⏎
+  ✓  31 roles valid
+✓ 1 role set for pm-mcp-clients (overrides machine: OpenCode · qwen-coder); 30 follow the machine
+----
+
+* Only the changed role is written to the project's assignment; the others keep following the machine, so a later machine change reaches them. `d` removes the project's value of the selected roles.
+
 [#state-coverage]
 === Every State and Its Transcript
 
@@ -1228,7 +1258,7 @@ Keep the machine's language? [Enter]   other: 2-3   ?   › 3
 
 |`roles.load`, `roles.default`, `roles.review`, `roles.validate`, `roles.write`, `roles.done`
 |`[S]`, `[S]`, `[O]`, `[S]`, `[S]`
-|<<t-roles-review>>, <<t-roles-adjust>>
+|<<t-roles-review>>, <<t-roles-adjust>>, <<t-config-project-roles>>
 
 |`roles.consent`, `roles.propose`
 |`[O]`, `[M]`
@@ -2166,6 +2196,30 @@ The names of the languages are each written in their own language, in every pack
 |changed
 |geändert
 
+|`onboard.roles.origin.project`
+|project
+|Projekt
+
+|`onboard.roles.project.applies`
+|The machine's assignment applies to all {count} roles here.
+|Die Zuordnung der Maschine gilt hier für alle {count} Roles.
+
+|`onboard.roles.project.keep`
+|Keep the machine's assignment
+|Die Zuordnung der Maschine behalten
+
+|`onboard.roles.project.reset`
+|reset to the machine's
+|auf die der Maschine zurücksetzen
+
+|`onboard.roles.project.action_save`
+|Save {count, plural, one {# role} other {# roles}} for {project}
+|{count, plural, one {# Role} other {# Roles}} für {project} speichern
+
+|`onboard.roles.project.done`
+|{count, plural, one {# role} other {# roles}} set for {project}; {following} follow the machine
+|{count, plural, one {# Role} other {# Roles}} für {project} festgelegt; {following} folgen der Maschine
+
 |`onboard.roles.advisory.does`
 |What it does
 |Was sie tut
@@ -2891,11 +2945,9 @@ The German name of the landing axis is _Abschluss_, since _Landing_ is not in th
 [#open-points]
 == Open Points
 
-Each open point names who decides it. The ones that wait for the operator are also listed in link:../discussions/open-questions.adoc#cli-design[Open Questions].
+Each open point names who decides it. The one that waits for the operator is also listed in link:../discussions/open-questions.adoc#cli-design[Open Questions].
 
 * *`--json` into a pipe* (operator). The operator checks require `System.console().isTerminal()`, which is true only when both standard input and standard output are a terminal; `pm-operator config show --json | jq` is therefore refused, and `--json` is useful only to read on the screen or to redirect after the fact. Recommendation: for read-only operator verbs, require only standard input to be a terminal, so that the operator is present and the output can go into a pipe; keep both for every verb that changes state. A correction of link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation], item 2, made by the package `command-tree` of `pm-mcp-clients` if accepted.
-* *Keys in German prompts* (operator). This design keeps the English mnemonic keys in every language (`y) Ja`, `n) Nicht jetzt`), so that a key is part of the command surface and the transcripts of both languages differ only in the texts. The alternative, keys from the catalogue (`j) Ja`), reads more naturally and makes keys depend on the language. Recommendation: as designed.
-* *A role assignment per project* (operator, with link:../use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6]). The resolution order of link:../use-cases/01-onboarding.adoc#change-role-assignment[Role Assignment] has a machine assignment and a plan override but no project assignment: a project departs from the machine only through a whole role artifact. `config roles --project` therefore shows and does not write. Recommendation: add a project assignment (`role-assignments.json` in the project's machine store) when the machine scope is specified, so that the three levels behave alike for roles.
 * *The refusal of a link for a state that moved on* (package `api-contract`, with the machine scope). Two channels answer the same state; the second answer needs an error code of its own (`state_moved`, `409`) with the current state in its detail, so that a client re-renders instead of reporting an error. It is not in the closed list of link:../specification/runtime-model/01-processes-and-transport.adoc#api-error-codes[Local API Error Codes] yet.
 * *Withdrawing a remembered consent* (with link:../use-cases/01-onboarding.adoc#change-consent[Consent Before Acting]). The machine settings list and withdraw remembered consents; this design names the terminal verb `pm-operator config consents` (a list with numbers to withdraw) and leaves its transcript to the package that specifies the consent store.
 * *The model probe and the advice in one consent state* (with link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5]). `catalogue.consent` asks two consents in one state; the terminal answers them together or one by one (<<t-models>>). The web design shows the same as two choices of one screen.
