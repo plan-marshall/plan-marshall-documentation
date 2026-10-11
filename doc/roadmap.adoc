@@ -716,7 +716,7 @@ _See the link:specification/module-structure.adoc#binaries[Module Structure Spec
 
 This milestone is the last of the roadmap: until it, CI and the release build the Linux binaries only, and macOS is served by a developer's own native build of the checked-out repositories, which the macOS-specific unit and integration tests of every milestone keep working.
 
-* [ ] Build `pm-mcp`, `pm-operator`, and `pm-exec` natively on macOS (`arm64`, `x86_64`) in `pm-mcp-clients` and deploy them under their platform classifiers, and build `pm-mcpd` on macOS in the release build of `plan-marshall-mcp`
+* [ ] Build `pm-mcp`, `pm-operator`, and `pm-exec` natively on macOS (`arm64`) in `pm-mcp-clients` and deploy them under their platform classifiers, and build `pm-mcpd` on macOS in the release build of `plan-marshall-mcp`
 * [ ] Run the integration-test layers and `pm-e2e` on macOS in CI against these binaries, and measure the `PM-TECH-3` bounds on the macOS release binaries
 * [ ] Sign `pm-mcpd` of every macOS release with a Developer ID and notarise it in the macOS release job, so the Keychain trust of a released binary survives an upgrade; a local unsigned build keeps the trust bound to its code hash (`PM-CRED-2`; link:specification/cli-and-security/02-credentials-and-operator.adoc#_os_keyring_backends_fallback_file_store[CLI, Coordination & Security Specification § OS Keyring Backends & Fallback File Store]); prerequisite: the operator's Apple Developer account
 * [ ] *Exit*: one release version produces the four binaries for every platform of the matrix in the same release layout, and the macOS release installs and upgrades with its Keychain trust intact

@@ -607,7 +607,7 @@ All other modules are plain JARs, except `pm-web-app` (resource JAR, served by `
 |Operating system |Architectures
 
 |macOS
-|`arm64`, `x86_64`
+|`arm64` (Apple silicon); `x86_64` is not built: GraalVM 25 offers no FFM downcalls there, and GraalVM releases after 25.0.1 no longer build for it
 
 |Linux (`glibc`)
 |`x86_64`, `aarch64`
