@@ -5,11 +5,11 @@
 
 link:../Design.adoc[Design] » Onboarding Screens
 
-_Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use-cases/01-onboarding.adoc#UC-ONB-2[UC-ONB-2], link:../use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], link:../use-cases/01-onboarding.adoc#UC-ONB-4[UC-ONB-4], link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5], link:../use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6]_
+_Use cases: link:../use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1], link:../use-cases/01-onboarding.adoc#UC-ONB-2[UC-ONB-2], link:../use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], link:../use-cases/01-onboarding.adoc#UC-ONB-4[UC-ONB-4], link:../use-cases/01-onboarding.adoc#UC-ONB-5[UC-ONB-5], link:../use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6], link:../use-cases/01-onboarding.adoc#UC-ONB-7[UC-ONB-7], link:../use-cases/01-onboarding.adoc#UC-ONB-8[UC-ONB-8], link:../use-cases/01-onboarding.adoc#UC-ONB-9[UC-ONB-9]_
 
 _Relies on: link:../use-cases/01-onboarding.adoc#changes[Onboarding, Changes to the Specification] (proposed), link:../specification/cli-and-security/03-web-server.adoc#web-app[CLI, Coordination & Security Specification, Web App]_
 
-Status: `DRAFT`. The wireframes are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
+Status: `DRAFT`. Each state is designed for both clients: the web app (a wireframe) and the terminal dialogue of `pm-operator onboard` (a transcript). The sketches are ASCII sketches of layout and content, not of the visual style. Names, versions, paths, models and figures in them are examples.
 
 == Principles
 
@@ -19,6 +19,7 @@ Status: `DRAFT`. The wireframes are ASCII sketches of layout and content, not of
 * *Preselected, never hidden.* Every screen opens with the proposal filled in (defaults, found harnesses, detected tools), so accepting it is one click; the overview shows everything that will be recorded, and every part of it can be changed, the detail one click away.
 * *Every check reports back.* A check is a line that turns from a spinner into ✓ or ✗; a ✗ carries what failed, the answer received, and the fix. Nothing is marked done that was not checked.
 * *Saying no is safe.* "Not now" never ends in an error or a warning colour; the screen stays and says that nothing was done.
+* *Web and terminal say the same.* Both render the same state with the same texts from the same catalogue (link:03-texts-and-languages.adoc[Texts and Languages]); a link is a button in the web app and a key or a numbered choice in the terminal. Where the web app shows a table, the terminal shows a list, with the same columns as fields.
 * *First run and later change look alike.* A later run of one aspect opens the same screen with the current values filled in and the step bar showing only that aspect.
 
 [#frame]
@@ -31,8 +32,9 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ plan-marshall                                   Machine: mbp-oliver   ⚙  ?   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  ① Harness ── ② Models ── ③ Roles ── ④ Credentials ── ⑤ Providers ── ✓ Done  │
-│  ━━━━━━━━━━                                                                  │
+│  ① Language ─ ② Harness ─ ③ Models ─ ④ Roles ─ ⑤ Credentials ─ ⑥ Providers   │
+│  ─ ⑦ Plans ─ ✓ Done                                                          │
+│  ━━━━━━━━━━━                                                                 │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  <title of the state>                                                        │
@@ -45,31 +47,58 @@ The onboarding fills the whole app until it is complete; the rest of the app is 
 └──────────────────────────────────────────────────────────────────────────────┘
 ----
 
-* *Step bar*: the five sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
+* *Step bar*: the seven sub-workflows of `onboard.*`; done steps are ticked and can be opened to look at, never re-run from the bar (a re-run is a later change from the settings). The bar shows where the process is; it does not navigate ahead.
 * *Footer*: the links of the state; the primary one on the right. A state the server is working in (`[S]`) shows progress instead and no link.
+* *Terminal*: `pm-operator onboard` prints the step line `[3/7] Models` above each state, the content below it, and the links as a prompt line; `?` shows the explanation the web app shows under the title.
++
+[source,text]
+----
+$ pm-operator onboard
+[2/7] Harness · Choose the harness to start with
+
+  1) Claude Code   2.4.1   ~/.local/bin/claude         ✓ supported
+  2) OpenCode      1.9.0   /opt/homebrew/bin/opencode  ✓ supported
+     Codex         0.31.2  /opt/homebrew/bin/codex     ✗ cannot run workers
+
+Check Claude Code? [Enter]   other: 1-2   a) add another   l) look again   ?
+----
 * *Model at work* (`[M]` states): the content shows that a model task runs, on which harness and role, the time so far, and the expected cost; when it fails or the operator leaves it, the screen continues as the use case's variation says (without a recommendation).
 
 [#start]
-== Start
-
-Shown at the first run in `onboard.entry`.
+== Start (`onboard.entry`, `onboard.mode`)
 
 [source,text]
 ----
   Set up this machine for plan-marshall
 
-  Five steps. Nothing on this machine is looked at, run, or changed until
+  Seven steps. Nothing on this machine is looked at, run, or changed until
   you say so in that step.
 
-    ① Harness     choose the coding agent the server works with first
-    ② Models      choose the agents and models other plans may use
-    ③ Roles       give every role an agent and a model
-    ④ Credentials where this machine keeps its tokens
-    ⑤ Providers   the git hosts, CI and analysis services this machine uses
+    ① Language    the language of this app and of the models' texts
+    ② Harness     choose the coding agent the server works with first
+    ③ Models      choose the agents and models other plans may use
+    ④ Roles       give every role an agent and a model
+    ⑤ Credentials where this machine keeps its tokens
+    ⑥ Providers   the git hosts, CI and analysis services this machine uses
+    ⑦ Plans       how plans run unless a project says otherwise
 
   You can stop at any point; the next visit continues where you stopped.
 
-                                                        [ Begin with ① ]
+  [ Decide everything for me… ]                       [ Begin with ① ]
+----
+
+* *Decide everything for me…* is the automatic run (<<auto>>); it opens its consent first.
+
+Terminal:
+
+[source,text]
+----
+$ pm-operator start
+plan-marshall is running. This machine is not set up yet.
+
+  g) guided, seven steps, nothing happens without your yes   [Enter]
+  a) decide everything for me, and show what was decided
+  w) open the web app instead      (browser opened · c copy URL)
 ----
 
 [#consent]
@@ -99,12 +128,60 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
   [ Not now ]                                       [ Look for harnesses ]
 ----
 
+Terminal:
+
+[source,text]
+----
+Look for harnesses on this machine?
+  looks for   claude, opencode, codex, agy
+  in          your PATH, ~/.local/bin, /Applications, /opt/homebrew/bin
+  runs        <program> --version on each one found
+  never       reads other files, starts a session, uses the network
+  cost        none
+
+y) yes   r) yes, and don't ask again   n) not now
+----
+
 * *Not now* (link `no`): the screen stays and shows "Nothing was done." under the title, with the same two buttons. The step bar does not move.
 * The remember choice is a choice inside the screen, not a third button, so the primary button stays one action: `yes` or `yes_remember` by the choice.
 * A consent with a model cost names the role, the harness, and the expected cost from earlier runs, or "not known yet" for the first run.
 
+[#language]
+== ① Language (`language.choose`)
+
+[source,text]
+----
+  Choose your languages
+
+  This app and pm-operator      ( ) English  (•) Deutsch
+                                from your system: de_DE
+
+  What models write and read    (•) same as above
+                                ( ) English
+                                ( ) Deutsch
+
+  Models do not work equally well in every language; you can let them
+  work in English while this app speaks German.            [ Why? ]
+
+  Words like Pull Request, Commit, Merge and Request stay as they are.
+
+                                                 [ Use Deutsch ]
+----
+
+* The screen switches to the chosen language at once, before the button is pressed, so the operator sees what it will look like.
+
+Terminal:
+
+[source,text]
+----
+[1/7] Language
+  This app and pm-operator    1) English   2) Deutsch ← from your system
+  What models write and read  s) same as above ←   e) English   d) Deutsch
+Use Deutsch for both? [Enter]   other: 1-2, then s/e/d
+----
+
 [#harness]
-== ① Harness
+== ② Harness
 
 [#harness-choose]
 === Choose (`harness.choose`)
@@ -121,13 +198,14 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
       Antigravity   —       not found
 
   The first harness also runs the advice in the next steps. You can add
-  the others in ② Models.
+  the others in ③ Models.
 
   ▸ Advanced: add a harness that is not listed
 
   [ Look again ]                              [ Check Claude Code ]
 ----
 
+* Each harness is shown with its icon (<<icons>>), or with its monogram where no icon is available.
 * Harnesses that cannot run workers are listed, greyed, with the reason; harnesses not found are listed so the operator sees what was looked for.
 * *No harness found* (`harness.none`): the list is replaced by what was looked for, *Add a harness that is not listed* as the primary action, and a short install hint per harness with a link to its own installation page, and *Look again*.
 
@@ -210,7 +288,7 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
 ----
 
 [#models]
-== ② Models (`catalogue.select`)
+== ③ Models (`catalogue.select`)
 
 [source,text]
 ----
@@ -238,7 +316,7 @@ One pattern for every `<step>.consent` state. Its content comes from the consent
 * Enrolling a further harness runs its checks and confirmation (<<harness-probe>>, <<harness-confirm>>) inline before the step completes.
 
 [#roles]
-== ③ Roles (`roles.review`)
+== ④ Roles (`roles.review`)
 
 The step opens with the default assignment applied, as an overview; accepting it is one click.
 
@@ -303,7 +381,7 @@ The advisory of a role (ⓘ, opened in place below its row):
 * *Save* is disabled while a row is marked ⚠; the header counts them.
 
 [#credential-store]
-== ④ Credentials (`store.choose`)
+== ⑤ Credentials (`store.choose`)
 
 [source,text]
 ----
@@ -327,7 +405,7 @@ The advisory of a role (ⓘ, opened in place below its row):
 * The primary button names the store it will use.
 
 [#providers]
-== ⑤ Providers
+== ⑥ Providers
 
 [#providers-select]
 === Select (`providers.select`)
@@ -388,6 +466,102 @@ The advisory of a role (ⓘ, opened in place below its row):
 * Every provider and every check has its own line; a provider is ✓ only when all its checks are. A ✗ shows the provider's answer and the fix.
 * *Continue without SonarCloud* records it as not available after a confirmation; all ✓ continues on its own to <<done>>.
 
+[#plan-defaults]
+== ⑦ Plans (`defaults.review`)
+
+[source,text]
+----
+  How should plans run on this machine?
+
+  A project's setup and a single plan can choose otherwise.
+
+  Landing    (•) Branch and Pull Request    review and merge on the provider
+             ( ) Commit on main             no Pull Request, pushed directly
+             ( ) Files only                 nothing is committed; you take over
+
+  Method     (•) Test first                 tests are written before the code
+             ( ) Tests after
+
+  Asking     ( ) At every phase             you confirm each phase
+             (•) At the key points          the outline, and before the Merge
+             ( ) Only questions             you are asked only what needs you
+
+  [ Back ]                                         [ Use these defaults ]
+----
+
+* The preselection is the shipped default; each line says in a few words what the variant does, and *Why?* beside an axis explains its consequences.
+* A variant that cannot run on this machine is greyed with its reason (`Branch and Pull Request` without a provider).
+
+Terminal:
+
+[source,text]
+----
+[7/7] Plans · How should plans run on this machine?
+  Landing  1) Branch and Pull Request ←  2) Commit on main  3) Files only
+  Method   t) Test first ←               a) Tests after
+  Asking   e) every phase   k) key points ←   q) only questions
+Use these defaults? [Enter]   change: e.g. "2 a q"
+----
+
+[#auto]
+== Automatic Run (`auto.consent`, `auto.result`)
+
+The consent lists everything the run does, in the form of <<consent>>, in one list; the run itself shows the step bar moving and each check as it reports. At the end:
+
+[source,text]
+----
+  Everything is decided
+
+  ① Language     Deutsch, models too           from your system      [ Change ]
+  ② Harness      Claude Code 2.4.1  ✓          the only supported one [ Change ]
+  ③ Models       3 models on 2 harnesses  ✓    all found              [ Change ]
+  ④ Roles        default assignment, 31 roles  the default            [ Change ]
+  ⑤ Credentials  macOS Keychain  ✓             available here         [ Change ]
+  ⑥ Providers    GitHub (gh)  ✓                gh logged in           [ Change ]
+                 SonarCloud  —                  no token: skipped     [ Add ]
+  ⑦ Plans        Pull Request · Test first · key points   the default [ Change ]
+
+  No model was asked; ask the steward to refine the roles in ⚙ Settings.
+
+                                                 [ Finish ]
+----
+
+Terminal:
+
+[source,text]
+----
+$ pm-operator onboard --auto
+This will look for harnesses and CLI tools, run their version and login
+probes, and use the defaults for everything else. No model is asked.
+Go ahead? [y/N] y
+
+  ✓ Language     Deutsch, models too          (from your system)
+  ✓ Harness      Claude Code 2.4.1            (the only supported one)
+  ✓ Models       3 models on 2 harnesses      (all found)
+  ✓ Roles        default assignment           (31 roles)
+  ✓ Credentials  macOS Keychain               (available here)
+  ✓ Providers    GitHub via gh                (gh logged in)
+  – SonarCloud   skipped: no token            pm-operator config providers
+  ✓ Plans        Pull Request · Test first · key points
+
+Change any of it: pm-operator config <language|harness|roles|…>
+----
+
+[#icons]
+== Harness Icons
+
+Where a harness is shown (the harness list, the role assignment, a worker in the plan views), it carries its icon: bundled, or fetched by the runtime from the maker's own URL after the operator's consent (link:../use-cases/01-onboarding.adoc#change-harness-icons[Harness Icons]), else a monogram. The terminal shows the harness's name only.
+
+*Research note (not legal advice).* The question was whether icons the project may not bundle can instead be referenced by URL so that the browser loads them from the maker. What was found:
+
+* *Copyright of the file.* Under EU law, embedding a work that its owner made freely available on the web is not a new communication to the public (CJEU _Svensson_, C-466/12, and _BestWater_, C-348/13), unless the owner restricted access by technical means (C-392/19). Loading a maker's own, freely available icon from the maker's URL is therefore unlikely to infringe its copyright; bundling a copy is a distribution and needs a licence. Icon collections such as Simple Icons are CC0 for their files but state that this grants no trademark right.
+* *Trademark.* Where the icon is hosted does not change the trademark question. EU law lets a third party use a mark to identify or refer to the proprietor's goods in accordance with honest practices (Art. 14(1)(c) EUTMR); commentary holds this applies to logos as to word marks. The makers' own rules are narrower: Anthropic's terms for Claude Code allow stating in plain text that a product runs Claude Code and require written permission for other uses of its names or logos; Google's brand rules forbid any use that suggests affiliation or endorsement.
+* *Privacy.* A browser that loads an icon from the maker's server sends the operator's IP address there on every view. A German court awarded damages for exactly this with web fonts loaded from Google (LG München I, 3 O 17493/20, 20 January 2022), holding that a local copy was possible. It would also break the content security policy of the web listener.
+
+*Consequence for the design.* The browser never loads from a maker's server; the runtime fetches once, on consent, and serves the icon itself, which avoids the privacy and policy problem and keeps the copyright position of embedding (the copy stays on the operator's machine and is not redistributed). The trademark question remains for every icon, bundled or fetched, and needs each maker's terms checked or permission asked; until then the monogram is the safe default.
+
+Sources: link:https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md[Simple Icons disclaimer]; link:https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance[Claude Code, Legal and compliance]; link:https://about.google/brand-resource-center/guidance/[Google Brand Resource Center]; link:https://www.hoganlovells.com/en/publications/from-bestwater-to-prussian-palaces-cjeu-provides-further-clarity-for-online-framing-of-copyright-protected-content[Hogan Lovells on BestWater and C-392/19]; link:https://www.lexisnexis.com/en-gb/legal/news/court-of-justice-confirms-the-expansion-of-the-fair-use-trade-mark-defence-inditex-v-buongiorno-myalert[Inditex v Buongiorno on Art. 14 EUTMR]; link:https://www.dr-datenschutz.de/schadensersatz-urteil-google-fonts-und-die-dsgvo/[LG München I on Google Fonts].
+
 [#done]
 == Done (`onboard.completed`)
 
@@ -395,11 +569,13 @@ The advisory of a role (ⓘ, opened in place below its row):
 ----
   This machine is ready
 
+    ✓ Language    Deutsch, models too
     ✓ Harness     Claude Code 2.4.1 (+ OpenCode 1.9.0)
     ✓ Models      3 models allowed
     ✓ Roles       31 roles assigned
     ✓ Credentials macOS Keychain
     ✓ Providers   GitHub (gh), SonarCloud
+    ✓ Plans       Pull Request · Test first · key points
 
   Next: enrol a project and set it up.
 
@@ -409,5 +585,6 @@ The advisory of a role (ⓘ, opened in place below its row):
 == Open Points
 
 * *Enrol a project* needs the project enrolment in the web app; today it is the CLI verb `pm-operator enrol`.
+* The terminal transcripts of the screens not sketched here (catalogue, roles table, credential store, providers) follow the same rules: a list per table, a key per link, the preselection on `Enter`.
 * How the app looks between the screens: one route per state, or one route for the onboarding that renders whichever state the server reports.
 * Whether the step bar lets the operator look at a done step while the process stands in a later one.

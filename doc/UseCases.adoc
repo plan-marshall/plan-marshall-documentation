@@ -8,7 +8,7 @@ link:../README.md[plan-marshall documentation] » Use Cases
 
 == Overview
 
-The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. How a use case looks and feels on the screen is worked out in the link:Design.adoc[Design]; how the system does it, in the link:Specification.adoc[Specification].
+The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. How a use case looks and behaves, in the web app and in the terminal alike, is worked out in the link:Design.adoc[Design]; how the system does it, in the link:Specification.adoc[Specification].
 
 == Conventions
 
@@ -46,7 +46,7 @@ Design:: the design documents that show it (link:Design.adoc[Design]).
 
 |`UC-ONB`
 |link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
-|Making a machine ready: the first harness, the harnesses and models for the work, the models of the roles, where credentials are kept, the providers of the machine.
+|Making a machine ready, guided or automatically: the languages, the first harness, the harnesses and models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default.
 
 |`UC-WEB`
 |link:use-cases/02-web-app.adoc[02-web-app.adoc]

@@ -8,7 +8,7 @@ link:../README.md[plan-marshall documentation] » Design
 
 == Overview
 
-The design shows how the link:UseCases.adoc[Use Cases] look and behave on the screen: the views, what they show, how one moves between them, the interactions, and the visual language. It is the counterpart of the link:Specification.adoc[Specification] for what a person sees; the specification states what the system does behind it, and a design never contradicts it.
+The design shows how the link:UseCases.adoc[Use Cases] look and behave in the web app and in the terminal: the views, what they show, how one moves between them, the interactions, and the visual language. It is the counterpart of the link:Specification.adoc[Specification] for what a person sees; the specification states what the system does behind it, and a design never contradicts it.
 
 == Conventions
 
@@ -31,6 +31,11 @@ The design shows how the link:UseCases.adoc[Use Cases] look and behave on the sc
 
 |link:design/02-onboarding.adoc[02-onboarding.adoc]
 |`DRAFT`
-|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-6[UC-ONB-6]
-|The onboarding screens: the frame, the consent pattern, and one screen per choice state of the onboarding workflow.
+|link:use-cases/01-onboarding.adoc#UC-ONB-1[UC-ONB-1] to link:use-cases/01-onboarding.adoc#UC-ONB-9[UC-ONB-9]
+|The onboarding screens and terminal dialogues: the frame, the consent pattern, the automatic run, one screen per choice state of the onboarding workflow, and the harness icons.
+
+|link:design/03-texts-and-languages.adoc[03-texts-and-languages.adoc]
+|`DRAFT`
+|link:use-cases/01-onboarding.adoc#UC-ONB-3[UC-ONB-3], and every use case with a text
+|The two languages, the glossary of words that are never translated, how texts are written, and the keys and packs of the message catalogue.
 |===
