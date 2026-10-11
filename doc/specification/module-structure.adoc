@@ -25,6 +25,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-TEST-3[PM-TEST-3: State-Machine Invariant, Property & McpAssured Protocol Verification]_
 * _See Requirement link:../Requirements.adoc#PM-TEST-4[PM-TEST-4: End-to-End Scenario & Worker Supervision Testing]_
 * _See Requirement link:../Requirements.adoc#PM-TEST-6[PM-TEST-6: Behavioural Conformance of Model-Facing Content]_
+* _See Requirement link:../Requirements.adoc#PM-TEST-7[PM-TEST-7: Mock Runtime for Client Development & Tests]_
 
 == Status: PLANNED
 
@@ -101,6 +102,7 @@ pm-mcp-clients (root POM)
 ├── pm-exec                     job launcher        -> binary pm-exec
 ├── pm-relay                    relay, enter        -> binary pm-mcp
 ├── pm-operator                 operator CLI        -> binary pm-operator
+├── pm-mock-runtime             mock runtime for development and tests (never shipped)
 └── pm-web-app                  SvelteKit SPA (resource JAR)
 
 pm-mcp-core (root POM)
@@ -197,6 +199,11 @@ _Implementation watch: link:../implementation-watch/module-structure.adoc#PM-WAT
 |`de.planmarshall.operator.*`
 |Operator CLI, native binary `pm-operator` (plain GraalVM native image, `native-maven-plugin` in its `native` profile): picocli with `picocli-codegen` and every verb a human runs at a terminal, without an `operator` sub-level: the privileged verbs (`enrol`, `unenrol`, `enrol-harness`, `roles`, `credentials`, `waive`, `unwaive`, `waivers`, `accept-edit`, `config`, `sweep`, `upstream`, `abort`, `drop-capture`, `release-project`, and the others of the operator channel), `web`, `client`, `runtime`, `drain`, and `status`, with the operator checks (terminal attached, no agent environment signal) and `qrcodegen` for pairing QR codes. Every verb that reads live state or changes state is a request to the daemon's API through the socket client of `pm-api`. Depends *only* on `pm-api`. Its `*IT` tests run operator verbs against the same kind of stub daemon; the verbs against the real `pm-mcpd` are covered by `pm-e2e`. The binary serves no MCP.
 |link:cli-and-security/01-cli-and-installer.adoc[CLI & Security § CLI & Installer] (operator binary, client installer), link:cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[CLI & Security § Operator Channel Isolation] (verbs and operator checks), link:cli-and-security/03-web-server.adoc#web-server[CLI & Security § Web Access & Pairing] (`web` verbs), link:client-profiles/02-placeholders-and-detection.adoc[Client Profiles § Placeholders & Detection] (operator checks against the host-detection table), link:client-profiles/03-bundle-manifest.adoc[Client Profiles § Bundle Manifest] (`client` verbs, drift checks of `pm-operator client status`), link:model-work/01-roles-and-configuration.adoc[Model Work § Roles & Configuration] (`roles` verbs), link:model-work/11-decision-records.adoc#corpus-export[Model Work § Corpus Export] (`decisions export`), link:runtime-model.adoc[Runtime Model] (on-demand start, direct file reads), link:mcp-tools/04-errors-and-testing.adoc[MCP Tools § Errors & Protocol Testing] (operator integration tests)
+
+|[[module-pm-mock-runtime]]`pm-mock-runtime` (in `pm-mcp-clients`)
+|`de.planmarshall.mock.*`
+|Mock runtime for the development and tests of the clients: serves the local API `/api/v1` with the contract of `pm-api` on the Unix socket of a given `PM_MCP_BASE` and, on request, a loopback web port, driven by scenario files in its resources, with a minimal HTTP/1.1 and Server-Sent Events server over a JDK `ServerSocketChannel`. It runs no job, starts no harness, reads nothing of the machine, writes no store. It replaces the stub daemon of the test scopes of `pm-relay` and `pm-operator`, whose integration tests and the unit tests of `pm-web-app` use its scenarios. Never part of a release and not deployed to the registry (`maven.deploy.skip`); a plain JAR, no native image.
+|link:runtime-model/05-mock-runtime.adoc[Runtime Model § Mock Runtime]
 
 |[[module-pm-web-app]]`pm-web-app` (in `pm-mcp-clients`)
 |— (SvelteKit, TypeScript)
@@ -522,7 +529,7 @@ Dependencies flow toward `pm-core`, and between repositories only in the order o
 * `pm-provider-git` and `pm-provider-ci` depend on `pm-core`; `pm-provider-github`, `pm-provider-gitlab`, and `pm-provider-sonar` on `pm-provider-ci` (its shared HTTP base) and `pm-core`. No provider module depends on `pm-workflow`: providers contribute primitives through the SPI in `pm-core` and never see engine internals.
 * `pm-runtime` depends on `pm-core` and `pm-api` only among the PM-MCP modules (`pm-api` for the machine paths the start sequence and the credential stores share with the clients), never on `pm-workflow` or a provider module, and never on Quarkus, CDI, Vert.x, or an MCP library. It is the only module that depends on `org.commonmark:commonmark`, which its ingestion validator uses, and on LSP4J.
 * `pm-mcp-server` depends on `pm-core`, `pm-workflow`, `pm-runtime`, every provider module, `pm-api`, and the resource JAR `pm-web-app`, and assembles them. It is the only module that depends on Quarkus, on `quarkus-security`, and on the Netty native transports, and no class of it exists without a Quarkus, CDI, Vert.x, or MCP type in its signature or its annotations, apart from the records those classes exchange.
-* The client modules never depend on `pm-core`, `pm-workflow`, a provider module, `pm-mcp-server`, or Quarkus: `pm-relay` and `pm-operator` depend on `pm-api` only and never on each other, and `pm-web-app` depends on no PM-MCP module. `pm-api` depends on `jackson-core` only.
+* The client modules never depend on `pm-core`, `pm-workflow`, a provider module, `pm-mcp-server`, or Quarkus: `pm-relay` and `pm-operator` depend on `pm-api` only and never on each other, `pm-mock-runtime` depends on `pm-api` only and is a test-scoped dependency of `pm-relay` and `pm-operator`, and `pm-web-app` depends on no PM-MCP module (its unit tests read the scenario files of `pm-mock-runtime` from the sibling module's resources). `pm-api` depends on `jackson-core` only.
 * `pm-exec` depends on no other PM-MCP module.
 * `pm-conformance` and `pm-e2e` have no compile or runtime dependency on `pm-mcp-server`; they reach the product only through its built binaries. `pm-e2e` declares a test-scoped dependency of type `pom` on `pm-mcp-server`, which brings no class onto its classpath and only orders the reactor so that `pm-mcpd` is built before it is staged; the three other binaries are resolved as archives from the registry.
 
@@ -612,7 +619,7 @@ Windows is served only through WSL2, with the Linux binaries; no Windows-native 
 == Test Placement
 
 * *Unit tests*: every module carries its own JUnit 5 suite and meets the coverage minimum on its own. The plain-Java library modules (`pm-api`, `pm-exec`, `pm-core`, `pm-workflow`, `pm-runtime`, the provider modules) run them on the JVM without Quarkus augmentation.
-* *Integration tests* (`*IT`, `-Pintegration-tests`), four layers: `pm-mcp-server` (packaged daemon over MCP/HTTP on its Unix socket, including the web listener and pairing), `pm-relay` (the `pm-mcp serve` relay over real `stdio` against the stub daemon of its test scope), `pm-operator` (operator verbs against the stub daemon of its test scope), and `pm-e2e` (all four binaries in the release layout, the only layer in which the client binaries meet the real `pm-mcpd`). The MCP protocol layers (McpAssured) are the server and the end-to-end layer, which runs the relay against the real daemon; the relay layer of `pm-mcp-clients` verifies the forwarding against its stub daemon, and the `pm-operator` layer serves no MCP (link:mcp-tools/04-errors-and-testing.adoc[MCP Tools § Errors & Protocol Testing]).
+* *Integration tests* (`*IT`, `-Pintegration-tests`), four layers: `pm-mcp-server` (packaged daemon over MCP/HTTP on its Unix socket, including the web listener and pairing), `pm-relay` (the `pm-mcp serve` relay over real `stdio` against the mock runtime `pm-mock-runtime` with its scenarios), `pm-operator` (operator verbs against the mock runtime with its scenarios), and `pm-e2e` (all four binaries in the release layout, the only layer in which the client binaries meet the real `pm-mcpd`). The MCP protocol layers (McpAssured) are the server and the end-to-end layer, which runs the relay against the real daemon; the relay layer of `pm-mcp-clients` verifies the forwarding against the mock runtime, and the `pm-operator` layer serves no MCP (link:mcp-tools/04-errors-and-testing.adoc[MCP Tools § Errors & Protocol Testing]).
 * *Native reflection*: a build test in `pm-mcp-server` verifies that every persisted record of `pm-core`, `pm-workflow`, `pm-runtime`, and the provider modules is registered for GraalVM native reflection.
 * *Scenario replay* (`pm-scenario`, `PM-TEST-4`): test scope of `pm-workflow`, not a module.
 * *Behavioural conformance* (`PM-TEST-6`): `pm-conformance`, out of band.

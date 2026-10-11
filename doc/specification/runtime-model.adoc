@@ -65,6 +65,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-5[PM-WORK-5: Interactive Session as Optional Worker]_
+* _See Requirement link:../Requirements.adoc#PM-TEST-7[PM-TEST-7: Mock Runtime for Client Development & Tests]_
 
 == Status: PLANNED
 
@@ -77,6 +78,7 @@ Implemented in (link:module-structure.adoc[Module Structure Specification]):
 * link:module-structure.adoc#module-pm-api[`pm-api`]: the Local API contract, the shared client over the Unix socket, the shared on-demand start procedure and the codec of the direct file reads
 * link:module-structure.adoc#module-pm-relay[`pm-relay`]: part 03: the `pm-mcp serve` relay of sessions and workers, and the direct file reads of `enter`
 * link:module-structure.adoc#module-pm-operator[`pm-operator`]: `runtime`, `drain`, `status` and the direct file reads of the operator CLI
+* link:module-structure.adoc#module-pm-mock-runtime[`pm-mock-runtime`]: part 05: the mock runtime and its scenarios
 
 == Parts
 
@@ -84,3 +86,4 @@ Implemented in (link:module-structure.adoc[Module Structure Specification]):
 * link:runtime-model/02-startup-recovery-drain.adoc[Startup, Recovery & Drain] — the startup sequence, per-project recovery with the fencing of worker generations and the requeue of leased tasks, the periodic sweep, and drain, stop, and upgrade
 * link:runtime-model/03-relay.adoc[Relay] — the relay contract for sessions and workers, the host protocol forms, connection metadata, generations at the relay, the relay rules, the request flow, messages from the runtime, and cancellation
 * link:runtime-model/04-sessions-and-workers.adoc[Sessions, Workers & Failure Semantics] — server-driven plans and epics, the entry session, worker connections, the call cycle, continuation, stalled plans as a supervisor fault, connection-scoped rendering, failure semantics, CLI interaction, and verification
+* link:runtime-model/05-mock-runtime.adoc[Mock Runtime] — the mock runtime that serves the local API from scenario files for the development and tests of the clients, the scenario format, the scenarios per flow, and their replay against the real runtime
