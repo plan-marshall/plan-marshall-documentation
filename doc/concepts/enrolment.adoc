@@ -42,7 +42,7 @@ The HMAC is computed under the enrolment integrity key, an operator-lane secret 
 
 The size and the SHA-256 serve the operator: they are what a re-baseline shows as recorded against current (<<rebaseline>>). The HMAC serves the runtime: without the key nobody can produce the HMAC of an edited file, so an edit made behind the runtime, however carefully the size and SHA-256 are adjusted to match, is detected.
 
-Every write of an enrolment holds the project's own lock, `locks/enrolments/<project_id>.lock`, so two writes of one project never interleave the file and its sidecar. The file is replaced before its sidecar, each by an atomic rename; a write stopped between the two leaves a file whose sidecar does not match it, which the check refuses, never a pair it trusts.
+Every write of an enrolment holds the project's own lock, `locks/enrolments/<project_id>.lock`, so two writes of one project never interleave the file and its sidecar. The file is replaced before its sidecar, each by an atomic rename; a write stopped between the two leaves a file whose sidecar does not match it, which the check refuses, never a pair it trusts. The audit record of an enrolment write (`enrol`, `unenrol`, the re-baseline) is owed before the write and survives an audit log that cannot be written or a crash, so it is handed over later rather than lost (link:store-integrity.adoc#audit-delivery[Store Integrity § Audit Records of a Store Change]).
 
 [#check]
 == The Check

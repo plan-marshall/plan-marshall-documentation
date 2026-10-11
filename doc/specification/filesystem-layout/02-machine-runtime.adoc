@@ -21,7 +21,8 @@ The runtime (`pm-mcpd`) persists machine-wide configuration, cross-process `File
 ├── harnesses.json.hmac                  # HMAC-SHA-256 sidecar of harnesses.json (mode 0600)
 ├── enrolments/                          # Operator enrolments, one file per project (mode 0700)
 │   ├── <project_id>.json                # Root, wrappers, tools, templates, scripts, budgets (mode 0600)
-│   └── <project_id>.json.hmac           # HMAC-SHA-256 sidecar of that file, written with every enrolment write (mode 0600)
+│   ├── <project_id>.json.hmac           # HMAC-SHA-256 sidecar of that file, written with every enrolment write (mode 0600)
+│   └── <project_id>.json.audit-intent   # Audit records an enrolment write still owes; exists only while one is owed (mode 0600)
 │
 ├── roles/                               # Machine role set: operator role artifacts (mode 0700)
 │   └── <role>.json                      # Role artifact; replaces the shipped artifact of the same name (no qualification records)
