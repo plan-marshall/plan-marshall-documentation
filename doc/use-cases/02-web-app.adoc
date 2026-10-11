@@ -1,0 +1,117 @@
+= Use Cases: Web App (UC-WEB)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Web App
+
+The operator works with `PM-MCP` in the browser: the web app served by the runtime (link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]). These use cases are first drafts from the discussion of the web app; their flows are still to be written.
+
+[#UC-WEB-1]
+== UC-WEB-1: Start and Open the Web App
+
+Status:: `DRAFT`
+Actor:: the operator, in a terminal of the machine the runtime runs on: sitting at it, or logged in over SSH.
+Goal:: reach the web app with one command and no further friction, whether the browser is on this machine or on the operator's own computer at the other end of an SSH connection.
+Trigger:: the operator runs `pm-operator start`, the first command after installing (it is `pm-operator web open` under a name to start with). On a machine not onboarded yet, the web app continues with link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1].
+Flow::
++
+[source,text]
+----
+  [S] = the server or pm-operator   [O] = the operator
+
+  [S] start.runtime            starts the runtime when none runs, opens the
+       │                       loopback web listener
+       ▼
+  [S] start.pairing            a pairing code, unless a browser of this
+       │                       machine is paired already (web open)
+       ▼
+  [S] start.where              a desktop session, or an SSH session
+       │                       (SSH_CONNECTION, SSH_TTY)?
+       ├── desktop ─────────► [S] start.browser    opens the default browser
+       │                            │ cannot start ──► start.show
+       │                            ▼
+       │                       start.show
+       ▼ SSH
+  [S] start.show               the ways in, each with a copy key:
+       │                       • URL  http://127.0.0.1:<port>/pair#code=…    c copy
+       │                       • over SSH: the forward command for the
+       │                         operator's own computer                     s copy
+       │                         ssh -L <port>:127.0.0.1:<port> <user>@<host>
+       │                         and that VS Code and JetBrains forward it
+       │                         on their own
+       │                       • the code, its expiry
+       ▼
+  [O] start.wait               c / s copy   n new code   o other device   q quit
+       │ code redeemed ───────► a fresh code is shown for a further device
+       │ o ──────────────────► start.other-device
+       ▼ q
+  done                         the runtime keeps running
+
+  [O] start.other-device       reach it from a phone or another computer on
+       │                       the network? HTTPS on all interfaces with a
+       │                       self-signed certificate, fingerprint to compare
+       ├── no (default) ─────► start.wait, unchanged
+       ▼ yes
+  [S] start.lan                LAN listener; shows the URL with the host
+                               name, the QR code and the fingerprint
+----
+Variations:: copying uses the terminal's clipboard sequence (OSC 52), which reaches the clipboard of the operator's own computer also over SSH; on a local terminal without it, the platform's clipboard tool. Where neither works, the key is not offered and the text stays on the screen to select. The operator forwards to another local port (`-L 8000:127.0.0.1:<port>`): the app works the same.
+Outcome:: the web app is open in a browser of the operator's choice, paired; nothing is reachable from the network unless the operator said yes in `start.other-device`.
+Changes::
+* *`pm-operator start`* (<<change-start>>).
+* *Loopback `Host` without the port* (<<change-loopback-host>>).
+* *A fresh code after a redemption* (<<change-fresh-code>>).
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
+
+[#UC-WEB-2]
+== UC-WEB-2: Drill Down into a Plan
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: follow a plan or an epic from its overview down to the part that needs attention, and understand what it is doing and why.
+Open points:: which levels the drill-down has (epic, plan, phase, step, task, job, finding, decision) and what each level shows.
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the web app as the dependable view).
+
+[#UC-WEB-3]
+== UC-WEB-3: Design a Plan's Process
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: shape the process a plan runs, for example add a step to finalize, by arranging the building blocks the project declares, and see before it is applied whether the server accepts it.
+Open points:: where a design lives (in the project's workflow units, in one plan, or in one plan with promotion to the project); whether a plan can be designed before it starts; which building blocks are offered.
+Requirements:: none yet: no requirement lets the operator change the process of a plan.
+
+[#changes]
+== Changes to the Specification
+
+The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-start]
+=== `pm-operator start`
+
+Gap:: `web open` opens a browser on this machine only and, without one, prints the URL; it knows no SSH session, no copy key, and no way to another device but `web pair` and `web enable --lan`.
+Fix::
+* `pm-operator start [--pair]` is `web open` with the flow of <<UC-WEB-1>>; `web open` stays as its other name.
+* It recognises an SSH session by `SSH_CONNECTION` or `SSH_TTY`, then opens no browser and shows the forward command built from the user name and the machine's host name.
+* It stays in the terminal until `q` and offers the keys of `start.wait`; a key it cannot serve (no clipboard path) is not shown. Without an interactive terminal it prints the ways in once and exits.
+* Other devices only on the operator's yes (`o`, then confirmation): it then enables the LAN listener as `web enable --lan` does, with the same certificate and fingerprint, and shows the QR code of the pairing URL.
+Affects:: link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer] (command listing), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
+
+[#change-loopback-host]
+=== Loopback `Host` without the Port
+
+Gap:: the `Host` validation requires `127.0.0.1:<port>` or `localhost:<port>` with the listener's own port; an SSH forward to another local port sends that port and is refused.
+Fix::
+* On the loopback listener a `Host` of `127.0.0.1`, `localhost`, or `[::1]` is accepted with any port or none. The check exists against foreign host names (DNS rebinding); the port adds nothing to it.
+* The `Origin` check of state-changing requests compares the same way on the loopback listener.
+* The LAN listener keeps the full comparison with its port.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-security-headers[Request Validation & Security Headers].
+
+[#change-fresh-code]
+=== A Fresh Code after a Redemption
+
+Gap:: one pairing code is open at a time and single use; while `start` shows several ways in, the first device to pair uses the code up for the others.
+Fix::
+* While `pm-operator start` waits, a redeemed code is replaced at once by a new one, and the screen shows the new code, URL, and QR code; `n` replaces it on request. At most one code is open at any time, as now.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
