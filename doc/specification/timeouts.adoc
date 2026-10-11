@@ -44,7 +44,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 * _See Requirement link:../Requirements.adoc#PM-WF-18[PM-WF-18: Question Recommendation Score & Decision Quorum]_
 
-== Status: PLANNED
+== Status: IN PROGRESS
 
 == Modules
 

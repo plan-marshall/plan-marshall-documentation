@@ -1,0 +1,83 @@
+= Operating the Runtime
+:toc: left
+:toclevels: 2
+:toc-title: Table of Contents
+:nofooter:
+
+link:../UserGuide.adoc[User Guide] » Operating the Runtime
+
+The runtime `pm-mcpd` is the one long-running process of `PM-MCP` on a machine. This document describes the parts of its lifecycle an operator configures and sees: the drain timeout, the drain itself, the recovery after a crash, and a relay of another version. How these work inside is explained in link:../concepts/runtime-lifecycle.adoc[Concepts § Runtime Lifecycle].
+
+NOTE: The behaviour described here is implemented in the library module `pm-runtime`; the runtime `pm-mcpd` takes it over when its assembly wires it in. Until then `POST /api/v1/runtime/stop` (`pm-operator runtime stop`) ends the runtime without a drain.
+
+[#drain-timeout-seconds]
+== `drain_timeout_seconds`
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+How long running work may finish after the runtime was asked to stop, before it is terminated. The key lives in the machine configuration `<PM_MCP_BASE>/machine-config.json`:
+
+[source,json]
+----
+{"drain_timeout_seconds": 600}
+----
+
+[cols="1,3", options="header"]
+|===
+|Property |Value
+
+|Unit
+|seconds, a whole number
+
+|Default
+|`600`, when the file or the key is absent
+
+|Minimum
+|`0`: nothing is waited for, running work is terminated at once
+
+|Invalid value
+|A negative number, a fraction, a string, a number too large for a 64-bit integer, a file that cannot be read, or a file that is not exactly one JSON object (for example a truncated file, or content after the object) is invalid. The runtime then uses the default of `600` seconds and logs the warning `PM_MCP-154`, naming the file and the reason (link:../LogMessages.adoc[Log Messages]). A wrong value never stops the start or the drain.
+|===
+
+[#what-a-drain-does]
+== What a Drain Does
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+A drain is the clean end of the runtime: on `SIGTERM` or `SIGINT` (as `pm-operator drain`, the service manager or the operating system send) and on a stop request through the local API. In order, the runtime:
+
+. stops admitting new work and ends what is idle;
+. lets what still runs finish, up to `drain_timeout_seconds`;
+. terminates what has not finished and records it `killed` (the warning `PM_MCP-153` says that the timeout expired);
+. closes its components, the web listener last;
+. removes `state/runtime.json`, `run/runtime.token` and `run/runtime.sock`;
+. releases its singleton lock and exits with code `0`.
+
+The log shows the start of a drain as `PM_MCP-54` with the drain timeout, and its end as `PM_MCP-55` with what got quiet in time and what was terminated. A component that fails during the drain is logged as `PM_MCP-158`; the drain goes on and still removes the files and releases the lock, so the next start finds a clean base.
+
+A second stop request during a drain waits for the drain in progress. Merge-queue and review-bot leases are deliberately kept: a merge or a review round may still be running on the provider. The next start finds them orphaned and keeps or releases them by the same rules as after a crash.
+
+[#recovery-after-a-crash]
+== Recovery After a Crash
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+A runtime that was killed, or that crashed, leaves no clean end behind. Nothing has to be done by hand: the next start repairs each enrolled project, after the socket is bound, so the runtime is reachable at once.
+
+* A project is repaired on the first call that addresses it, and every enrolled project in a pass in the background; each project once per runtime.
+* A call to a project whose repair takes longer than 10 seconds gets the error `runtime_recovering`. It is retryable: repeat the call, and it is served once the repair has finished. The log shows the wait as `PM_MCP-155`. Calls to other projects are served meanwhile.
+* A repair that fails stops only its project; the log names the project, the step and the reason (`PM_MCP-252`). Each finished repair is logged as `PM_MCP-56`.
+* A project that is not enrolled is not touched.
+
+The repair marks the leases of the dead runtime as orphaned, releases a lease only on positive evidence that it was abandoned, completes the store transactions the crash interrupted, and makes the derived writes they left undone. Once an hour the runtime also sweeps the enrolled projects that are repaired (`PM_MCP-57`, and `PM_MCP-159` for a step that failed).
+
+[#relay-version-mismatch]
+== Relay Version Mismatch
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7], link:../Requirements.adoc#PM-DIST-4[PM-DIST-4]_
+
+After an upgrade, the relays of host sessions that were already open are still the old binaries. Every relay names its own version in the request header `PM-MCP-Relay-Version`, and the runtime compares it with its own. A relay of another version keeps working; the mismatch concerns only the operator and never appears in what a model sees.
+
+For each relay version that differs from its own, the runtime once per runtime instance:
+
+* writes an audit record `relay_version_mismatch` with both versions (`relay_version`, `runtime_version`);
+* logs the warning `PM_MCP-156`, naming both versions and the recommendation;
+* keeps the latest mismatch as status data for `pm-operator status`: the relay version, the runtime version, and the recommended command `pm-operator drain`.
+
+The recommended action is `pm-operator drain`, which stops the old runtime. The detection is not stored across a restart: a runtime started anew reports a mismatch it observes again.
