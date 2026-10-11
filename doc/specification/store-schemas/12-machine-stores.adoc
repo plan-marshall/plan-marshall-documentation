@@ -36,7 +36,7 @@ Configures machine-wide build and worker concurrency limits, warm LSP pool sizin
       "type": "integer",
       "minimum": 0,
       "default": 600,
-      "description": "How long running jobs may finish after SIGTERM/SIGINT or pm-operator drain before their process groups are terminated and recorded killed (runtime-model.adoc, Drain, Stop & Upgrade; timeouts.adoc, Runtime Lifecycle)."
+      "description": "How long running jobs may finish after SIGTERM/SIGINT or pm-operator drain before their process groups are terminated and recorded killed (runtime-model.adoc, Drain, Stop & Upgrade; timeouts.adoc, Runtime Lifecycle). The runtime's drain reads an invalid value (negative, not an integer, or a file that is unreadable or not one JSON object) as the default, with a warning, and never fails for it."
     },
     "escalation_cap_seconds": {
       "type": "integer",
