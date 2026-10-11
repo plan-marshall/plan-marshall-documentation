@@ -39,7 +39,7 @@ That makes the check sound for what it claims and silent about the rest. A state
 == What the Fuzzer Adds
 _Requirements: link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
 
-The fuzzer looks at exactly what the graph cannot see: guards. It takes a unit that passed the verifier and walks it many times. Each walk draws a value for every guard atom of the unit (`in_worktree`, `has_open_findings`, `all_tasks_completed` and every `predicate:` primitive), follows only the exits that hold under those values, and moves at random among them. A state that is not terminal and has no holding exit is a dead state: in that situation the process would stop with nowhere to go. The fuzzer reports it with the walk's assignment, so the report shows how to get there.
+The fuzzer looks at exactly what the graph cannot see: guards. It takes a unit that passed the verifier and walks it many times. Each walk draws a value for every guard atom the unit's guards name (a built-in such as `in_worktree`, `has_open_findings` or `all_tasks_completed`, or a `predicate:` primitive; an atom no guard names plays no part and is not drawn), follows only the exits that hold under those values, and moves at random among them. A state that is not terminal and has no holding exit is a dead state: in that situation the process would stop with nowhere to go. The fuzzer reports it with the walk's assignment, so the report shows how to get there.
 
 A link state whose only link is guarded by `in_worktree` passes the verifier, because the link exists; the fuzzer finds the dead state as soon as a walk draws `in_worktree=false`. The same unit with that guard removed gives no report.
 
