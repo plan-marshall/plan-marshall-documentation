@@ -68,7 +68,8 @@ The runtime (`pm-mcpd`) persists machine-wide configuration, cross-process `File
 │   │                                    # Machine store locks, one sibling lock per renamed store,
 │   │                                    # acquired alphabetically after all scope locks:
 │   ├── build-slots.lock                 # state/build-slots.json
-│   ├── credentials.lock                 # credentials/ (fallback credential files)
+│   ├── credentials.lock                 # credentials/ (fallback credential files); creation of the
+│   │                                    # enrolment integrity key in the keyring, before any enrolment lock
 │   ├── enrolments/
 │   │   └── <project_id>.lock            # enrolments/<project_id>.json and its .hmac (lexicographic by project_id)
 │   ├── harnesses.lock                   # harnesses.json and its .hmac

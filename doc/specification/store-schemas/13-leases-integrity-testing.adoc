@@ -114,7 +114,7 @@ _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-
 * *Lock-Free Snapshot Reads*: Because every store update uses atomic write-and-rename (`<file>.tmp.<uuid>` -> `<file>`), all read-only operations (`pm_state`, `pm_plans`, `pm_epics`, `pm://` resources) read the current inode snapshot directly without acquiring file locks. A snapshot reader never decides `store_tampered`; it reports `digest_unverified` (<<store-digest-verification>>).
 * *Sibling Lock Files*: Every store that is replaced by atomic rename is guarded by a sibling lock file, never by a lock on the store file itself (a rename replaces the inode, so a lock on the old file excludes nobody). The machine stores and their lock files are:
 ** `<PM_MCP_BASE>/locks/build-slots.lock`: `state/build-slots.json`
-** `<PM_MCP_BASE>/locks/credentials.lock`: the fallback credential files `credentials/` (every write of a `pm-operator credentials` verb)
+** `<PM_MCP_BASE>/locks/credentials.lock`: the fallback credential files `credentials/` (every write of a `pm-operator credentials` verb), and the creation of the enrolment integrity key in the keyring (`enrolment-integrity-key`), taken before any enrolment lock
 ** `<PM_MCP_BASE>/locks/harnesses.lock`: `harnesses.json` and its sidecar `harnesses.json.hmac`
 ** `<PM_MCP_BASE>/locks/enrolments/<project_id>.lock`: `enrolments/<project_id>.json` and its sidecar `enrolments/<project_id>.json.hmac` (one lock per enrolment file)
 ** `<PM_MCP_BASE>/locks/install-records.lock`: `state/install-records.json`
