@@ -1,0 +1,376 @@
+= Use Cases: Starting Work (UC-STA)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Starting Work
+
+The operator starts a plan or an orchestrator in a project from what the work comes from: a description, documents, issues, a lesson, the checkout's local changes, a pull request, or a recipe. The operator does this in the web app or in the terminal client, which are the only places where the operator acts (<<change-clients-only>>); how each shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+
+[#principles]
+== Principles
+
+[#machinery-gathers]
+Machinery gathers, models read:: Gathering a source is the server's work: it fetches, checks, creates the directories, and stores every source of a plan or an orchestrator in its source directory. The only model step while a source comes in is the screening of what came from outside the machine. A model works with a source only once it is stored locally, and an external one only once it is screened.
+[#local-is-own]
+What is on this machine is the operator's own:: The operator's description and the documents on this machine are trusted as the checkout's code is trusted, and are not screened; what comes from outside the machine (an issue, a pull request) is untrusted until screened.
+[#sources-first]
+Sources first, the rest when needed:: Starting asks only what the work comes from. What the plan or the orchestrator needs beyond that (its posture, its base branch, how many plans run at once) is asked where it is first needed, and not at all where the project or the machine sets a value.
+
+[#UC-STA-1]
+== UC-STA-1: Start a Plan
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: start a plan in a project from everything it should start from, in one guided run, and see it run.
+Trigger:: the operator chooses _Add a plan_ on a project (link:04-projects.adoc#UC-PRJ-2[UC-PRJ-2]), after a project's onboarding (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]), or in the terminal client in a checkout, whose project is the proposal.
+Preconditions:: the project is enrolled and ready; the machine is onboarded.
+Flow::
++
+[source,text]
+----
+  [S] = the server   [O] = the operator   [M] = a model through a role task
+  ↳ = a sub-workflow
+
+  [S] start.open               the entry of the project and its source
+       │                       directory, empty; the facts: the project's
+       │                       recipes, its unclaimed lessons, whether the
+       │                       checkout has local changes
+       ▼
+  [O] start.choose             a plan from sources, or a recipe
+       ├── recipe ───────────► ↳ recipe.start (<<UC-STA-5>>)
+       ▼ sources
+  [O] start.sources            the sources gathered so far, each with its
+       │                       state; add one, remove one, start
+       ├── description ──────► [S] start.store-description   the text as
+       │                            │                         description.md
+       │                            ▼
+       │                       start.sources
+       ├── documents ────────► ↳ source.documents (<<UC-STA-3>>) ─► start.sources
+       ├── issue ────────────► ↳ source.issue (<<UC-STA-4>>) ─────► start.sources
+       ├── lesson ───────────► ↳ source.lesson ───────────────────► start.sources
+       ├── local changes ────► ↳ source.local-changes ────────────► start.sources
+       ├── pull request ─────► ↳ source.pull-request ─────────────► start.sources
+       ▼ start, every source stored and none unscreened
+  [O] start.ready              what the plan starts from, its title and id
+       │                       proposed from the sources, both changeable
+       ▼ create
+  [S] start.create             re-checks what creation needs; creates the
+       │                       plan; the source directory becomes the plan's
+       ▼
+  init.*                       the plan runs (link:03-plans.adoc#UC-PLN-1[UC-PLN-1]); what it needs and
+                               has no value for is asked where it is first
+                               needed (<<change-options-when-needed>>)
+----
+Variations::
+* *Several sources*: a plan starts from any number of descriptions, documents, issues, and lessons together; each is stored on its own in the source directory (<<change-source-directory>>). A pull request and the local changes decide how the plan runs (it adopts the pull request, or it lands the changes) and therefore start a plan alone or with descriptions and documents only.
+* *A source that fails* (an issue not found, a document not readable) stays in the list with its cause, to be tried again or removed; the plan cannot start while a source is not stored, or an external one not screened or accepted.
+* *Leaving*: the entry keeps its sources while the operator is away, in either client; abandoning it deletes its source directory, and nothing of a plan exists before `start.create`.
+* *A lesson* is checked against the current checkout first; one whose premise no longer holds is shown with its evidence, to be used anyway or retired (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States]).
+* *An orchestrator's plan* is started by the orchestrator itself, without the operator; its source is the orchestrator's staged section, stored in the plan's source directory like any other.
+Outcome:: the plan exists, with every source it starts from in its source directory, and runs; the operator sees it in Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]).
+Changes::
+* *All interaction in the operator's clients* (<<change-clients-only>>).
+* *Starting from the clients* (<<change-start-from-clients>>).
+* *The source directory* (<<change-source-directory>>).
+* *Asked when needed* (<<change-options-when-needed>>).
+Requirements:: link:../Requirements.adoc#PM-WF-10[PM-WF-10], link:../Requirements.adoc#PM-WF-15[PM-WF-15]; the bootstrap is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], the sources in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Plan Source Contracts).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc[Starting Work]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc[Terminal Client, Starting Work]
+
+[#UC-STA-2]
+== UC-STA-2: Start an Orchestrator
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: start an orchestrator for an initiative that needs several plans, from everything that describes it, and let it cut the work into plans.
+Trigger:: the operator chooses _Add an orchestrator_ on a project (link:04-projects.adoc#UC-PRJ-2[UC-PRJ-2]).
+Preconditions:: the project is enrolled and ready; the machine is onboarded.
+Flow::
++
+[source,text]
+----
+  [S] start-epic.open          the entry of the project and its source
+       │                       directory, empty
+       ▼
+  [O] start-epic.sources       the sources gathered so far, as in UC-STA-1:
+       │                       descriptions, documents, issues; add one,
+       │                       remove one, start
+       ├── description ──────► [S] start-epic.store-description
+       ├── documents ────────► ↳ source.documents (<<UC-STA-3>>)
+       ├── issue ────────────► ↳ source.issue (<<UC-STA-4>>)
+       ▼ start, every source stored and none unscreened
+  [O] start-epic.ready         the orchestrator's title and id, proposed
+       │                       from the sources, both changeable
+       ▼ create
+  [S] start-epic.create        the ledger, with the list of its sources; the
+       │                       orchestrator's machine store, into which the
+       │                       source directory moves
+       ▼
+  [M] epic.decompose           the role decompose reads the stored sources
+       │                       and drafts the workstreams and the staged
+       │                       plans
+       ▼
+  epic.*                       the orchestrator runs and starts its plans;
+                               how many run at once is asked when the first
+                               plan is to start, unless the project sets it
+----
+Variations::
+* *Documents are the usual source* of an orchestrator: a concept, a specification, a directory of them. They are stored as they are; a directory keeps its tree.
+* *Adopting* an orchestrator that exists in the ledger but not on this machine (another machine started it) is offered instead of a new one, as today (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Epic Bootstrap]).
+* *Its plans and the orchestrator talk through the server*: a plan sends to its orchestrator's inbox, and the orchestrator to a plan's mailbox (link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/model-work/08-epic-coordination.adoc#plan-mailbox[Plan Mailbox]); no text passes from one to the other through the operator.
+* A source that fails, leaving, and abandoning are as in <<UC-STA-1>>.
+Outcome:: the orchestrator exists with its sources stored and listed in its ledger, has drafted its workstreams and plans from them, and starts its plans as they become launchable.
+Changes::
+* *All interaction in the operator's clients* (<<change-clients-only>>).
+* *Starting from the clients* (<<change-start-from-clients>>).
+* *The source directory* (<<change-source-directory>>), including the orchestrator's sources.
+* *Asked when needed* (<<change-options-when-needed>>).
+Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc[Starting Work]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc[Terminal Client, Starting Work]
+
+[#UC-STA-3]
+== UC-STA-3: Bring in Documents
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, while starting a plan or an orchestrator.
+Goal:: make one or more files, or a directory, a source of the work, copied or moved, without a model touching them on the way.
+Trigger:: the operator adds documents in <<UC-STA-1>> or <<UC-STA-2>>.
+Flow::
++
+[source,text]
+----
+  [O] source.documents.pick     files or a directory on this machine; the
+       │                        checkout's files first
+       ▼
+  [S] source.documents.check    each is a regular file, readable, within the
+       │                        bounds of size and count; a directory is
+       │                        listed with what it holds; links that lead
+       │                        out of it are not followed
+       ├── something fails ──► source.documents.pick, with the cause per file
+       ▼
+  [O] source.documents.mode     copy or move, the machine's default chosen;
+       │                        a file the checkout's git tracks is always
+       │                        copied, since moving it would change the
+       │                        repository
+       ▼
+  [S] source.documents.store    copies or moves them into the source
+       │                        directory, a directory with its tree; records
+       │                        each with where it came from, its size, and
+       │                        its digest
+       ▼
+  done                          the documents are a source, trusted
+----
+Variations::
+* *The machine's default* is _copy_; the operator changes it in the machine's settings, or by choosing _always_ with an answer, after which the choice is no longer asked.
+* *Not screened*: documents on this machine are the operator's own (<<change-local-trusted>>); the deterministic level-1 validator does not run on them either, since nothing about them is external.
+Outcome:: the documents are stored in the source directory, listed in its manifest; a moved document is gone from where it was.
+Changes::
+* *Documents as a source* (<<change-documents>>).
+* *What is on this machine is trusted* (<<change-local-trusted>>).
+
+[#UC-STA-4]
+== UC-STA-4: Bring in an Issue
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, while starting a plan or an orchestrator.
+Goal:: make an issue of GitHub, GitLab, or Codeberg a source of the work, from the project's own repository or another one, fetched by the server and screened before any model reads it.
+Trigger:: the operator adds an issue in <<UC-STA-1>> or <<UC-STA-2>>.
+Flow::
++
+[source,text]
+----
+  [O] source.issue.name        the issue: a number (the project's own
+       │                       repository) or its URL
+       ▼
+  [S] source.issue.resolve     the forge (GitHub, GitLab, Codeberg or another
+       │                       Forgejo), the repository, the provider, the
+       │                       credential
+       ├── another repository, not granted ──► [O] source.issue.grant
+       │                                          may the server read the
+       │                                          issues of <owner/repo>?
+       │                                          once, or for this project
+       ├── no credential for the forge ─────► reads it without one if it is
+       │                                       public; else names the
+       │                                       credential to add
+       ▼
+  [S] source.issue.fetch       a bounded job of the forge's provider: title,
+       │                       body, labels, milestone, assignees, state, URL
+       ├── fails ─────────────► [O] source.issue.failed   the cause (not
+       │                             found, not readable, provider
+       │                             unavailable); try again, or remove it
+       ▼
+  [S] source.issue.store       the level-1 validator over title and body,
+       │                       every change reported; stored in the source
+       │                       directory, marked untrusted and unscreened
+       ▼
+  [M] source.issue.screen      the screener over the stored copy: the only
+       │                       model step of bringing in a source
+       ├── suspicious ────────► [O] source.issue.flagged   the flagged spans;
+       │                             accept (recorded with its reason) or
+       │                             remove it
+       ▼ clean
+  done                         the issue is a source; models of the plan
+                               read it as untrusted text
+----
+Variations::
+* *A pull request* comes in the same way through `source.pull-request` (its title and body screened, its changed files recorded), with the check that it is open and its head writable.
+* *Writing back* (the clarified request and the approved outline posted as comments) goes only to an issue of the project's own repository, and only where the project's team configuration enables it.
+Outcome:: the issue is stored in the source directory with its fields and its screening verdict; nothing outside the screener has read it before.
+Changes::
+* *Issues by number or URL* (<<change-issues>>).
+* *Codeberg and Forgejo* (<<change-forgejo>>).
+* *Screened once stored* (<<change-screen-stored>>).
+
+[#UC-STA-5]
+== UC-STA-5: Run a Recipe
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: run a recurring kind of work the project or a domain has named and shaped as a workflow of its own (a coverage push, a dependency update, an audit), giving only its parameters.
+Trigger:: the operator chooses a recipe in <<UC-STA-1>>, or the recipe of a project from its actions.
+Flow::
++
+[source,text]
+----
+  [O] recipe.choose            the project's recipes, each with what it does;
+       │                       the domain's and the project's own
+       ▼
+  [O] recipe.parameters        the recipe's parameters, each with its
+       │                       options as the server resolves them (the
+       │                       modules, the domains, a scope) and a proposal
+       ├── a request-scoped recipe ──► start.sources of UC-STA-1, then here
+       ▼
+  [S] recipe.create            the plan, its id from the recipe and the
+       │                       time; its process is the recipe's workflow
+       ▼
+  <recipe>.*                   the recipe's own phases, as sub-workflows
+----
+Outcome:: a plan runs the recipe's workflow with the parameters given.
+Changes::
+* *A recipe is a workflow* (<<change-recipe-workflow>>).
+Requirements:: the recipes are specified in link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points].
+
+[#changes]
+== Changes to the Specification
+
+The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-clients-only]
+=== All Interaction in the Operator's Clients
+
+Gap:: the operator acts through a coding agent: `pm-mcp enter` opens an entry from the agent's shell, the agent's session drives the bootstraps and the project setup, the agent's model maps the user's words onto the links of a bootstrap ("choosing what to work on is the user's intent relayed by the model"), and a decision may be answered in the entry session (channel `session`). What the operator sees, is asked, and answers then depends on a harness and a model, which the system cannot make dependable, and the same step has two shapes, one for a session and one for the clients.
+Fix::
+* *The operator's clients are the only place of interaction with the operator*: the web app and the terminal client. Everything the operator is asked, chooses, or answers is an operator wait (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to them; no harness, no session, and no model relays the operator's words or choices.
+* *A harness is a worker only*: the runtime runs it for the tasks of a role, and it never acts for the operator. The session-driven units, the entry session, the channel `session` of answers, and the host-facing verb `pm-mcp enter` as the operator's way to start work are removed; `pm-mcp serve` stays, for the workers.
+* *Every way to start work* (a plan, an orchestrator, a recipe, a project's onboarding and setup) runs in the clients (<<change-start-from-clients>>, link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]).
+* The interpretation of the operator's own words in a decision (link:03-plans.adoc#change-own-words[Own Words]) is not relaying: the operator wrote in a client, and confirms what was understood there.
+Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/mcp-tools/01-core-workflow-tools.adoc[Core Workflow Tools] (the bootstrap entries), link:../specification/cli-and-security/01-cli-and-installer.adoc#command-tree[Command Tree] and the entry identity recording of `pm-mcp enter`, link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (the channel `session`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation], link:../Requirements.adoc#PM-WF-12[PM-WF-12] (choices before a scope exists as links the model follows after relaying the user's choice), link:../requirements/08-security.adoc[PM-SEC] (the places that say the same), link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine], link:../requirements/13-client-profiles.adoc[Client Profiles] (`PM-CLIENT-*`, the entry of a host), link:03-plans.adoc#UC-PLN-2[UC-PLN-2] (its actor), link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process] (the setup from the entry session). This is an *intent change*: it replaces the founding principle that the user works with `PM-MCP` through a coding agent.
+
+[#change-start-from-clients]
+=== Starting from the Clients
+
+Gap:: a plan or an epic is started only by `pm-mcp enter` and the bootstrap a session drives; a pending entry without a session is invalid unless an epic starts its own plan; the choice `start.choose` takes exactly one source, and the description (`new_request`) is a link with no state of its own.
+Fix::
+* `POST /api/v1/projects/{project_id}/entries` with the kind `plan` or `epic` opens an entry; its states are operator waits served to both clients; the pending entry record needs no session.
+* `start.choose` offers a plan from sources or a recipe; `start.sources` and `start-epic.sources` hold a list of sources, to which every source sub-workflow adds and from which the operator removes; the description is stored by the main workflow itself (`start.store-description`), since it needs nothing gathered.
+* `start.ready` and `start-epic.ready` show the title and the id proposed from the sources; the other commit options of today (posture, outline review, base branch) leave the start (<<change-options-when-needed>>).
+* `epic_slug`, `title`, and `vision` of `start-epic.define` become the sources and the title of `start-epic.ready`; the vision is a description like any other.
+* The facts of `start.open` stay local listings (recipes, unclaimed lessons, local changes); issues and pull requests are named, never listed (link:../later-improvements.adoc[Later Improvements], L-6).
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc[Bootstrap & Lessons States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Plan Source Contracts), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record].
+
+[#change-source-directory]
+=== The Source Directory
+
+Gap:: a plan's sources live only in its pending entry, as one source object, and are then flattened into `request.md`; no plan or epic keeps a source as it came in, an epic keeps none at all (its header has no origin, and `epic.decompose` reads "the epic's vision and source" from nowhere), and a plan cannot start from more than one source.
+Fix::
+* *Every entry has a source directory*, created by the server with the entry (`pending/<entry_id>/sources/`) and moved with the creation into the plan (`plans/<plan_id>/sources/`) or the orchestrator's machine store (`epics/<epic_id>/sources/`):
++
+[source,text]
+----
+sources/
+├── sources.json            the manifest: per source its id, kind, reference,
+│                           where it came from, trust, digest, size, added
+│                           at, and for an external one its screening verdict
+├── description-<n>.md      a description, as written
+├── documents/<n>/…         documents, as copied or moved; a directory with
+│                           its tree
+├── issues/<forge>-<owner>-<repo>-<number>/
+│   ├── issue.md            title and body, level-1 validated
+│   └── issue.json          labels, milestone, assignees, state, URL
+├── pull-request/           as an issue, with the changed files
+├── lesson-<id>.md          the lesson as claimed
+└── local-changes.json      the captured changes
+----
+* *The manifest is the record of the sources*: `origin` of `mcp/status.json` names the sources by their ids (a list), and the epic header lists them (kind, reference, digest) so that the ledger says what the orchestrator started from on every machine.
+* `request.md` keeps its sections; its original input is composed by the server from the descriptions and a reference to each other source; the models of the plan read the sources in the source directory.
+* The issue's reference lives in the manifest and in `origin`; `references.json` gains no field for it.
+* A source is never changed once stored; a source added later (a description during refine) is a new entry of the manifest.
+Affects:: link:../specification/filesystem-layout/03-project-store.adoc#machine-store[Per-Project Machine Store], link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`origin`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`), link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (`request.md`).
+
+[#change-documents]
+=== Documents as a Source
+
+Gap:: there is no way to start from documents: no source kind, no unit, no place to keep them. `plan-marshall` starts a plan from one file pointer and reads an orchestrator's documents where they lie, so a moved or edited document changes what the work started from.
+Fix::
+* A source unit `source-documents` (<<UC-STA-3>>) with the source kind `documents`: the server checks the files or the directory (regular files, readable, the bounds of size and count, no link followed out of a directory), and copies or moves them into the source directory.
+* Copy or move is an operator wait with the machine's default (`sources.documents_mode`: `copy` by default, `move`, or `ask`), a file the checkout's git tracks always copied.
+* The web app picks the files through a listing of the server, confined to the checkout and the operator's home directory; the terminal client sends paths, resolved against its working directory.
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the listing).
+
+[#change-local-trusted]
+=== What Is on This Machine Is Trusted
+
+Gap:: `PM-SEC-1` asks to treat all external content "including repository code, build definitions" as untrusted, while the source units treat the project's own content (a lesson, a recipe, the local changes) as validated only, and documents from the checkout or the operator's machine have no place in the rule at all. `plan-marshall` also screens third-party text the user pastes into a description, which was a workaround for a system without a server between the operator and the models.
+Fix::
+* *Trusted*: what the operator wrote in a client (a description, an answer), and what is on this machine (the checkout, documents the operator chose). They are never screened; a model reads them as the operator's and the project's own, as it reads the code.
+* *Untrusted until screened*: what comes from outside the machine: issues, pull requests, review comments and bot findings, analysis messages, results of upstream MCP servers. The two-level guard stays for them unchanged.
+* A description is not searched for pasted third-party text: what the operator puts into a client is the operator's.
+Affects:: link:../requirements/08-security.adoc#PM-SEC-1[PM-SEC-1], link:../specification/model-work/07-untrusted-text-screening.adoc#two-level-guard[Two-Level Guard for External Text].
+
+[#change-screen-stored]
+=== Screened Once Stored
+
+Gap:: the screening of a source runs over text held in the pending entry, and the order of fetching, storing, and screening is stated per source unit.
+Fix::
+* *One order for every external source*: fetch by a bounded job, the level-1 validator, store in the source directory marked unscreened, then the screener over the stored copy; the verdict is written into the manifest. No model but the screener reads a source before its verdict is `clean` or the operator accepted it.
+* The batch of a source is built from the stored files; the batch kinds stay as they are.
+Affects:: link:../specification/model-work/07-untrusted-text-screening.adoc#two-level-guard[Two-Level Guard for External Text], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States].
+
+[#change-issues]
+=== Issues by Number or URL
+
+Gap:: an issue is named only by its number and read only from the project's own repository by its CI provider; `plan-marshall` also starts from an issue's URL in another repository. Only title and body are kept; labels, milestone, and assignees are lost. The plan source promises to post back to the issue through asynchronous mirror jobs that no operation specifies.
+Fix::
+* `source-issue` takes a number (the project's own repository) or a URL; the server resolves the forge, the repository, and the provider from it.
+* *Another repository* is read only with the operator's grant, once or for the project, recorded like the cross-repository reads (link:../specification/cli-and-security/02-credentials-and-operator.adoc#cross-repository-reads[Cross-Repository Reads]), with the credential of that forge, or without one for a public issue.
+* *The fields*: title and body as text through the guard; labels, milestone, assignees, state, and URL as structured fields in `issue.json`, never as text for a model to follow.
+* *The links* of an issue keep their targets when they lead to the issue's own forge: the level-1 allowlist gains the origin of the forge the source came from.
+* *Writing back* is the operation `ci.issue-comment` of the CI contract, only for an issue of the project's own repository and only when the team's configuration enables it; it posts the clarified request after Phase 2 and the approved outline after Phase 3.
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (the issue source), link:../specification/job-runtime/03-parsers-and-gates.adoc#ingestion-validator[Ingestion Validator] (the allowlist), link:../specification/cli-and-security/02-credentials-and-operator.adoc#cross-repository-reads[Cross-Repository Reads], link:../specification/module-structure.adoc[Module Structure] (`pm-provider-ci`).
+
+[#change-forgejo]
+=== Codeberg and Forgejo
+
+Gap:: the providers are GitHub and GitLab only (`ci_provider`, the integrations, the credential keys, the provider modules); Codeberg and other Forgejo or Gitea forges are not known anywhere.
+Fix::
+* A provider `forgejo` for Codeberg and every Forgejo or Gitea forge: the module `pm-provider-forgejo` with the CI contract over the Forgejo REST API, the value `forgejo` in `ci_provider` and the integrations, the host detection (`codeberg.org`, else a probe of `/api/v1/version`), the credential key `forgejo` with its host, and its place in the machine's provider defaults (link:01-onboarding.adoc#change-provider-defaults[Machine Provider Defaults]).
+* It serves the issue source first; as the CI provider of a project whose remote is on a Forgejo forge, it follows the same contract as the others.
+Affects:: link:../specification/module-structure.adoc[Module Structure], link:../specification/store-schemas/07-project-configuration.adoc[Project Configuration] (`ci_provider`), link:../specification/store-schemas/09-derived-facts-and-build-timings.adoc[Derived Facts] (the detection), link:../specification/identifiers/02-registry-stores-to-web.adoc[Identifier Registry] (the credential key), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Operator Credential CLI].
+
+[#change-recipe-workflow]
+=== A Recipe Is a Workflow
+
+Gap:: a recipe is a source of a plan that the plan's phases then route around: special states (`init.recipe-selected`, `outline.recipe-entry`, `outline.recipe-confirm`, `outline.empty-harvest`), a forced lane, a forced confidence. The recipe's work is spread over the general plan's workflow instead of being a workflow of its own.
+Fix::
+* *A recipe is a named workflow* of its domain or project: its phases are sub-workflows (link:03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows]), its own where it differs and the plan's shared ones (finalize, the landing) where it does not; it declares its parameters and whether it takes the sources of a request.
+* Starting a recipe (<<UC-STA-5>>) creates a plan whose process is the recipe's workflow; the recipe routes inside the plan's workflow go.
+Affects:: link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (the recipe source, the recipe states), link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance].
+
+[#change-options-when-needed]
+=== Asked When Needed
+
+Gap:: the bootstrap asks the plan's options before the plan exists (posture, outline review, base branch, slug), and `plan-marshall` asks more during its init (the domain, the lane); the operator decides them before knowing whether they matter, and an orchestrator's `parallelization_scope` is fixed at its definition.
+Fix::
+* *The start asks only the sources*, and the title and id proposed from them.
+* *Every other option is an operator wait at the state that first needs it*, with its proposal: the posture where the plan's lane is chosen, the base branch before the plan's branch is created, the outline review when the outline is ready, the number of plans an orchestrator runs at once when its first plan is to start. An option the project or the machine sets (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]) is not asked.
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`parallelization_scope`).

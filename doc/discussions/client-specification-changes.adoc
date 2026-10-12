@@ -5,13 +5,15 @@
 
 xref:../Requirements.adoc[Requirements] » xref:README.adoc[Discussions] » Specification Changes for the Clients
 
-What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
+What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
 
 [#decided]
 == Decided
 
 * *Waiting for the operator is normal behaviour*, defined once in the workflow language, and the specification's principle that no state waits for an operator decision is wrong. An operator wait halts its own scope only; the onboarding's wait is the one that halts the system (link:../use-cases/03-plans.adoc#change-operator-wait[Waiting for the Operator]). That removing time limits touched some 35 places showed the waits were sliced wrongly: each place defined its own.
 * *A decision is the question set*, named by its first question's id; across plans and epics it is addressed as `<scope_id>/<question_id>` (`fix-relay/Q-007`); no new identifier kind, and the name _decision record_ (`D-NNNN`) keeps its meaning, the record of a decision taken.
+* *The operator acts only in the two clients* (link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]): a harness is a worker, never a channel of the operator. The session-driven units, the entry session, the channel `session` of answers, and `pm-mcp enter` as the operator's way to start work go; every place that relays the user's choice through a model is rewritten as an operator wait.
+* *Sources are gathered by the server and kept in a source directory* (link:../use-cases/05-starting-work.adoc#change-source-directory[The Source Directory]); the only model step of bringing in a source is the screening of external content, over the stored copy; what is on this machine is trusted (link:../use-cases/05-starting-work.adoc#change-local-trusted[What Is on This Machine Is Trusted]).
 * *The console's preferences* (`console.notify`, `console.full_screen`) are keys of the runtime's machine configuration.
 
 [#foundations]
@@ -75,6 +77,18 @@ Beyond the sections each change names in its _Affects_:
 |link:../use-cases/03-plans.adoc#change-running-work[Running Work], link:../use-cases/03-plans.adoc#change-titles[Titles], link:../use-cases/03-plans.adoc#change-phase-start[Phase Start], link:../use-cases/03-plans.adoc#change-needs-operator[Needs the Operator], link:../use-cases/03-plans.adoc#change-overview-resource[Overview Resource]
 |`last_activity_at`; a closed activity state of a plan (working, waiting for the operator, stalled, paused); an orchestrator's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
 
+|link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]
+|every specification that names the entry session or the model relaying the user (Session-Driven Units, the bootstraps, `PM-WF-12`, the setup's links, Operator Channel Isolation, the client profiles' entry); what of `pm-mcp enter` stays for a host (none, or the recording of a worker's identity); the static verification rule that allows links-only states in session-driven units.
+
+|link:../use-cases/05-starting-work.adoc#change-start-from-clients[Starting from the Clients], link:../use-cases/05-starting-work.adoc#change-source-directory[Source Directory], link:../use-cases/05-starting-work.adoc#change-documents[Documents], link:../use-cases/05-starting-work.adoc#change-screen-stored[Screened Once Stored]
+|the manifest's schema and its digests; the bounds of size and count of documents; the listing of files for the web app and its confinement; how a list of sources maps onto `origin` and `PlanSource`; the composed original input of `request.md`; the recovery of a source directory after a crash between storing and screening; the epic header's list of sources and its ledger write; the machine key `sources.documents_mode`; the refusal codes of a source (`not_found`, `not_readable`, `too_large`, `outside_allowed`).
+
+|link:../use-cases/05-starting-work.adoc#change-issues[Issues by Number or URL], link:../use-cases/05-starting-work.adoc#change-forgejo[Codeberg and Forgejo]
+|the URL grammar per forge; the grant for another repository in the grant store; `ci.issue-view` and `ci.issue-comment` in the CI contract of `pm-provider-ci`; the team key that enables writing back; the Forgejo provider in every closed list of providers, integrations, and credential keys; the allowlist origin of a source's forge.
+
+|link:../use-cases/05-starting-work.adoc#change-recipe-workflow[A Recipe Is a Workflow], link:../use-cases/05-starting-work.adoc#change-options-when-needed[Asked When Needed]
+|the recipe descriptor's workflow and parameters; what goes of the recipe states in Phases 1 and 3; the operator wait of each option and where it sits; the operator wait for `parallelization_scope`.
+
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
 
@@ -93,6 +107,8 @@ UC-PLN-3 (designing a plan's process) proposes no change yet: its building block
 * The entry opens the loopback listener first, then the LAN on a yes; today's lifecycle refuses the second exposure.
 * Machine Scope's gate names the web app; the design names both clients.
 * The messages endpoint has two paths.
+* All Interaction in the Operator's Clients against Onboarding a Project as One Process, which let the entry session drive the setup (corrected there), and against the package `enter-command`, which builds `pm-mcp enter` as the entry of a host.
+* Starting from the Clients against L-6: the clients name an issue, as the bootstrap does; a list of issues to pick from stays a later improvement.
 
 [#slicing]
 == Packages
@@ -157,6 +173,26 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`pm-mcp-clients`
 |The Terminal Client as the Entry, Loopback Host, A Fresh Code, Credentials in the Web App
 |`operator-interaction-contract`; UC-ENT-1 agreed
+
+|`start-from-clients`
+|`pm-mcp-core`
+|All Interaction in the Operator's Clients, Starting from the Clients, The Source Directory, Documents as a Source, What Is on This Machine Is Trusted, Screened Once Stored, Issues by Number or URL, Asked When Needed: the bootstraps as units of operator waits, the source units, the source directory, the end of the session-driven units
+|`operator-wait-and-machine-scope`; UC-STA-1 to UC-STA-4 agreed
+
+|`forgejo-provider`
+|`pm-mcp-core`
+|Codeberg and Forgejo: the provider module, its place in every list of providers
+|UC-STA-4 agreed
+
+|`recipe-workflows`
+|`pm-mcp-core`
+|A Recipe Is a Workflow
+|`phase-sub-workflows`; UC-STA-5 agreed
+
+|`start-contract`
+|`pm-mcp-clients`
+|the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files
+|`operator-interaction-contract`; `start-from-clients`; UC-STA agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`.
