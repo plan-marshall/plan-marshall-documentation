@@ -1,0 +1,84 @@
+= Runtime Lifecycle
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Concepts.adoc[Concepts] » Runtime Lifecycle
+
+The runtime `pm-mcpd` runs for a long time and serves many projects, but it can be stopped by the operator, by the operating system, or by a crash at any moment. Four mechanisms keep that safe: a start that does only bounded work before anything can connect, a drain that ends the runtime in a fixed order, a recovery that repairs each project after a crash before it is served, and a periodic sweep that removes what has aged out. They live in the library module `pm-runtime`, package `runtime.start`, and are called by the assembly `pm-mcp-server` from its start, its signal handlers and its requests; that wiring is still to come, apart from the start steps that the runtime ran before (the lock, the cleanup, the directory check, the token, the bind). How the code is built is in link:../developer/runtime-lifecycle.adoc[Developer Guide § Runtime Lifecycle]; what an operator sees and configures is in link:../user/operator.adoc[User Guide § Operating the Runtime].
+
+[#startup]
+== Startup
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7], link:../Requirements.adoc#PM-TECH-3[PM-TECH-3], link:../Requirements.adoc#PM-SEC-6[PM-SEC-6]_
+
+A start runs five steps before the socket is bound, so no client can connect before the runtime token exists, and then two more:
+
+----
+1 singleton lock ──> 2 stale socket and runtime record removed ──> 3 directories and permissions
+   (loser exits,        (only while the lock is held)                 (violation: exit 77)
+    writes nothing)
+──> 4 bounded verification ──> 5 fresh runtime token ──> 6 bind the socket ──> 7 ready
+      (audit chain only)                                    (runtime.json)        (recovery starts)
+----
+
+Every step after the first runs only while the runtime holds the singleton lock `locks/runtime.lock`. That one rule is what makes the second step safe: holding the lock proves that no live runtime owns the socket and the runtime record it removes. A runtime killed in any of these steps holds nothing afterwards, because the operating system releases the lock with the process, and the next start runs all steps again and writes a fresh token.
+
+The fourth step, the *bounded verification*, does only work whose cost does not grow with the number of projects, plans or jobs. It verifies the audit chain incrementally from its last checkpoint, and nothing else: it reads no enrolment, no plan and no job file, migrates no store and validates no workflow unit. Each of those is checked when it is used, and a failure there blocks only the project that needs it. A broken audit chain is never repaired and never stops the start: it is logged, recorded as an `audit_chain_broken` audit record, and handed on with the start's outcome so that the status can show it. Until the audit trail exists, the verification answers that there is no chain to verify.
+
+Keeping the start bounded is what makes the cold-start target of `PM-TECH-3` reachable for a machine with any number of projects: the time to ready does not depend on how much work the machine holds. A test measures it on the JVM: the start steps take the same time, within the noise of the file system, for a base with no project and for one with 300 enrolled projects, and none of the seeded project files is read.
+
+[#drain]
+== Drain
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+The drain ends the runtime cleanly when it receives `SIGTERM` or `SIGINT` (sent by `pm-operator drain`, the service manager or the operating system) or is asked to stop through its local API. It runs in a fixed order:
+
+. stop admitting new work and end what is idle;
+. let what still runs finish, up to the drain timeout (`drain_timeout_seconds` of `machine-config.json`, 600 seconds by default; `0` does not wait);
+. terminate what has not finished by then and record it `killed`;
+. close the components, the web listener last;
+. remove the runtime record `state/runtime.json`, the token `run/runtime.token` and the socket `run/runtime.sock`;
+. release the singleton lock and exit with code `0`.
+
+The drain does not know the components it ends. Jobs, workers, the language server pool and the web listener join it as participants, each answering the same four questions in the same order: stop admitting, end what is idle, are you quiet yet, terminate what remains. This keeps the order in one place and lets each component bring its own rules (a job recorded `queued` during the drain, a worker's generation fenced) when it is built.
+
+Stopping the admission races with a new admission: a job admitted just after the check would run on, unsupervised, past the drain. The drain therefore sets its draining flag before it calls any participant, and a participant decides every admission under its own lock, reading the flag there.
+
+A failure of one participant never leaves the runtime half stopped: the failure is recorded, and the drain still removes the runtime files and releases the lock. The drain runs once; a second stop request waits for the first and gets its result.
+
+The drain never touches a lease store. Merge-queue and review-bot leases stay in place: a merge or a review round may still be in flight on the provider, and releasing the lease would let another plan take the slot. The next start finds them orphaned and handles them exactly like the leases of a crash (<<per-project-recovery>>).
+
+[#per-project-recovery]
+== Per-Project Recovery
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+A crash leaves work half done: transactions interrupted between their journal and their rename, leases held by a runtime that no longer exists, derived writes not yet made. The runtime repairs this per project, never before the socket is bound, so a machine with many projects still starts at once.
+
+*Triggers.* Two triggers start the recovery of a project: the first call that addresses the project, and a background pass over every enrolled project after the bind. Each project is recovered once per runtime instance, by whichever trigger comes first; the other waits for the same result. The claim on a project's recovery is one atomic step, so two triggers racing on the same project can never both run it. Only enrolled projects are recovered; the store an unenrolled project left behind is not touched.
+
+*The wait.* A call addressing a project whose recovery has not finished waits for it, at most 10 seconds (the project recovery wait). Then the call is answered with the retryable error `runtime_recovering`, and the recovery goes on; a repeated call is served once it has finished. Calls addressing other projects are served meanwhile, and a project whose recovery failed blocks only itself.
+
+*Step order.* The steps run in a fixed order, because each relies on the ones before it:
+
+. enrolment integrity;
+. jobs and workers of the previous runtime instance;
+. leases;
+. roll-forward of interrupted transaction journals;
+. cross-scope reconciliation;
+. worktree presence;
+. engine deadlines;
+. resumption of the drive;
+. pending-record sweep;
+. baseline worktree sweep.
+
+Three steps are implemented. The *lease step* marks the leases of the project whose holder, a runtime identified by process id and start instant, is no longer alive as orphaned, so the owning plan, epic or workspace can adopt them on its next transition; it removes a lease only on positive evidence that it was abandoned, and never touches the leases of another project. The *roll-forward* completes, for every scope of the project, a transaction a crash interrupted after its journal was written (link:store-integrity.adoc[Concepts § Store Integrity]); a journal that does not match what it describes modifies nothing and stops the recovery of the project as an integrity breach. The *cross-scope reconciliation* runs after it, when every authoritative store is complete, and makes the derived writes that a crash left undone. The other seven steps are named in the order already; they do their work when the stores and components they need exist, and report until then that they are not implemented. A step that fails stops the recovery of its project, and only of its project.
+
+*Sweep rule.* Every step that removes or releases something selects only from positive evidence of abandonment: a dead owner identified by process id and start instant, a terminal state, or an expired lease or retention period. A name that fails to parse as an identifier is never evidence, and every swept directory excludes its reserved entries by construction. A recovery that removes nothing it is unsure of can be run again after any crash without harm.
+
+[#periodic-sweep]
+== Periodic Sweep
+_Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
+
+Some records age out while the runtime runs: a pending entry record whose bootstrap was abandoned, a fenced session generation. Once an hour, the periodic sweep runs its steps for every enrolled project whose recovery has finished; a project still recovering, or whose recovery failed, is skipped and taken up by a later run. Each run hands its steps the instant 24 hours before it (the pending entry record maximum age): only a record older than that may be removed, because the runtime keeps no connections and age is the only evidence that nobody will come back for it. Both durations are compiled constants, not configuration: there is no legitimate reason for one machine to differ from another.
+
+The two steps, for the pending entry records and for the fenced session generations, are named and run in every sweep; they remove records once the pending store and the task queue exist. A failing step is logged and stops neither the other steps nor the other projects. A sweep interrupted by a crash is completed by the next run: a step removes only records already old enough, so running it again removes what is left and never a young record. The drain stops the schedule.

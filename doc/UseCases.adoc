@@ -8,12 +8,13 @@ link:../README.md[plan-marshall documentation] » Use Cases
 
 == Overview
 
-The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. How a use case looks and behaves, in the web app and in the terminal alike, is worked out in the link:Design.adoc[Design]; how the system does it, in the link:Specification.adoc[Specification].
+The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. There is one set of use cases for both clients of the operator, the web app and the terminal client: a use case says what the operator achieves, never how a client shows it. How each client shows it is worked out in its design, which is the specification of the client's implementation and lives with its code (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]); how the system does it, in the link:Specification.adoc[Specification].
 
 == Conventions
 
 * *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `== UC-<AREA>-<N>: <title>`. A number is never reused.
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
+* *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys.
 * *Status*: each use case states one of `DRAFT` (being written, open points named), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
 * *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit, marked `[S]` when the server acts, `[O]` when the operator chooses, and `[M]` when a model acts through a role task; the arrows carry the outcomes. The diagram shows the process, never a screen.
 * *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
@@ -34,7 +35,7 @@ Outcome:: what holds afterwards.
 Open points:: what is not decided yet.
 Changes:: the changes of the requirements and specifications it needs, each modelled as the fix of a gap.
 Requirements:: the requirements that serve it (link:Requirements.adoc[Requirements]).
-Design:: the design documents that show it (link:Design.adoc[Design]).
+Design:: the design documents that show it, per client (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 ----
 
 [#index]
@@ -48,7 +49,11 @@ Design:: the design documents that show it (link:Design.adoc[Design]).
 |link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
 |Making a machine ready, guided or automatically: the languages, the first harness, the harnesses and models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default.
 
-|`UC-WEB`
-|link:use-cases/02-web-app.adoc[02-web-app.adoc]
-|The web app: opening it, following plans and epics down to their parts, and designing a plan's process.
+|`UC-ENT`
+|link:use-cases/02-entry.adoc[02-entry.adoc]
+|Getting to work: the first command after installing, the onboarding when the machine is not ready, the web app connected from a desktop or over SSH.
+
+|`UC-PLN`
+|link:use-cases/03-plans.adoc[03-plans.adoc]
+|Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, and designing a plan's process.
 |===

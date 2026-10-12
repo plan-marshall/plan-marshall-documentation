@@ -7,9 +7,12 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 `plan-marshall-documentation` holds every document of plan-marshall-mcp (PM-MCP): use cases in `doc/UseCases.adoc` (modules in
 `doc/use-cases/`), requirements in
 `doc/Requirements.adoc` (modules in `doc/requirements/`), technical specifications in `doc/Specification.adoc`
-(documents in `doc/specification/`), the screen design in `doc/Design.adoc` (documents in `doc/design/`), delivery staging in `doc/roadmap.adoc`, defect archetypes and fixtures to guard
+(documents in `doc/specification/`), delivery staging in `doc/roadmap.adoc`, defect archetypes and fixtures to guard
 during implementation in `doc/ImplementationWatch.adoc` (documents in `doc/implementation-watch/`), and the concept,
-developer and user documentation of the implemented system. It holds no code and builds no artifact.
+developer and user documentation of the implemented system. It holds no code and builds no artifact. The one exception to
+"every document": the design of the two clients (the terminal client, the web app, and what they share) is the specification
+of their implementation and lives with their code in `pm-mcp-clients` (`doc/design/`); the use cases it shows stay here,
+one set for both clients.
 
 The code lives in four repositories of the organisation `plan-marshall`: `plan-marshall-mcp` (the Quarkus daemon
 assembly `pm-mcp-server`, the end-to-end tests, the model verification corpus `test/model/verification/`),
@@ -32,7 +35,8 @@ into the documents it concerns.
 ## Documentation
 
 AsciiDoc (`.adoc`) for all project documentation. Use cases go into `doc/use-cases/` (index `doc/UseCases.adoc`,
-identifiers `UC-<AREA>-<N>`), the screen design that shows them into `doc/design/` (index `doc/Design.adoc`).
+identifiers `UC-<AREA>-<N>`); they are client-neutral, cut by subject and never by client, and the design that shows them
+is in `pm-mcp-clients` (`doc/design/`).
 Requirements go into `doc/requirements/`,
 technical specifications into `doc/specification/` (traceability rules in `doc/Specification.adoc`; a reference
 specification with status `REFERENCE`, such as `evaluation.adoc`, records evidence and defines nothing),

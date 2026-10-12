@@ -75,7 +75,11 @@ worker are settled `killed`, the worker's generation is fenced and its job token
 and the build and model slots released; both provider leases are still recorded after exit, and the next start
 adopts or releases them by the recovery evidence rules exactly as after a crash; after the next start the released
 task is offered again exactly once without counting a re-offer, and a late call of the fenced generation is refused
-`generation_fenced`.
+`generation_fenced`. Present in `pm-mcp-core`: the drain never touches a lease store; `RuntimeDrainTest` seeds a
+merge-queue and a review-bot lease store, each holding a lease, and finds both byte-identical after the drain, and
+`RuntimeDrainKilledRuntimeIT` after a runtime killed in the drain wait and the next start. The parts on workers,
+generations, task leases and slots stay for the packages of the job runner and the supervisor, which join the drain
+as participants.
 Source:: design review.
 
 [#PM-WATCH-RUN-7]

@@ -37,15 +37,15 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |—
 |every MCP call addressing a project (by scope or `PM-MCP-Workspace`) after a runtime start, and every Local API request addressing a project
 |The call returns the retryable error `runtime_recovering` (`isError: true`; a Local API request: the same code of the `pm-api` error codes); the recovery continues, and a repeated call is served once it has finished. Nothing of the call is executed.
-|link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../mcp-tools.adoc[MCP Tools] (closed error codes); link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model, Local API]
+|link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../mcp-tools.adoc[MCP Tools] (closed error codes); link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model, Local API]; implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ProjectRecovery.java[ProjectRecovery] (`RECOVERY_WAIT`), link:../../concepts/runtime-lifecycle.adoc#per-project-recovery[Concepts § Per-Project Recovery]
 
 |[[drain-timeout]]Drain timeout
 |`600`
 |`drain_timeout_seconds` in `machine-config.json`
-|minimum `0` (`0` terminates running jobs at once)
+|minimum `0` (`0` terminates running jobs at once), maximum `3153600000` (100 years of 365 days, so the deadline of the drain can always be represented); a negative, non-integer or larger value, and a `machine-config.json` that cannot be read or does not parse as one JSON object, is invalid: the default `600` applies and a warning names the file and the reason; the start and the drain never fail for it
 |running jobs at `SIGTERM`/`SIGINT` / `pm-operator drain`; the wait of `pm-operator drain` for the runtime's exit
 |Remaining job groups are terminated (xref:01-job-budgets-and-waits.adoc#grace-period[Grace period]) and recorded `killed`, their build and model slots released, their job tokens revoked, the generations of workers fenced and their task leases released (the tasks stay `queued` for the next start), and `queued` jobs recorded `killed`; at the start of the drain no task is offered any more and every waiting worker is answered `end`, so only workers holding a task run into the drain timeout; warm language servers are shut down; merge-queue and review-bot leases are left in place and handled at the next start like those of a crash (<<leases>>); the runtime exits. `pm-operator drain` waits for the exit up to the drain timeout plus the xref:01-job-budgets-and-waits.adoc#grace-period[Grace period] plus a fixed `10`, then reports that the runtime is still draining.
-|link:../runtime-model/02-startup-recovery-drain.adoc#_drain_stop_upgrade[Runtime Model, Drain, Stop & Upgrade]
+|link:../runtime-model/02-startup-recovery-drain.adoc#_drain_stop_upgrade[Runtime Model, Drain, Stop & Upgrade]; implemented on the runtime side: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/DrainTimeout.java[DrainTimeout], link:../../user/operator.adoc#drain-timeout-seconds[User Guide § drain_timeout_seconds]
 
 |[[stalled-threshold]]Stalled threshold
 |`600` since the last transition or task progress of a non-terminal scope that has no pending condition and awaits no event (the definition: link:../runtime-model/04-sessions-and-workers.adoc#stalled-plans[Runtime Model, Stalled Plans]).
@@ -61,7 +61,7 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |—
 |`<PM_MCP_BASE>/projects/<project_id>/pending/<entry_id>.json`, with the bootstrap state it holds (age since `created_at`)
 |Removed and audited, one audit record each, by the project's recovery sweep and by the <<periodic-sweep-interval>> (age is the only evidence; the runtime keeps no connections); the bootstrap ends without a terminal and a later call naming the `entry_id` is `scope_not_found`. The bootstrap does no age check of its own.
-|link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]
+|link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]; the constant implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/PeriodicSweep.java[PeriodicSweep] (`PENDING_ENTRY_MAX_AGE`), link:../../concepts/runtime-lifecycle.adoc#periodic-sweep[Concepts § Periodic Sweep]
 
 |[[periodic-sweep-interval]]Periodic runtime sweep interval
 |`3600` between two runs of the runtime's periodic sweep over all enrolled projects.
@@ -69,7 +69,7 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |—
 |pending entry records older than the <<pending-entry-max-age>>; fenced entries of the session generation record older than the same maximum age
 |Each run removes the expired pending entry records, with one audit record each, and the expired fenced generations under the queue lock (link:../store-schemas/16-task-queue.adoc#session-generation-record[Store Schemas, Session Generation Record]).
-|link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]
+|link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]; implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/PeriodicSweep.java[PeriodicSweep] (`INTERVAL`), link:../../concepts/runtime-lifecycle.adoc#periodic-sweep[Concepts § Periodic Sweep]
 
 |[[lsp-idle-timeout]]Language server idle timeout
 |`900` without a request to the instance.

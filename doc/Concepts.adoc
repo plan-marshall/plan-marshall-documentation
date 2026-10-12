@@ -25,6 +25,9 @@ The concepts explain *why* `PM-MCP` is built the way it is and *what* its parts 
 |link:concepts/locks-and-leases.adoc[Locks and Leases]
 |How the runtime keeps concurrent writes from losing each other or deadlocking: short locks in one total order, lock files beside the stores, reads without locks, and leases for claims that last longer than a transaction.
 
+|link:concepts/runtime-lifecycle.adoc[Runtime Lifecycle]
+|How the runtime starts, ends and recovers: the start steps before anything can connect and why the work before the socket stays bounded, the drain that ends the runtime cleanly, the recovery of each project after a crash, run once and lazily, and the periodic sweep that removes what has aged out.
+
 |link:concepts/store-integrity.adoc[Store Integrity]
 |How the stores stay trustworthy: exactly one format version accepted and every other refused, the transaction journal that makes a write of several stores survive a crash, writes across scopes in a fixed order, append-only logs with their torn tail repaired, and digests that reveal an edit made outside the runtime.
 |===
