@@ -298,7 +298,7 @@ Flow::
   epic.next-work               the epic starts the plans that can start
 ----
 Variations::
-* *A later run* keeps what shipped and what runs; it changes only staged plans, and the review shows each change against the staged plan it replaces.
+* *A later run* keeps what shipped, what runs, and what is paused; it changes only staged plans, and the review shows each change against the staged plan it replaces.
 * *A failing check* blocks _agree_ and names the plans concerned; the operator edits, drops, or has the plan drafted again.
 * *Leaving* keeps the draft and the decisions made on it; the review continues where it stopped, in either client. The epic starts no plan before the first decomposition is agreed.
 * *The operator's words* are interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]).
