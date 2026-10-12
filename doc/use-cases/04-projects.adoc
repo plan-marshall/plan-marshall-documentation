@@ -56,8 +56,18 @@ Flow::
        │                       defaults, the integration variants, the commit
        │                       identity; the machine's value is the proposal
        ▼
-  [S] setup.qualify, enrich    role qualification and enrichment, as the
-       │                       setup runs them, with their costs consented
+  [S] setup.detect-domains,    the project's architecture, by its type: the
+      setup.discover-modules   domains that apply (Java, Python, JavaScript,
+       │                       documentation, ...) from their descriptors and
+       │                       files, and the modules the parser of each build
+       │                       system finds (Maven, Gradle, npm, Python)
+       ▼
+  [S] setup.qualify-roles      role qualification, its cost consented
+       ▼
+  [M] setup.enrich-architecture  each module's responsibility, purpose, and
+       │                       key packages, by the role enrich, one task per
+       │                       module; the architecture is written to
+       │                       .marshall/project-architecture/
        ▼
   [O] setup.commit-changes     the team's configuration to commit, or to leave
        ▼
@@ -66,15 +76,16 @@ Flow::
 ----
 Variations::
 * *Machine values as the proposal.* Every value the project can take from the machine is proposed from it and marked so; accepting it records nothing for the project, which keeps following the machine. Only a changed value is recorded for the project (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]).
+* *The architecture is the setup workflow's work, typed by the project*: the domain descriptors and the build systems the project uses decide what is detected, discovered, and enriched (link:../specification/domain-extensions/01-four-axis-architecture.adoc[Four-Axis Domain Architecture], link:../specification/domain-extensions/03-module-discovery.adoc[Module Discovery]); a project of a type no other descriptor covers is set up with the domain `general-dev`; a later run of the setup reconciles the architecture with the checkout.
 * *A later run of one aspect* opens its states with the project's current values, as the first run and a later change are one process.
 * *A step that cannot pass* (a credential refused, a tool missing, the build map not derivable) shows its check line with the cause and the fix and waits for the operator; the project is enrolled but not ready until it passes.
 * *An enrolled project without setup*, such as one enrolled with `pm-operator enrol`, continues at its setup.
 * *A released project* is offered to be enrolled again, which reopens its plan lifecycle.
-Outcome:: the project is enrolled and set up; its team configuration is committed or left to commit; it takes from the machine what it does not set itself.
+Outcome:: the project is enrolled and set up, its architecture discovered and enriched; its team configuration is committed or left to commit; it takes from the machine what it does not set itself.
 Changes::
 * *Onboarding a project as one process* (<<change-project-onboarding>>).
 * *Project values over machine values* (<<change-project-levels>>).
-Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1] (enrolment, the lifecycle gate), link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2] (the enrolment as the source of execution); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], the setup in link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine].
+Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1] (enrolment, the lifecycle gate), link:../Requirements.adoc#PM-EXT-3[PM-EXT-3] (module discovery, build map, architecture enrichment), link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2] (the enrolment as the source of execution); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], the setup in link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
 
 [#UC-PRJ-2]
