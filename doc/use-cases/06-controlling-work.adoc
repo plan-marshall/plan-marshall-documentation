@@ -15,7 +15,7 @@ Actions follow the state:: A plan or an epic offers the actions its state allows
 [#epic-informed]
 The epic always knows:: Whatever the operator does to a plan that an epic started reaches that epic, without the operator saying so; the epic reacts in its own workflow, as it does to every other event of its plans.
 [#ending-archives]
-Ending archives:: A plan that the operator cancels or abandons is archived, with its outcome and the reason; an epic is archived only once it is through.
+Ending archives:: A plan that the operator cancels or abandons is archived, with its outcome and the reason; an epic is archived with its outcome when it is through, or when the operator cancels it.
 
 [#UC-CTL-1]
 == UC-CTL-1: Control a Plan
@@ -34,6 +34,8 @@ Flow::
        │                       running: pause, cancel
        │                       pausing: start (the pause is withdrawn), cancel
        │                       paused: start, abandon
+       │                       and in every one of them: settings (the plan's
+       │                       overrides, link:01-onboarding.adoc#change-plan-overrides[Plan Overrides])
        ├── pause ────────────► [O] plan.pause-when   when it holds:
        │                             │             • now: running tasks are
        │                             │               withdrawn, running jobs
@@ -48,7 +50,7 @@ Flow::
        │                        [S] plan.pausing   runs until that point, then
        │                             │             holds
        │                             ▼
-       │                        paused
+       │                        plan.paused
        ├── start ────────────► [S] plan.start      runs on from where it rests
        ├── cancel ───────────► [O] plan.confirm-end   what ends: the running
        │                             │                work, the open pull
@@ -60,16 +62,17 @@ Flow::
        │                             │              lesson claim released; then
        │                             │              archived as cancelled or
        │                             ▼              abandoned, with the reason
-       │                        archived
+       │                        plan.archived
        ▼ every action, where an epic started the plan
   [S] plan.inform-epic         the act reaches the epic's inbox: paused,
                                started, cancelled, abandoned, with the reason
 ----
 Variations::
 * *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan. A pause after the current task or phase holds at an operator wait, too, since nothing runs there.
+* *The runtime stops or the machine restarts*: a paused plan stays paused, a pausing plan holds at its point once it runs again, and a running plan runs on from its last committed state; an operator wait stays open (<<change-plan-pause>>).
 * *A plan always runs once it exists*: a plan the operator starts (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]) and a plan an epic starts run at once; the only plan that exists and does not run is a paused one.
 * *Cancel* and *abandon* are the same end, named by the state the plan was in: a running or pausing plan is cancelled, a paused one abandoned.
-* *Its epic reacts* in its own workflow: it may stage the plan's row again, hold the rows that depend on it, or ask the operator (<<UC-CTL-2>>); a plan the epic started is never ended by the epic without the operator.
+* *Its epic reacts* in its own workflow: it may stage the plan's row again, hold the rows that depend on it, or ask the operator (<<UC-CTL-2>>); a plan the epic started is never ended by the epic itself.
 * *A plan that runs no longer* (it has ended) offers no action but its view.
 Outcome:: the plan is paused, running, or archived as the operator chose, and its epic knows.
 Changes::
@@ -92,9 +95,9 @@ Flow::
 ----
   [S] epic.actions             next plan, decompose again, findings review,
        │                       watches review, archive, cancel
-       ├── decompose again ──► ↳ epic.decomposition (link:05-starting-work.adoc#UC-STA-6[UC-STA-6]), with the
+       ├── decompose again ──► ↳ decomposition (link:05-starting-work.adoc#UC-STA-6[UC-STA-6]), with the
        │                         operator's instruction
-       ├── next plan ────────► [S] epic.next-plan   the next launchable row in
+       ├── next plan ────────► [S] epic.next-work   the next launchable row in
        │                             │              the queue's order: the plan
        │                             │              started from its staged
        │                             │              section, implicitly created
@@ -103,8 +106,8 @@ Flow::
        │                             │                       the scope full)
        │                             ▼
        │                        the plan runs (UC-CTL-1 controls it)
-       ├── findings review ──► ↳ epic.review (<<UC-CTL-3>>), the findings
-       ├── watches review ───► ↳ epic.review (<<UC-CTL-3>>), the watches
+       ├── findings review ──► ↳ review (<<UC-CTL-3>>), the findings    
+       ├── watches review ───► ↳ review (<<UC-CTL-3>>), the watches    
        ├── archive ──────────► [S] epic.archive-check   tests that it is
        │                             │                  through: no plan
        │                             │                  running or paused, every
@@ -134,6 +137,7 @@ Variations::
 * *Watches still open* when the epic is through are listed by the archive check; archiving keeps them in the archived ledger, so nothing the epic watched is lost.
 * *An epic task waiting for the operator* (a held item, a decision) is shown with the actions and reached from them (link:03-plans.adoc#UC-PLN-2[UC-PLN-2]).
 Outcome:: the epic has started its next plan, is archived because it is through, or is cancelled with its plans as the operator chose.
+Open points:: whether an epic can be paused as a whole (today the operator pauses its plans one by one, and the epic starts no plan while its scope is full).
 Changes::
 * *An epic's actions* (<<change-epic-actions>>).
 * *An epic's findings and watches* (<<change-findings-watches>>).
@@ -161,9 +165,10 @@ Flow::
        ▼
   [O] review.item              per item: keep, drop, promote, edit, talk; or
        │                       accept the remaining proposals, or finish
-       ├── keep ─────────────► [S] kept, as a watch or as a defect (the kind
-       │                            may change)
-       ├── drop ─────────────► [S] dropped, with the operator's reason
+       ├── keep ─────────────► [S] review.keep   kept, as a watch or as a
+       │                            defect (the kind may change)
+       ├── drop ─────────────► [S] review.drop   dropped, with the operator's
+       │                            reason
        ├── promote ──────────► [M] review.draft-plan   the planning role
        │                             │                 drafts a staged plan
        │                             │                 from the item: objective,
@@ -171,7 +176,11 @@ Flow::
        │                             │                 dependencies
        │                             ▼
        │                        [O] review.confirm-plan   stage it, edit it
-       │                                                  (as below), or back
+       │                             │                    (as below), or back
+       │                             ├── edit ──► review.instruct
+       │                             ├── back ──► review.item
+       │                             ▼ stage
+       │                        review.item, the item promoted
        ├── edit ─────────────► [O] review.instruct   what to adapt or add to
        │                             │               the item's statement and
        │                             │               rules
@@ -200,6 +209,45 @@ Outcome:: every reviewed item is kept, dropped, or staged as a plan, its stateme
 Changes::
 * *An epic's findings and watches* (<<change-findings-watches>>).
 * *The review* (<<change-epic-review>>).
+Requirements:: the epic's coordination is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]
+
+[#UC-CTL-4]
+== UC-CTL-4: Resolve What Holds a Plan
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: see why a plan, an epic, or a project's landing does not go on, when no decision is asked, and resolve it.
+Trigger:: Running Work marks something that needs the operator and is not a decision (link:03-plans.adoc#change-needs-operator[What Needs the Operator]): a plan stalled, a condition that needs an operator act, an integrity pause, an item of an epic held, a failed landing of an epic or of a move.
+Flow::
++
+[source,text]
+----
+  [S] hold.show                what holds, from a closed list, with its
+       │                       cause, since when, what was tried, and the
+       │                       acts that resolve it:
+       │                       • stalled: retry now, recycle the worker
+       │                       • condition: the act it names (grant access,
+       │                         add a credential, raise a budget), each as
+       │                         a dialogue of the clients
+       │                       • integrity pause: inspect the change, accept
+       │                         it, or restore
+       │                       • held item, failed landing: retry, or the
+       │                         item's own acts
+       │                       • and always: end the plan (UC-CTL-1)
+       ▼
+  [O] hold.resolve             the operator's act, confirmed where it cannot
+       │                       be undone
+       ▼
+  [S] hold.apply               the act applied; the plan, the epic, or the
+                               landing goes on, or what still holds is shown
+----
+Variations:: an act the operator needs a terminal for today (`pm-operator grant-access`, `accept-edit`) is offered in both clients; a hold that clears by itself (a provider back) disappears without an act.
+Outcome:: what held is resolved, or the plan is ended; nothing waits without the operator knowing why.
+Changes::
+* *Holds and their acts* (<<change-holds>>).
+Requirements:: the conditions are specified in link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], stalled plans in link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]
 
 [#changes]
 == Changes to the Specification
@@ -209,12 +257,13 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 [#change-plan-pause]
 === Pausing and Starting a Plan
 
-Gap:: the operator can only abort a plan (`pm-operator abort plan`); there is no pause, no state of a plan that exists but does not run, and the activity state _paused_ of Running Work (link:03-plans.adoc#change-needs-operator[What Needs the Operator]) has nothing behind it.
+Gap:: the operator can only abort a plan (`pm-operator abort plan`); there is no pause, no state of a plan that exists but does not run, and the state _paused_ of Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]) has nothing behind it; the specification states that no operator verb stops, continues, or steers a plan between phases.
 Fix::
 * A plan is *running*, *pausing* (running until the point its pause names), or *paused*. A plan always runs once it exists: starting a plan, by the operator or by its epic, creates and runs it in one act, and the epic's plans are never created to wait; _emit_ is not a step of its own.
 * *Pause* is an operator act over the local API with the point where the plan holds: *now* (running tasks withdrawn as on a recycle, running jobs stopped, both run again on start), *after the current task* (the default: what runs finishes and its result is kept, nothing new starts), or *after the current phase* (the phase's sub-workflow runs to its end, the next phase is not entered). The plan's operator waits stay open.
 * *Start* resumes a paused plan from its current state; on a pausing plan it withdraws the pause.
-Affects:: link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessions & Workers] (the withdrawal of a task), link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (the plan's activity), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI].
+* *A pause survives a restart*: the pause and its point are part of the plan's state; after a restart of the runtime a paused plan stays paused and a pausing plan holds at its point.
+Affects:: link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessions & Workers] (the withdrawal of a task), link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (the plan's activity), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI], link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc[Questions, Waivers & Operator Influence] ("no operator verb stops, continues, or steers a plan"), link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine] ("no in-run operator decision remains"), link:../requirements/08-security.adoc[PM-SEC-3], link:../specification/runtime-model/02-startup-recovery-drain.adoc[Startup, Recovery & Drain].
 
 [#change-plan-end]
 === Cancelling and Abandoning Archive
@@ -224,7 +273,8 @@ Fix::
 * *Cancel* (a running or pausing plan) and *abandon* (a paused one) end the plan through `plan.aborted` with the outcome `cancelled` or `abandoned` and the operator's reason, then archive it like a completed plan; its lesson claim is released as today.
 * *The pull request*: the operator chooses in the confirmation whether an open pull request of the plan is closed (with a comment naming the reason) or left open; its branch stays.
 * `pm-operator abort plan` becomes the shell form of cancel and abandon.
-Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), link:03-plans.adoc#change-running-work[Running Work] (an aborted plan is not active).
+* *The four outcomes*: `cancelled` and `abandoned` join the closed list of plan outcomes; the integrity abort and the release of a project keep their own reasons and are archived the same way.
+Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), link:03-plans.adoc#change-running-work[Running Work] (an aborted plan is not active), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-abort[Operator Abort] and `delete-plan`, link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Release] (the release aborts every plan), link:../specification/store-schemas/13-leases-integrity-testing.adoc[Integrity] (the integrity abort), link:../requirements/02-workflow.adoc[PM-WF] (the closed list of plan outcomes), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
 [#change-epic-informed]
 === The Epic Is Told
@@ -233,6 +283,7 @@ Gap:: an epic learns a plan's outcome from the plan's events (`plan_outcome`) on
 Fix::
 * Every operator act on a plan whose `origin.epic_id` names a live epic appends a record to the epic's inbox (`paused`, `started`, `cancelled`, `abandoned`, with the reason and the operator's channel), and the queue row follows the plan's state.
 * The epic's `coordinate` task decides on it as on every inbox message: re-stage the row, hold the rows that depend on it, leave it, or raise a decision for the operator; the epic never ends a plan itself.
+* The queue row's status gains `paused`, `cancelled`, and `abandoned`, following its plan.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox Record], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Queue Row].
 
 [#change-epic-actions]
@@ -241,10 +292,12 @@ Affects:: link:../specification/model-work/08-epic-coordination.adoc#plan-scope-
 Gap:: the operator can only abort an epic (`pm-operator abort epic`); it starts its plans only by itself, archives only when its completion review says so, and has nothing to show the operator why it is or is not through.
 Fix::
 * *Next plan*: an operator act that has `epic.next-work` start the next launchable row now (which creates its plan implicitly), in the queue's order, under the same admission tests (dependencies, surfaces, locks); with no launchable row it answers why per row; with the scope full it offers to raise `parallelization_scope` by one.
-* *Decompose again*: the operator's instruction starts `epic.decomposition` (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]) over the staged rows.
+* *Decompose again*: the operator's instruction starts `decomposition` (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]) over the staged rows.
 * *Archive*: the operator's request runs the archive check (no plan running or paused, every row shipped or ended, no open finding, the ledger landed, the completion review done) and archives through `epic.archive` only when it passes; otherwise it answers what is open. Open watches go into the archive.
 * *Cancel*: `pm-operator abort epic` with the operator's choice for its plans: cancel them too (each through <<change-plan-end>>), or let them run on detached (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Children of a Terminal Epic]).
-Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.next-work`, `epic.archive`, `epic.review-completion`), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI].
+* *Endpoints*: the acts are operator endpoints of the epic resource (link:03-plans.adoc#change-epic-resource[The Epic as a Resource]).
+* *Outcome*: the epic's `terminal_reason` gains `aborted`, set by cancel; `completed` by the archive.
+Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.next-work`, `epic.archive`, `epic.review-completion`), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header] (`terminal_reason`, `parallelization_scope`).
 
 [#change-findings-watches]
 === An Epic's Findings and Watches
@@ -261,6 +314,15 @@ Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordi
 
 Gap:: nothing lets the operator decide an epic's items: an epic task decides alone, and the operator only reads the ledger.
 Fix::
-* A sub-workflow `epic.review` over one register, of operator waits and tasks of the epic's planning role (the role `decompose`, which drafts the epic's plans): its proposal per item, the draft of a staged plan for _promote_, the rewrite of an item for _edit_, the answers and proposals of _talk_; every change a model proposes reaches the register only through the operator's read-back.
+* A sub-workflow `review` over one register, of operator waits and tasks of the epic's planning role (the role `decompose`, which drafts the epic's plans): its proposal per item, the draft of a staged plan for _promote_, the rewrite of an item for _edit_, the answers and proposals of _talk_; every change a model proposes reaches the register only through the operator's read-back.
 * Its dispositions are written to the ledger in one write and landed like every ledger write; a promoted item stages a row under the same surface checks as `epic.decompose`.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the planning role's tasks), link:03-plans.adoc#change-own-words[Own Words] (the read-back).
+
+[#change-holds]
+=== Holds and Their Acts
+
+Gap:: what holds a plan without a decision (a stall, a condition that names an operator command, an integrity pause, a held item, a failed landing) is reported as a condition with an operator command as text (`facts.operator_command`); the acts are terminal verbs, several of them unavailable in the web app, and none is described for a client.
+Fix::
+* Each hold is a record of the scope with its kind (the `needs_operator` kinds that are not decisions), cause, since when, attempts, and the acts that resolve it, each act an operator endpoint of both clients with its arguments; an operator command as relay text goes.
+* A hold that clears by itself ends its record and its event says so.
+Affects:: link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], link:../specification/hypermedia-format/01-representation-and-link-forms.adoc#operator-command-relay[Operator Commands as Relay Text], link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI] (`grant-access`, `accept-edit`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].

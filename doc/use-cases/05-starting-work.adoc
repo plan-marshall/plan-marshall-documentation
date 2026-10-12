@@ -32,13 +32,14 @@ Flow::
   [S] = the server   [O] = the operator   [M] = a model through a role task
   ↳ = a sub-workflow
 
-  [S] start.open               the entry of the project and its source
-       │                       directory, empty; the facts: the project's
-       │                       recipes, its unclaimed lessons, whether the
-       │                       checkout has local changes
+  [S] start.open               the setup gate (the machine onboarded, the
+       │                       project ready); the entry of the project and
+       │                       its source directory, empty; the facts:
+       │                       the project's recipes, its unclaimed lessons,
+       │                       whether the checkout has local changes
        ▼
   [O] start.choose             a plan from sources, or a recipe
-       ├── recipe ───────────► ↳ recipe.start (<<UC-STA-5>>)
+       ├── recipe ───────────► ↳ recipe (<<UC-STA-5>>)    
        ▼ sources
   [O] start.sources            the sources gathered so far, each with its
        │                       state; add one, remove one, start
@@ -46,11 +47,11 @@ Flow::
        │                            │                         description.md
        │                            ▼
        │                       start.sources
-       ├── documents ────────► ↳ source.documents (<<UC-STA-3>>) ─► start.sources
-       ├── issue ────────────► ↳ source.issue (<<UC-STA-4>>) ─────► start.sources
-       ├── lesson ───────────► ↳ source.lesson ───────────────────► start.sources
-       ├── local changes ────► ↳ source.local-changes ────────────► start.sources
-       ├── pull request ─────► ↳ source.pull-request ─────────────► start.sources
+       ├── documents ────────► ↳ source-documents (<<UC-STA-3>>) ─► start.sources
+       ├── issue ────────────► ↳ source-issue (<<UC-STA-4>>) ─────► start.sources
+       ├── lesson ───────────► ↳ source-lesson (<<UC-STA-8>>) ────► start.sources
+       ├── local changes ────► ↳ source-local-changes (<<UC-STA-9>>) ► start.sources
+       ├── pull request ─────► ↳ source-pr (<<UC-STA-7>>) ────────► start.sources
        ▼ start, every source stored and none unscreened
   [O] start.ready              what the plan starts from, its title and id
        │                       proposed from the sources, both changeable
@@ -96,17 +97,17 @@ Flow::
        │                       descriptions, documents, issues; add one,
        │                       remove one, start
        ├── description ──────► [S] start-epic.store-description
-       ├── documents ────────► ↳ source.documents (<<UC-STA-3>>)
-       ├── issue ────────────► ↳ source.issue (<<UC-STA-4>>)
+       ├── documents ────────► ↳ source-documents (<<UC-STA-3>>)
+       ├── issue ────────────► ↳ source-issue (<<UC-STA-4>>)
        ▼ start, every source stored and none unscreened
   [O] start-epic.ready         the epic's title and id, proposed
        │                       from the sources, both changeable
        ▼ create
-  [S] start-epic.create        the ledger, with the list of its sources; the
-       │                       epic's machine store, into which the
-       │                       source directory moves
+  [S] start-epic.create        the ledger, into which the source directory
+       │                       moves, committed and landed; the epic's
+       │                       machine store
        ▼
-  ↳ epic.decomposition         the role decompose drafts the workstreams
+  ↳ decomposition              the role decompose drafts the workstreams
        │                       and the staged plans from the stored sources;
        │                       the operator reviews and shapes them before
        │                       anything is committed (<<UC-STA-6>>)
@@ -141,18 +142,18 @@ Flow::
 +
 [source,text]
 ----
-  [O] source.documents.pick     files or a directory on this machine; the
+  [O] source-documents.pick     files or a directory on this machine; the
        │                        checkout's files first
        ▼
-  [S] source.documents.check    each is a regular file, readable, within the
+  [S] source-documents.check    each is a regular file, readable, within the
        │                        bounds of size and count; a directory is
        │                        listed with what it holds; links that lead
        │                        out of it are not followed
-       ├── something fails ──► source.documents.pick, with the cause per file
+       ├── something fails ──► source-documents.pick, with the cause per file
        ▼
-  [O] source.documents.mode     copy or move, the machine's default chosen
+  [O] source-documents.mode     copy or move, the machine's default chosen
        ▼
-  [S] source.documents.store    copies or moves them into the source
+  [S] source-documents.store    copies or moves them into the source
        │                        directory, a directory with its tree; records
        │                        each with where it came from, its size, and
        │                        its digest
@@ -172,6 +173,8 @@ Outcome:: the documents are stored in the source directory, listed in its manife
 Changes::
 * *Documents as a source* (<<change-documents>>).
 * *What is on this machine is trusted* (<<change-local-trusted>>).
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-1[PM-SEC-1] (what is trusted); the sources are specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#documents[Starting Work, Documents]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#plan[Terminal Client, Starting a Plan]
 
 [#UC-STA-4]
 == UC-STA-4: Bring in an Issue
@@ -184,14 +187,14 @@ Flow::
 +
 [source,text]
 ----
-  [O] source.issue.name        the issue: a number (the project's own
+  [O] source-issue.name        the issue: a number (the project's own
        │                       repository) or its URL
        ▼
-  [S] source.issue.resolve     the forge (GitHub, GitLab, Codeberg or another
+  [S] source-issue.resolve     the forge (GitHub, GitLab, Codeberg or another
        │                       Forgejo), the repository, the provider, the
        │                       credential; a number becomes the issue's URL
        │                       in the project's repository
-       ├── another repository, not granted ──► [O] source.issue.grant
+       ├── another repository, not granted ──► [O] source-issue.grant
        │                                          may the server read the
        │                                          issues of <owner/repo>?
        │                                          once, or for this project
@@ -199,19 +202,19 @@ Flow::
        │                                       public; else names the
        │                                       credential to add
        ▼
-  [S] source.issue.fetch       a bounded job of the forge's provider: title,
+  [S] source-issue.fetch       a bounded job of the forge's provider: title,
        │                       body, labels, milestone, assignees, state, URL
-       ├── fails ─────────────► [O] source.issue.failed   the cause (not
+       ├── fails ─────────────► [O] source-issue.failed   the cause (not
        │                             found, not readable, provider
        │                             unavailable); try again, or remove it
        ▼
-  [S] source.issue.store       the level-1 validator over title and body,
+  [S] source-issue.store       the level-1 validator over title and body,
        │                       every change reported; stored in the source
        │                       directory, marked untrusted and unscreened
        ▼
-  [M] source.issue.screen      the screener over the stored copy: the only
+  [M] source-issue.screen      the screener over the stored copy: the only
        │                       model step of bringing in a source
-       ├── suspicious ────────► [O] source.issue.flagged   the flagged spans;
+       ├── suspicious ────────► [O] source-issue.flagged   the flagged spans;
        │                             accept (recorded with its reason) or
        │                             remove it
        ▼ clean
@@ -219,13 +222,15 @@ Flow::
                                read it as untrusted text
 ----
 Variations::
-* *A pull request* comes in the same way through `source.pull-request` (its title and body screened, its changed files recorded), with the check that it is open and its head writable.
+* *A pull request* comes in the same way, through its own source (<<UC-STA-7>>).
 * *Writing back* (the clarified request and the approved outline posted as comments) goes only to an issue of the project's own repository, and only where the project's team configuration enables it.
 Outcome:: the issue is stored in the source directory with its fields and its screening verdict; nothing outside the screener has read it before.
 Changes::
 * *Issues by number or URL* (<<change-issues>>).
 * *Codeberg and Forgejo* (<<change-forgejo>>).
 * *Screened once stored* (<<change-screen-stored>>).
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-1[PM-SEC-1] (the two-level guard); the issue source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States], the guard in link:../specification/model-work/07-untrusted-text-screening.adoc#two-level-guard[Two-Level Guard].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#issue[Starting Work, An Issue]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#flagged[Terminal Client, A Flagged Issue]
 
 [#UC-STA-5]
 == UC-STA-5: Run a Recipe
@@ -233,7 +238,7 @@ Changes::
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: run a recurring kind of work the project or a domain has named and shaped as a workflow of its own (a coverage push, a dependency update, an audit), giving only its parameters.
-Trigger:: the operator chooses a recipe in <<UC-STA-1>>, or the recipe of a project from its actions.
+Trigger:: the operator chooses a recipe in <<UC-STA-1>>.
 Flow::
 +
 [source,text]
@@ -255,6 +260,7 @@ Outcome:: a plan runs the recipe's workflow with the parameters given.
 Changes::
 * *A recipe is a workflow* (<<change-recipe-workflow>>).
 Requirements:: the recipes are specified in link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#recipe[Starting Work, A Recipe]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#recipe[Terminal Client, Running a Recipe]
 
 [#UC-STA-6]
 == UC-STA-6: Decompose an Epic
@@ -306,6 +312,104 @@ Outcome:: the epic's workstreams and staged plans are in its ledger as the opera
 Changes::
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
 Requirements:: the decomposition is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`, `epic.recut`) and link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#decomposition[Starting Work, The Decomposition]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#decomposition[Terminal Client, The Decomposition]
+
+[#UC-STA-7]
+== UC-STA-7: Adopt a Pull Request
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, while starting a plan.
+Goal:: have a plan take over an open pull request of the project and bring it to its landing.
+Trigger:: the operator adds a pull request in <<UC-STA-1>>.
+Flow::
++
+[source,text]
+----
+  [O] source-pr.name           a number or the URL of a pull request of the
+       │                       project's own repository; stored as its URL
+       ▼
+  [S] source-pr.observe        a bounded job: open? its head branch writable
+       │                       by the agent identity? its title, body, and
+       │                       changed files
+       ├── not open, head not writable, not found ──► [O] source-pr.failed
+       │                             the cause; try again, or remove it
+       ▼
+  [S] source-pr.store          title and body level-1 validated, stored
+       │                       unscreened, with the changed files
+       ▼
+  [M] source-pr.screen         the screener over the stored copy
+       ├── suspicious ────────► [O] source-pr.flagged   accept with a reason,
+       │                                                or remove it
+       ▼ clean
+  done                         the plan will adopt the pull request: it runs
+                               the adopt lane on the pull request's branch
+----
+Variations:: a plan that adopts a pull request starts from it alone, with descriptions and documents at most (<<UC-STA-1>>).
+Outcome:: the pull request is a source; the plan, once started, works on its branch.
+Changes::
+* *Screened once stored* (<<change-screen-stored>>); *issues by number or URL*, which holds for pull requests too (<<change-issues>>).
+Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-pr`).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#pull-request[Starting Work, A Pull Request]
+
+[#UC-STA-8]
+== UC-STA-8: Bring in a Lesson
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, while starting a plan.
+Goal:: start a plan from a lesson a former plan recorded, after checking that it still holds.
+Trigger:: the operator adds a lesson in <<UC-STA-1>>.
+Flow::
++
+[source,text]
+----
+  [O] source-lesson.choose     the project's unclaimed lessons, newest first
+       ▼
+  [S] source-lesson.resolve    the lesson read from the lesson store; the
+       │                       premise check: do the files and symbols it
+       │                       cites still exist?
+       ├── unavailable (claimed, retired, store damaged) ──► the cause;
+       │                                                     choose another
+       ├── premise no longer holds ──► [O] source-lesson.premise   the
+       │                                    evidence: use it anyway (the
+       │                                    evidence goes into the plan),
+       │                                    retire the lesson, or remove it
+       ▼ holds
+  [S] source-lesson.store      the lesson stored in the source directory;
+                               claimed for the plan when the plan is created
+----
+Outcome:: the lesson is a source, claimed by the plan once it exists; it is released if the plan ends without merging.
+Changes::
+* *The source directory* (<<change-source-directory>>).
+Requirements:: the lesson source and the claim are specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] and link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-lessons[Lessons].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#lesson[Starting Work, A Lesson]
+
+[#UC-STA-9]
+== UC-STA-9: Capture Local Changes
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, while starting a plan.
+Goal:: hand the uncommitted changes of the checkout to a plan that lands them.
+Trigger:: the operator adds the local changes in <<UC-STA-1>>; offered only when the checkout has some.
+Flow::
++
+[source,text]
+----
+  [S] source-local-changes.preview   the changed files against the branch,
+       │                             with their counts of lines
+       ▼
+  [O] source-local-changes.confirm   add them, or not
+       ▼ add
+  [S] source-local-changes.store     the preview recorded in the source
+                                     directory; at creation the changes are
+                                     captured as a snapshot commit, and the
+                                     plan runs the land lane
+----
+Variations:: a plan that lands local changes starts from them alone, with descriptions and documents at most. A change made in the checkout between the preview and the creation is captured with the rest, and the creation names it.
+Outcome:: the local changes are a source; the plan, once created, holds them as a snapshot and lands them.
+Changes::
+* *The source directory* (<<change-source-directory>>).
+Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-local-changes`).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#local-changes[Starting Work, Local Changes]
 
 [#changes]
 == Changes to the Specification
@@ -321,7 +425,9 @@ Fix::
 * *A harness is a worker only*: the runtime runs it for the tasks of a role, and it never acts for the operator. The session-driven units, the entry session, the channel `session` of answers, and the host-facing verb `pm-mcp enter` as the operator's way to start work are removed; `pm-mcp serve` stays, for the workers.
 * *Every way to start work* (a plan, an epic, a recipe, a project's onboarding and setup) runs in the clients (<<change-start-from-clients>>, link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]).
 * The interpretation of the operator's own words in a decision (link:03-plans.adoc#change-own-words[Own Words]) is not relaying: the operator wrote in a client, and confirms what was understood there.
-Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/mcp-tools/01-core-workflow-tools.adoc[Core Workflow Tools] (the bootstrap entries), link:../specification/cli-and-security/01-cli-and-installer.adoc#command-tree[Command Tree] and the entry identity recording of `pm-mcp enter`, link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (the channel `session`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation], link:../Requirements.adoc#PM-WF-12[PM-WF-12] (choices before a scope exists as links the model follows after relaying the user's choice), link:../requirements/08-security.adoc[PM-SEC] (the places that say the same), link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine], link:../requirements/13-client-profiles.adoc[Client Profiles] (`PM-CLIENT-*`, the entry of a host), link:03-plans.adoc#UC-PLN-2[UC-PLN-2] (its actor), link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process] (the setup from the entry session). This is an *intent change*: it replaces the founding principle that the user works with `PM-MCP` through a coding agent.
+* *What of the session goes*: the session relay of a host (`pm-mcp serve --client`) and its MCP surface, the session generations and `sessions.jsonl`, the host entry commands (`/mcp-plan-marshall`, `/mcp-plan-orchestrator`, `/mcp-marshall-steward`) and their bundle files, and the interactive session as an optional worker (`PM-WORK-5`); what stays of a host is the worker it runs (`pm-mcp serve --job`).
+* *No elicitation*: MCP elicitation is no channel of the operator; the setup's and the bootstraps' choices that used it are operator waits, and the channel enums keep `web`, `cli`, and `quorum`.
+Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/mcp-tools/01-core-workflow-tools.adoc[Core Workflow Tools] (the bootstrap entries), link:../specification/cli-and-security/01-cli-and-installer.adoc#command-tree[Command Tree] and the entry identity recording of `pm-mcp enter`, link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (the channel `session`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation], link:../Requirements.adoc#PM-WF-12[PM-WF-12] (choices before a scope exists as links the model follows after relaying the user's choice), link:../requirements/08-security.adoc[PM-SEC] (the places that say the same), link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine], link:../requirements/13-client-profiles.adoc[Client Profiles] (`PM-CLIENT-*`, the entry of a host), link:03-plans.adoc#UC-PLN-2[UC-PLN-2] (its actor), link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process] (the setup from the entry session). This is an *intent change*: it replaces the founding principle that the user works with `PM-MCP` through a coding agent, link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessions & Workers] (the entry session, the optional worker), link:../specification/runtime-model/03-relay.adoc[Relay] (session generations), link:../specification/store-schemas/16-task-queue.adoc[Task Queue] (`issued_by: enter`), link:../specification/identifiers/01-general-rules-and-registry.adoc[Identifier Registry] (session ids), link:../specification/filesystem-layout/03-project-store.adoc[Project Store] (`sessions.jsonl`), link:../specification/client-profiles/02-placeholders-and-detection.adoc[Placeholders & Detection] and link:../specification/client-profiles/03-bundle-manifest.adoc[Bundle Manifest] (the entry commands), link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] and link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine] (elicitation), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc[Question Record] and link:../specification/store-schemas/18-decision-records.adoc[Decision Record] (the channel enums), link:../requirements/16-model-work.adoc#PM-WORK-5[PM-WORK-5], link:../requirements/02-workflow.adoc[PM-WF] and link:../requirements/08-security.adoc[PM-SEC] (elicitation).
 
 [#change-start-from-clients]
 === Starting from the Clients
@@ -333,6 +439,7 @@ Fix::
 * `start.ready` and `start-epic.ready` show the title and the id proposed from the sources; the other commit options of today (posture, outline review, base branch) leave the start (<<change-options-when-needed>>).
 * `epic_slug`, `title`, and `vision` of `start-epic.define` become the sources and the title of `start-epic.ready`; the vision is a description like any other.
 * The facts of `start.open` stay local listings (recipes, unclaimed lessons, local changes); issues and pull requests are named, never listed (link:../later-improvements.adoc[Later Improvements], L-6).
+* `POST /api/v1/entries`, the request of `pm-mcp enter`, goes; its codes `project_not_enrolled` and `lifecycle_closed` answer the new request.
 Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc[Bootstrap & Lessons States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Plan Source Contracts), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record].
 
 [#change-source-directory]
@@ -340,7 +447,7 @@ Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc[Bo
 
 Gap:: a plan's sources live only in its pending entry, as one source object, and are then flattened into `request.md`; no plan or epic keeps a source as it came in, an epic keeps none at all (its header has no origin, and `epic.decompose` reads "the epic's vision and source" from nowhere), and a plan cannot start from more than one source.
 Fix::
-* *Every entry has a source directory*, created by the server with the entry (`pending/<entry_id>/sources/`) and moved with the creation into the plan (`plans/<plan_id>/sources/`) or the epic's machine store (`epics/<epic_id>/sources/`):
+* *Every entry has a source directory*, created by the server with the entry (`pending/<entry_id>/sources/`) and moved with the creation into the plan (`plans/<plan_id>/sources/`) or the epic's ledger (`.marshall/epics/<epic_id>/sources/`, committed and landed with it):
 +
 [source,text]
 ----
@@ -363,7 +470,9 @@ sources/
 * `request.md` keeps its sections; its original input is composed by the server from the descriptions and a reference to each other source; the models of the plan read the sources in the source directory.
 * The issue's reference lives in the manifest and in `origin`; `references.json` gains no field for it.
 * A source is never changed once stored; a source added later (a description during refine) is a new entry of the manifest.
-Affects:: link:../specification/filesystem-layout/03-project-store.adoc#machine-store[Per-Project Machine Store], link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`origin`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`), link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (`request.md`).
+* *An epic's sources are in its ledger*: they move into `.marshall/epics/<epic_id>/sources/` and are committed and landed with the ledger, so that another machine that adopts the epic, and every later decomposition, reads them; the epic's machine store keeps none. An external source in the ledger is kept in its level-1-validated form with its verdict, as everywhere.
+* `origin` names the sources by their ids; each id resolves in the manifest to its kind and reference, for an issue or a pull request its URL.
+Affects:: link:../specification/filesystem-layout/03-project-store.adoc#machine-store[Per-Project Machine Store], link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Pending Entry Record], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`origin`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`), link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (`request.md`), link:../specification/filesystem-layout/01-repository-workspace.adoc[Repository Workspace] (the ledger's `sources/`).
 
 [#change-documents]
 === Documents as a Source
@@ -373,7 +482,8 @@ Fix::
 * A source unit `source-documents` (<<UC-STA-3>>) with the source kind `documents`: the server checks the files or the directory (regular files, readable, the bounds of size and count, no link followed out of a directory), and copies or moves them into the source directory.
 * Copy or move is an operator wait with the machine's default (`sources.documents_mode`: `copy` by default, `move`, or `ask`). A copy is not managed: nothing keeps it and its original in step. A move deletes a file outside git where it was, and removes a file git tracks from git through a short landing (`git.land-removal`: one commit, landed as the project lands, as the epic's ledger is landed), which runs on after the source is stored.
 * The web app picks the files through a listing of the server, confined to the checkout and the operator's home directory; the terminal client sends paths, resolved against its working directory.
-Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the listing), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows] (`git.land-removal`).
+* *Loopback only*: the listing of files, a move, and the choice of documents outside the checkout are accepted only from the terminal client and from a browser on the loopback listener, never from a device on the network, like the entry of secrets; a move is the only deletion of the operator's files the runtime makes, and only on the operator's choice.
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the listing), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows] (`git.land-removal`), link:../specification/runtime-model/01-processes-and-transport.adoc[Processes & Transport] (the files the runtime writes outside its stores), link:../specification/cli-and-security/03-web-server.adoc#web-listener[Web Listener], link:../requirements/08-security.adoc[PM-SEC].
 
 [#change-local-trusted]
 === What Is on This Machine Is Trusted
@@ -432,14 +542,16 @@ Gap:: the bootstrap asks the plan's options before the plan exists (posture, out
 Fix::
 * *The start asks only the sources*, and the title and id proposed from them.
 * *Every other option is an operator wait at the state that first needs it*, with its proposal: the posture where the plan's lane is chosen, the base branch before the plan's branch is created, the outline review when the outline is ready, the number of plans an epic runs at once when its first plan is to start. An option the project or the machine sets (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]) is not asked.
-Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`parallelization_scope`).
+* *An epic's `parallelization_scope`* is a project key (`epic.parallelization_scope`, its machine default 1); the epic asks it when its first plan is to start only where the project sets none, and a later raise (link:06-controlling-work.adoc#change-epic-actions[An Epic's Actions]) is a ledger write of its header, landed like every ledger write.
+* *The outline review* is asked only where the plan's asking axis does not set it (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]).
+Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`parallelization_scope`), link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans] ("never a configuration default"), link:../specification/store-schemas/07-project-configuration.adoc[Project Configuration].
 
 [#change-decomposition-review]
 === The Decomposition Is Reviewed
 
 Gap:: `epic.decompose` and `epic.recut` serve one task of the role `decompose`, whose submits are committed by `epic.commit-decomposition` without anyone seeing them: the cut of an initiative into plans, the decision that shapes all the epic's work, is never shown to the operator, who can neither shape it nor ask for another cut.
 Fix::
-* *A sub-workflow `epic.decomposition`* of the epic: the role's draft, the server's checks (surface disjointness, dependencies without a cycle, a workstream per plan), and the operator wait `decomposition.review`, in which the operator keeps, edits, drops, or adds plans, talks with the role, or has it draft again with an instruction; every change a model proposes reaches the draft only through the operator's read-back; nothing is committed before the operator agrees and every check passes.
+* *A sub-workflow `decomposition`* of the epic: the role's draft, the server's checks (surface disjointness, dependencies without a cycle, a workstream per plan), and the operator wait `decomposition.review`, in which the operator keeps, edits, drops, or adds plans, talks with the role, or has it draft again with an instruction; every change a model proposes reaches the draft only through the operator's read-back; nothing is committed before the operator agrees and every check passes.
 * `epic.decompose` and `epic.recut` call it; a later run (the operator's _decompose again_, or stale rows) changes only staged rows and shows each change against the row it replaces.
 * The epic starts no plan before its first decomposition is committed.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.decompose`, `epic.commit-decomposition`, `epic.recut`), link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness], link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the submits of `decompose` for a rewrite and for talk).

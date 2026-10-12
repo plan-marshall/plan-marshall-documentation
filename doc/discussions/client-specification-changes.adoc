@@ -20,7 +20,7 @@ What the specifications must gain so that the runtime gives the two clients of t
 [#foundations]
 == Foundational Findings
 
-. *Operator waits* (settled above): every operator step of the onboarding and of a decision needs a state that waits for the operator in a unit the entry session does not drive; today the workflow language forbids it.
+. *Operator waits* (settled above): every operator step of the onboarding and of a decision needs a state that waits for the operator, in every unit and scope; today the workflow language forbids it.
 . *The operator's links over the local API have no form*: no representation of a state for a client (its id, kind, step, level, facts, proposal, items, links), no scheme of link ids and endpoints. Every link of today's hypermedia format is model-facing.
 . *No event catalogue*: the event streams are a list of contents in prose; no event has a name or a payload schema, so no client can follow a decision, an overview, or a check line.
 . *Texts of the runtime*: a client shows only catalogue texts, but representations carry prose (a check's cause and fix, a reason). The contract must say which fields are message keys with arguments and which are verbatim external or model text (a provider's answer, a harness's error text, question content).
@@ -76,7 +76,7 @@ Beyond the sections each change names in its _Affects_:
 |the named schemas of a decision, an answer, an interpretation, and a vote on a part with several options or a value; who sets what a decision blocks and how reversible it is, also for server-raised questions; who may revise a decision; the support per option derived by the runtime (counts, models, band, dissent), within the quorum's at most three votes; the asking role and phase on the record; the device and channel of an answer; how the runtime tells the channel `cli` apart; a new outcome for _none fits_; access to a decision's evidence over the local API; the list of open decisions across scopes, with since when each waits (`delivered_at`); what follows from an answer, composed by the runtime for `decision.confirm`; the progress of the interpreting role while the operator waits; the refusal of an answer to an older revision and of an answer to a part whose dependency is unanswered.
 
 |link:../use-cases/03-plans.adoc#change-running-work[Running Work], link:../use-cases/03-plans.adoc#change-titles[Titles], link:../use-cases/03-plans.adoc#change-phase-start[Phase Start], link:../use-cases/03-plans.adoc#change-needs-operator[Needs the Operator], link:../use-cases/03-plans.adoc#change-overview-resource[Overview Resource]
-|`last_activity_at`; a closed activity state of a plan (working, waiting for the operator, stalled, paused); an epic's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
+|`last_activity_at`; a closed activity state of a plan (running, pausing, paused, waiting for the operator, stalled); an epic's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
 
 |link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]
 |every specification that names the entry session or the model relaying the user (Session-Driven Units, the bootstraps, `PM-WF-12`, the setup's links, Operator Channel Isolation, the client profiles' entry); what of `pm-mcp enter` stays for a host (none, or the recording of a worker's identity); the static verification rule that allows links-only states in session-driven units.
@@ -99,6 +99,12 @@ Beyond the sections each change names in its _Affects_:
 |link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
 |the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, rewrite, and talk; the `needs_operator` kind of new findings.
 
+|link:../use-cases/03-plans.adoc#change-epic-resource[The Epic as a Resource], link:../use-cases/03-plans.adoc#change-event-streams[Events per Scope], link:../use-cases/03-plans.adoc#change-ended-work[Ended Work]
+|the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
+
+|link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
+|the device's label; the closing of a revoked device's streams; the release's confirmation against the engine-owned abort; the closed list of holds, their acts and their arguments, and the end of `facts.operator_command`.
+
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
 
@@ -115,7 +121,7 @@ UC-PLN-3 (designing a plan's process) proposes no change yet: its building block
 * Operator Choices and Answers from the Terminal Client both edit Operator Channel Isolation, item 1: one edit.
 * The steward's harness against the resolution order of the role assignment.
 * The entry opens the loopback listener first, then the LAN on a yes; today's lifecycle refuses the second exposure.
-* Machine Scope's gate names the web app; the design names both clients.
+* Machine Scope against Onboarding a Project as One Process: a project's onboarding no longer runs in the machine scope but in a scope of its own (corrected there), so that several projects are onboarded at once.
 * The messages endpoint has two paths.
 * All Interaction in the Operator's Clients against Onboarding a Project as One Process, which let the entry session drive the setup (corrected there), and against the package `enter-command`, which builds `pm-mcp enter` as the entry of a host.
 * Starting from the Clients against L-6: the clients name an issue, as the bootstrap does; a list of issues to pick from stays a later improvement.
@@ -134,10 +140,20 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |the operator wait in the workflow language (one definition, the places that had their own reduced to a reference), the machine scope and the system halt while the onboarding is not complete, the decline of a waiver request
 |Waiting for the Operator, agreed
 
+|`machine-onboarding-unit`
+|`pm-mcp-core`
+|the engine side of the onboarding: its sub-workflows in the machine scope, the consent store and its kinds, the harness scan and probes, the unknown harness, the catalogue, steward, and role stores, the credential store and its move, provider verification, automatic onboarding, the plan axes and overrides in the composition
+|`operator-wait-and-machine-scope`; UC-ONB agreed
+
+|`decision-engine`
+|`pm-mcp-core`
+|the engine side of decisions: the decision as a structure with its revision, the interpreting role `interpret`, the support per option derived by the runtime, the outcome _none fits_, the open decisions across scopes, the channel `cli`
+|`operator-wait-and-machine-scope`; UC-PLN-2 agreed
+
 |`operator-interaction-contract`
 |`pm-mcp-clients`
-|a state's representation for a client and the operator's links over the local API; the event catalogue (names, payloads, `reset`); texts as message keys with arguments; the client inputs (locale, `PATH`, SSH); the client-owned files; the configuration with origins and levels; the corrections of the mock runtime's specification
-|`api-contract`; `operator-wait-and-machine-scope`
+|a state's representation for a client and the operator's links over the local API; the event catalogue (names, payloads, `reset`) and Events per Scope; texts as message keys with arguments; the client inputs (locale, `PATH`, SSH); the client-owned files; the configuration with origins and levels; the corrections of the mock runtime's specification
+|`api-contract`; `mock-runtime`; `operator-wait-and-machine-scope`
 
 |`message-catalogue`
 |`pm-mcp-clients`
@@ -146,13 +162,13 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`overview-contract`
 |`pm-mcp-clients`
-|Running Work, Titles, Phase Start, Needs the Operator, Overview Resource
+|Running Work, Titles, Phase Start, Needs the Operator, Overview Resource, Ended Work
 |`operator-interaction-contract`; UC-PLN-4 agreed
 
 |`phase-sub-workflows`
 |`pm-mcp-core`
 |Phases as Sub-Workflows, The Plan's History: the plan unit as a workflow of phase sub-workflows, the plan's append-only history of its process
-|`operator-wait-and-machine-scope`; UC-PLN-1 agreed
+|`operator-wait-and-machine-scope`; `workflow-engine`; `plan-instance`; UC-PLN-1 agreed
 
 |`process-contract`
 |`pm-mcp-clients`
@@ -161,38 +177,38 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`project-onboarding-unit`
 |`pm-mcp-core`
-|Onboarding a Project as One Process, Project Values over Machine Values: the project onboarding unit of the machine scope (checkout, consent, detection, identity, enrolment, then the setup), the setup's choices as operator waits, the project's values over the machine's
-|`operator-wait-and-machine-scope`; UC-PRJ-1 agreed
+|Onboarding a Project as One Process, Project Values over Machine Values: the project onboarding unit in a scope of its own per project (checkout, consent, detection, identity, enrolment, then the setup), the setup's choices as operator waits, the project's values over the machine's
+|`operator-wait-and-machine-scope`; `enrolment-store`; UC-PRJ agreed
 
 |`project-contract`
 |`pm-mcp-clients`
-|The Projects of the Machine, and the client side of a project's onboarding: the list of every enrolled project, favourites, recent and most used, the onboarding's states for the clients
-|`operator-interaction-contract`; `project-onboarding-unit`; UC-PRJ-1 and UC-PRJ-2 agreed
+|The Projects of the Machine, Releasing Ends Work, and the client side of a project's onboarding: the list of every enrolled project, favourites, recent and most used, the onboarding's states for the clients
+|`operator-interaction-contract`; `project-onboarding-unit`; UC-PRJ agreed
 
 |`decision-contract`
 |`pm-mcp-clients`
 |The Decision Structure, Own Words, Answers from the Terminal Client
-|`operator-interaction-contract`; UC-PLN-2 agreed
+|`operator-interaction-contract`; `decision-engine`; UC-PLN-2 agreed
 
 |`onboarding-contract`
 |`pm-mcp-clients`
-|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness
-|`operator-interaction-contract`; UC-ONB agreed
+|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`)
+|`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; UC-ONB agreed
 
 |`entry-contract`
 |`pm-mcp-clients`
-|The Terminal Client as the Entry, Loopback Host, A Fresh Code, Credentials in the Web App
-|`operator-interaction-contract`; UC-ENT-1 agreed
+|The Terminal Client as the Entry, Loopback Host, A Fresh Code, Credentials in the Web App, Devices in Both Clients
+|`operator-interaction-contract`; UC-ENT and UC-ONB-8 agreed
 
 |`start-from-clients`
 |`pm-mcp-core`
 |All Interaction in the Operator's Clients, Starting from the Clients, The Source Directory, Documents as a Source, What Is on This Machine Is Trusted, Screened Once Stored, Issues by Number or URL, Asked When Needed: the bootstraps as units of operator waits, the source units, the source directory, the end of the session-driven units
-|`operator-wait-and-machine-scope`; UC-STA-1 to UC-STA-4 agreed
+|`operator-wait-and-machine-scope`; `entity-addressing`; UC-STA-1 to UC-STA-4 and UC-STA-7 to UC-STA-9 agreed
 
 |`forgejo-provider`
 |`pm-mcp-core`
-|Codeberg and Forgejo: the provider module, its place in every list of providers
-|UC-STA-4 agreed
+|Codeberg and Forgejo: the provider module, its place in one list of providers
+|the CI contract of `pm-provider-ci`; UC-STA-4 agreed
 
 |`recipe-workflows`
 |`pm-mcp-core`
@@ -201,8 +217,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`plan-and-epic-control`
 |`pm-mcp-core`
-|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions
-|`operator-wait-and-machine-scope`; UC-CTL-1 and UC-CTL-2 agreed
+|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts
+|`operator-wait-and-machine-scope`; UC-CTL-1, UC-CTL-2, UC-CTL-4, and UC-PLN-5 agreed
 
 |`epic-findings-review`
 |`pm-mcp-core`
@@ -216,13 +232,13 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work and of the decomposition: the actions of a plan and an epic, the archive check, the states of the reviews and of the decomposition
-|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL and UC-STA-6 agreed
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews and of the decomposition, the epic resource
+|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
 
 |`start-contract`
 |`pm-mcp-clients`
 |the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files
-|`operator-interaction-contract`; `start-from-clients`; UC-STA agreed
+|`operator-interaction-contract`; `start-from-clients`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
 |===
 
 The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`.

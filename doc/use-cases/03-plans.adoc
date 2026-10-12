@@ -20,7 +20,7 @@ Flow::
 . *A sub-workflow.* Selecting a sub-workflow shows its workflow the same way, and so on through every level of nesting, down to the leaves: the states that call nothing.
 . *A leaf.* A leaf shows what runs or ran in it: its job or its tasks (role, worker, attempt, outcome), its times, and its outcome; a state waiting for the operator leads into <<UC-PLN-2>>.
 . *Where it is.* At every level the path from the plan down to the level shown is visible, and the way back up; the level the plan is at is marked, and the operator can jump to it.
-Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an epic has a view of its own.
+Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an epic has a view of its own (<<UC-PLN-5>>).
 Outcome:: the operator knows, at every level of the plan's process, what is done, what runs, and what is still to come, and has found the part that needs attention.
 Changes::
 * *Phases as sub-workflows* (<<change-phase-sub-workflows>>).
@@ -37,7 +37,7 @@ Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client (link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]).
 Goal:: learn at once that a plan or an epic waits for a decision, understand what is asked and why, decide it with what the plan offers, or in the operator's own words, and never decide by accident.
 Trigger:: a decision of a plan or an epic is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it because its confidence stayed below the threshold the decision declaration sets (link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
-Preconditions:: the operator has a client open, or is reached by a notification of one.
+Preconditions:: the operator has a client open, or is reached by a notification of one: the terminal client's notification while it runs (`console.notify`), the web app's browser notification once the operator allowed it.
 Flow::
 +
 [source,text]
@@ -103,7 +103,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PLN-3]
 == UC-PLN-3: Design a Plan's Process
 
-Status:: `DRAFT`
+Status:: `DRAFT`, a stub: its building blocks are open points
 Actor:: the operator.
 Goal:: shape the process a plan runs, for example add a step to finalize, by arranging the building blocks the project declares, and see before it is applied whether the server accepts it.
 Open points:: where a design lives (in the project's workflow units, in one plan, or in one plan with promotion to the project); whether a plan can be designed before it starts; which building blocks are offered; whether the terminal client offers it at all.
@@ -118,11 +118,11 @@ Goal:: see at a glance, across every project, where plans and epics are running 
 Trigger:: the operator opens the overview of running work; the client opens it where the operator left it.
 Flow::
 . *Projects.* The overview lists the projects that have running work: an active plan or epic, or something of the project that needs the operator without one (a question of its setup). A project without either is not listed, nor is an ended or archived plan. Each project shows whether something in it needs the operator, and how many plans and epics are active in it. Projects that need the operator come first, then the most recently active.
-. *A project, by plan.* The project's active plans, each with: whether it needs the operator and for what (a decision, a waiver request, a pause, stalled); its title; its current phase and its state in it (working, waiting for the operator, stalled, paused); since when it runs and since when it is in the current phase; its progress (tasks done of all); and the epic it belongs to, if any, from which the operator moves to that epic.
+. *A project, by plan.* The project's active plans, each with: whether it needs the operator and for what (a decision, a waiver request, an integrity pause, stalled); its title; its current phase and its state in it, from one closed list: running, pausing, paused, waiting for the operator, stalled; since when it runs and since when it is in the current phase; its progress (tasks done of all); and the epic it belongs to, if any, from which the operator moves to that epic.
 . *A project, by epic.* The project's active epics, each with whether it or one of its plans needs the operator, its title, since when it runs, how many of its plans run and how many are staged, and its plans below it as in the view by plan; the plans that belong to no epic follow as a group of their own, so that the two views show the same plans.
 . *Into a plan or an epic*: selecting one leads into <<UC-PLN-1>>; a decision that waits leads into <<UC-PLN-2>>.
 . *Where the operator left it*: the overview remembers the project, the view, and the selected plan or epic, and opens there the next time, per web browser and per terminal user; a selection that has ended falls back to its project.
-Variations:: the overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an epic are told apart by their icon, their colour, and a word, never by colour alone.
+Variations:: _Ended work_ lists the plans and epics of a project that ended (completed, cancelled, abandoned, archived), newest first, each leading to its view as it ended (<<change-ended-work>>). The overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an epic are told apart by their icon, their colour, and a word, never by colour alone.
 Outcome:: the operator knows where work runs and what needs the operator, and has reached the plan or epic to act on.
 Changes::
 * *Running work* (<<change-running-work>>).
@@ -132,6 +132,28 @@ Changes::
 * *The overview resource and its events* (<<change-overview-resource>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan and epic); the runtime status is specified in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], epics in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-overview.adoc[Plan Overview] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/15-overview.adoc[Terminal Client, The Overview].
+
+[#UC-PLN-5]
+== UC-PLN-5: Follow an Epic
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: see an epic as a whole: what it starts from, how it is cut into workstreams and plans, where each plan is, what landed, what it found and watches, and what it waits for.
+Trigger:: the operator selects an epic in Running Work (<<UC-PLN-4>>), or names it.
+Flow::
+. *The epic.* Its title, since when it runs, its state (running, waiting for the operator, held, landing), how many plans run at once of how many it allows, and its actions (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
+. *Its workstreams.* Each workstream with its plans in the queue's order, each plan with its status (staged, running, pausing, paused, shipped, cancelled, abandoned, held), what it waits for (a dependency, a lock, the scope), and since when; a running plan leads into its plan view (<<UC-PLN-1>>).
+. *Its sources.* What the epic starts from, as stored (link:05-starting-work.adoc#change-source-directory[The Source Directory]).
+. *Its landings.* Each landed plan with its pull request and the epic's analysis of the landing.
+. *Its findings and watches.* The open items with their counts, leading into the reviews (link:06-controlling-work.adoc#UC-CTL-3[UC-CTL-3]).
+. *Its events.* What happened in the epic, newest first: plans started and ended, messages of its plans, acts of the operator, decompositions.
+Variations:: the view follows the epic as it runs. An epic that ended shows as it ended, from Ended Work. An epic waiting for the operator (a decomposition, a held item, a decision) shows that first, leading to it.
+Outcome:: the operator knows where the epic stands, plan by plan, and has reached the part to act on.
+Changes::
+* *The epic as a resource* (<<change-epic-resource>>).
+* *Events per scope* (<<change-event-streams>>).
+Requirements:: the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]
 
 [#changes]
 == Changes to the Specification
@@ -148,7 +170,7 @@ Fix::
 * The plan instance composes the plan unit and the phase sub-workflows; a pruned phase is a pruned call, with its reason.
 * The depth of the call graph and of `call_stack` grows by the phase level.
 * This is an *intent change*: it changes how every phase is written, and it makes a phase a unit the composition, and the design of a plan's process (<<UC-PLN-3>>), can choose and replace.
-Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units], link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (the `phase` clause), link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (call depth), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows], link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], every module of link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Phase Workflows], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`phase`, `call_stack`), link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc[Loop-Back & Diagrams].
+Affects:: link:../requirements/02-workflow.adoc#PM-WF-16[PM-WF-16] (the call depth, also against the onboarding's nesting and a recipe's phases), link:../specification/store-schemas/03-findings-and-review-records.adoc[Store Schemas] (the `phase` field of findings, of tasks in link:../specification/store-schemas/06-task-and-references.adoc[Task Records], and of link:../specification/store-schemas/17-re-planning.adoc[Re-Planning] records), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units], link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (the `phase` clause), link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (call depth), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows], link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], every module of link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Phase Workflows], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`phase`, `call_stack`), link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc[Loop-Back & Diagrams].
 
 [#change-process-resource]
 === The Plan's Process as a Structure
@@ -181,7 +203,7 @@ Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#lo
 
 Gap:: a question carries a text of at most 500 characters, 2 to 5 options, and one recommended option with one confidence and one rationale; a quorum's vote names only the option it chose. There is no place for the description and evidence of a decision, no confidence per option, no decision in several parts, no statement of what the decision blocks or how reversible it is, and no answer but an option of the list.
 Fix::
-* *Decision*: the question set becomes a decision of its own, with a stable id and a revision: a title, a short header, a description with its evidence (files, diffs, findings, links), what it blocks (the plan, a task, nothing), how reversible its outcome is (reversible, costly, irreversible), and its parts.
+* *Decision*: the question set becomes a decision of its own, with a stable id (`<scope_id>/<question_id>`, the id of its first question, no new identifier kind) and a revision: a title, a short header, a description with its evidence (files, diffs, findings, links), what it blocks (the plan, a task, nothing), how reversible its outcome is (reversible, costly, irreversible), and its parts.
 * *Part*: each question of the set is a part with a stable id, its question, an answer type (one option, several options, a value), the options, and an optional dependency on options of another part; whether own words and notes are allowed is declared per part.
 * *Option*: a stable key, a short label, a description of its trade-off, its consequences, an optional preview (a diff, a text), and its *support* where a quorum voted: how many votes chose it, from which roles and models, and the dissent with its reason. A self-reported confidence stays a detail of each vote; the clients never present it as the probability that an option is right.
 * *Recommendation*: a field of the part (the option, its rationale, who recommends it), never a part of an option's label.
@@ -198,7 +220,8 @@ Fix::
 * The runtime checks the result before it is shown: the option exists, the quoted passages occur in the words. A result that fails the check is shown as unclear.
 * `decision.read-back` shows the result in one sentence beside the operator's words; nothing is recorded before the operator confirms it. Unclear leads to `decision.clarify`, one question, at most as often as the unit allows, then back to the choice of an option.
 * Words that fit no option are recorded as the operator's own option, in the operator's words; the interpretation never substitutes the closest option. A delegation is recorded as such, and only where the decision allows one.
-* The operator's words are untrusted text for every model that reads them later: shown as text, quoted inside facts, never followed as instructions.
+* The operator's words are the operator's own and never screened (link:05-starting-work.adoc#change-local-trusted[What Is on This Machine Is Trusted]); a model that reads them later gets them as quoted data in its facts, never as instructions of the system.
+* The interpreting role is the shipped `read_only` role `interpret`, qualified like every role on its corpus topic `own_words`.
 Affects:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (answers), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States] (the states of the interpretation), link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the interpreting role), link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record] (chosen, interpreted, delegated).
 
 [#change-operator-wait]
@@ -210,7 +233,8 @@ Fix::
 * *Who decides.* A decision is taken either by a quorum confident by the threshold its declaration sets, or by the operator in an operator wait; nothing is decided by the passing of time, and nothing by a rule that asks no one. The question modes `auto` and `none`, `questions.wait_seconds`, the deadline `expires_at`, the class fallbacks on expiry, the closure `assumed`, and the expiry of a waiver request go with the per-place definitions that carry them.
 * *What halts.* An operator wait halts its own scope and nothing else: a plan or an epic waits, and every other plan, epic, and project keeps running; the status shows it as waiting for the operator, never as stalled. The one wait that halts the system is the machine scope's: while the onboarding is not complete, the machine is not configured, so no plan and no epic starts, while the onboarding itself and the operator's verbs work (link:01-onboarding.adoc#change-machine-scope[Machine Scope]).
 * *A waiver request* is an operator wait like a question; it ends by `waive` or by a new `decline`, which records the outcome `declined` and lets the remediation unit take its next transition.
-Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#waivers-and-integrity[Waivers & Integrity] (the principle), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States], link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (rule 10), link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Question Delivery], link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Question Wait] and the waiver wait, link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] and the waiver request, link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`questions.*`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-waive[Waivers] (`decline`), link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../requirements/02-workflow.adoc[PM-WF-12]; the other places that define a wait of their own are reduced to a reference to it. This is an *intent change*: it replaces a founding principle of the workflow language.
+* *The question modes go*: `questions.mode` and its values go with the per-place waits; whether a quorum runs is said only by the decision's declaration, and an escalated quorum delivers its decision as an operator wait; the rule that a state never waits for an operator decision, the bounded waiver wait (`waiver_wait_seconds`) that gates `request_waiver`, the closure `assumed`, and the error code `question_expired` go with them.
+Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#waivers-and-integrity[Waivers & Integrity] (the principle), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States], link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (rule 10), link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Question Delivery], link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Question Wait] and the waiver wait, link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] and the waiver request, link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`questions.*`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-waive[Waivers] (`decline`), link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../requirements/02-workflow.adoc[PM-WF-12]; the other places that define a wait of their own are reduced to a reference to it. This is an *intent change*: it replaces a founding principle of the workflow language., and the places that state the opposite rule today: link:../specification/state-catalogue.adoc[State Catalogue] (overview), link:../specification/workflow-dsl/08-remediation-units.adoc[Remediation Units] (no operator wait, the bounded waiver wait), link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (plan outcomes), link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc[Questions, Waivers & Operator Influence] (modes, deadlines, conditions with a fallback), link:../specification/state-catalogue/02-plan-phases-1-3.adoc[Phases 1–3] and link:../specification/state-catalogue/03-plan-phases-4-5-land.adoc[Phases 4–5] and link:../specification/state-catalogue/06-setup-epic-other.adoc[Setup & Epic] (the fallback `assumed`), link:../specification/mcp-tools/03-resource-uris.adoc[Resource URIs], link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum] (the delivery of mode `auto`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (`question_expired`), link:../requirements/08-security.adoc[PM-SEC-3] (never waits for an operator decision).
 
 [#change-running-work]
 === Running Work
@@ -244,7 +268,7 @@ Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workf
 
 Gap:: what needs the operator is spread over many sources: open decisions, waiver requests, integrity pauses, stalled plans, conditions that name an operator command, held items of an epic, a failed epic landing, workspace setup repairs. No flag combines them per plan, epic, or project.
 Fix::
-* The runtime derives for every plan, epic, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed`, `setup`); an epic's summary includes its plans', a project's its plans', epics', and workspace's.
+* The runtime derives for every plan, epic, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `operator_wait` (any other operator wait: a consent, a decomposition or review, an option asked when needed, a failed landing of a move), `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed`, `findings` (new findings of an epic), `paused`, `setup`); an epic's summary includes its plans', a project's its plans', epics', and workspace's.
 * The summary is derived on read and never stored, like `stalled`.
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
 
@@ -262,7 +286,34 @@ Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#lo
 
 Gap:: a content question is answered only in the web app (channel `web`) or through the entry session's answer link (channel `session`); "there is no CLI command that answers one". The operator who works in the terminal client cannot decide what a plan asks without switching to the browser, and learns of the question only there.
 Fix::
-* The terminal client is a third channel of content answers, `cli`: it follows the runtime's events while it is open, announces every open question record and waiver request of the operator's plans and epics, and answers a question through the same scope-qualified answer endpoint as the web app, validated the same way; the first valid answer wins, a later one is refused (`already_answered`).
+* The terminal client is the second channel of content answers beside `web`, `cli` (the channel `session` goes with link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]): it follows the runtime's events while it is open, announces every open question record and waiver request of the operator's plans and epics, and answers a question through the same scope-qualified answer endpoint as the web app, validated the same way; the first valid answer wins, a later one is refused (`already_answered`).
 * An answer from the terminal client is a content answer, never an override; a waiver request is answered by `waive`, as today. The terminal client keeps the operator checks of `pm-operator`.
 * Every client says when a question was answered in another one, and withdraws what it showed.
-Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] (the channel).
+Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] (the channel), link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record] and link:../specification/model-work/11-decision-records.adoc[Decision Records] (the channel enums), link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (the channel rules), link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc[Questions, Waivers & Operator Influence] ("no content-answer command exists").
+
+[#change-epic-resource]
+=== The Epic as a Resource
+
+Gap:: an epic is read through `pm://epic/{epic_id}/ledger` and `pm-operator status` only; the local API has no epic resource, no queue row with its status and what it waits for, no registers, no decomposition draft, no archive check, and no endpoint for the operator's acts on an epic.
+Fix::
+* `GET /api/v1/epics/{epic_id}`: the header (title, state, `parallelization_scope`, `needs_operator`), the workstreams with their rows (status, what it waits for, since when, the plan of a running row), the sources' manifest, the landings, the counts of the registers.
+* Sub-resources: the registers of findings and watches, the decomposition draft while one is open, the archive check, the epic's history of events.
+* The operator's acts on an epic as endpoints (next plan, decompose again, archive, cancel, a review's dispositions), validated like every operator act and answered with the new state.
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/mcp-tools/03-resource-uris.adoc[Resource URIs] (`pm://epic/*`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Epic Queue Row].
+
+[#change-event-streams]
+=== Events per Scope
+
+Gap:: the local API streams events runtime-wide and per plan only (`GET /api/v1/events`, `/plans/{plan_id}/events`); an epic, a project's workspace, the machine scope, and a pending entry (a start, a project's onboarding) have no stream, though their operator waits and progress must reach both clients.
+Fix::
+* One event stream per scope: `GET /api/v1/epics/{epic_id}/events`, `/projects/{project_id}/workspace/events`, `/machine/events`, `/entries/{entry_id}/events`, with the same envelope, catalogue, and resume rule as the plan's; the runtime-wide stream keeps announcing every scope's start, end, and `needs_operator` change, so that the overview needs no other stream.
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], the event catalogue of link:../discussions/client-specification-changes.adoc#foundations[Foundational Findings] (item 3).
+
+[#change-ended-work]
+=== Ended Work
+
+Gap:: Running Work shows only what runs (<<change-running-work>>); an ended plan or epic, in the project's archive or among its plans with phase `aborted`, has no listing and no way into its view.
+Fix::
+* `GET /api/v1/projects/{project_id}/ended` lists the project's ended plans and epics, newest first, with their outcome, reason, and end time, paged; each resolves to its process and history as it ended, read from the archive.
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives].
+
