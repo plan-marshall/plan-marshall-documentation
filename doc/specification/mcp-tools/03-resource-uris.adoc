@@ -113,7 +113,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/questions`
 |`text/toon`
 |Plan
-|The fold of the plan's question records (`questions.jsonl`): every record with `question_id`, class, origin, closure (`open`, `answered`, `assumed`, `cancelled`), and, once closed, the chosen `branch_key`, the answer's `channel`, and the `decision_id` of the decision taken.
+|The fold of the plan's question records (`questions.jsonl`): every record with `question_id`, class, origin, state (`open` until its closing line, then the `closure` of its `answered` line, `answered` or `assumed`, or `cancelled`), and, once closed, the chosen `branch_key`, the answer's `channel`, and the `decision_id` of the decision taken.
 
 |`pm://plan/{plan_id}/decisions`
 |`text/toon`
