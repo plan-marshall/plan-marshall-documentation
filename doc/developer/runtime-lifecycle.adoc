@@ -44,7 +44,7 @@ The lifecycle of the runtime is plain Java in the package `de.planmarshall.runti
 |Step `ENROLMENT_INTEGRITY`: under the project's enrolment lock, `EnrolmentStore.recoverPair` settles a stopped pair write and `EnrolmentCheck.verify` checks the enrolment; a refusal is a `Failed` with its message (link:enrolment-store.adoc#recovery[Enrolment Store § The Recovery]).
 
 |https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/OwedEnrolmentAuditStep.java[`OwedEnrolmentAuditStep`]
-|Step `OWED_ENROLMENT_AUDIT`: `Enrolments.replayOwedAudit(projectId)` hands over the owed audit records of the project; `unenrolledPass()` is the background task for the projects no longer enrolled (failures logged `PM_MCP-167`).
+|Step `OWED_ENROLMENT_AUDIT`: `Enrolments.replayOwedAudit(projectId)` hands over the owed audit records of the project; `unenrolledPass()` is the background task for the projects no longer enrolled, which hands over what every project without its enrolment file owes and removes the orphan sidecar of an interrupted unenrol (failures logged `PM_MCP-167`).
 
 |https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/LeaseRecoveryStep.java[`LeaseRecoveryStep`]
 |Step `LEASES`: the project-selecting stale lease sweep over every lease store it is given (link:locks-and-leases.adoc#sweep[Locks and Leases § The Stale Lease Sweep]), with the caller's `AbandonmentEvidence`; `AbandonmentEvidence.NONE` finds none, so nothing is released.
