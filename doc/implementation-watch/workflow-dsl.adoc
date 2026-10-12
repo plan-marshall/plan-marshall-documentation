@@ -32,15 +32,6 @@ that remove the only offered link; a `rejected` whose detail no offered link can
 Fixture:: six-run record (`compliant-paths-001` and five folded predecessors; `phase-gates-003`).
 Source:: plan-marshall process-compliance PLAN-09 D3.
 
-[#PM-WATCH-DSL-2]
-=== PM-WATCH-DSL-2: Guards are three-valued
-
-Anchor:: link:../specification/workflow-dsl/04-ast-node-model.adoc#_ast_node_model[Workflow DSL § AST Node Model] (guard expressions)
-Hazard:: Guards collapsed "could not evaluate" into held or not held.
-Guard:: Guards return the sealed `GuardResult` (`HELD`, `NOT_HELD`, `COULD_NOT_EVALUATE(reason)`) that is handled
-exhaustively; `COULD_NOT_EVALUATE` raises the `guard_indeterminate` condition.
-Source:: plan-marshall truthful-signals (quality-aspect) PLAN-207 D7.
-
 [#PM-WATCH-DSL-3]
 === PM-WATCH-DSL-3: Every read token has a producer
 
@@ -352,16 +343,17 @@ Source:: design review.
 Anchor:: link:../specification/workflow-dsl/01-grammar.adoc#sub-workflow-exits[Workflow DSL § Result Guards & Sub-Workflow Exit Contract],
 link:../specification/workflow-dsl/04-ast-node-model.adoc#condition-overlays[Workflow DSL § Condition Overlays],
 link:../Requirements.adoc#PM-WF-1[PM-WF-1]
-Hazard:: A step-out that unwinds more than its own frame ends a plan from inside a nested unit (a commit inside a
-remediation unit takes the plan's fallback although the unit could still remedy); a step-out offered to a model
-inside a plan, or on an `auto` or job state, lets the model leave a bounded wait.
-Guard:: Scenario tests: the server step-out of `git.commit_and_push` (`cause: attempts_exhausted`) called by
-`remediation-ci.commit-fix` returns `stepped_out` to that call site only, which routes it to
-`remediation-ci.budget-check`; a spent condition budget inside the same nesting unwinds every frame in one
-transaction with the server step-out `{by: server, cause: condition}` and enters the phase's fallback state
-directly, with no caller's `stepped_out` transition taken (`INV-REM-4` exemption); a representation test asserts
-that `step_out` appears on every resting `link` state of a sub-workflow the entry session drives (the source units,
-`lessons.pmwf`) and on no task entity, no view, and no `auto`, `job`, `composite_job`, or `job llm` state.
+Hazard:: A step-out that carries no `{by, cause}` record leaves the caller's fallback without the gap it must name; a
+step-out offered to a model inside a plan, or on an `auto` or job state, lets the model leave a bounded wait.
+Guard:: The engine's half is implemented: a step-out pops exactly one frame which the calling unit routes, and a
+spent condition budget unwinds every frame in one transaction to the fallback state with no caller's `stepped_out`
+transition taken (`SubWorkflowExecutionTest` in `pm-workflow`). Open: scenario tests that the server step-out of
+`git.commit_and_push` (`cause: attempts_exhausted`) called by `remediation-ci.commit-fix` returns
+`stepped_out {by: server, cause: attempts_exhausted}` to that call site, which routes it to
+`remediation-ci.budget-check`, and that the unwind of a spent condition budget records the server step-out
+`{by: server, cause: condition}` (`INV-REM-4` exemption); a representation test asserts that `step_out` appears on
+every resting `link` state of a sub-workflow the entry session drives (the source units, `lessons.pmwf`) and on no
+task entity, no view, and no `auto`, `job`, `composite_job`, or `job llm` state.
 Source:: design review.
 
 [#PM-WATCH-DSL-15]

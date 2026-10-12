@@ -156,16 +156,24 @@ All plan phase lifecycles, finalize sequences, and epic workflows must be define
 
 See the link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification], link:specification/state-catalogue.adoc[State Catalogue], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
-Implementation (the parser of the workflow DSL with its refusals naming file and line, the immutable tree of a unit, the reading of a plan instance's header, and the printer; the validation rules, the compiled invariants, the loader of project-owned units, the plan instance composition, the interpreter and the diagram generator are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowParser.java[WorkflowParser],
+Implementation (the parser of the workflow DSL with its refusals naming file and line, the immutable tree of a unit, the reading of a plan instance's header, and the printer; the deterministic interpreter of a verified unit and the sub-workflows it calls, which runs the primitives of `auto` states, starts the jobs of job states and creates the queue tasks of task states through ports, and is resumed by typed engine events, with three-valued guards and the persisted loop-back and remediation counters, not yet wired into the runtime `pm-mcpd`; the validation rules, the compiled invariants, the loader of project-owned units, the plan instance composition and the diagram generator are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowParser.java[WorkflowParser],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/WorkflowPrinter.java[WorkflowPrinter],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/WorkflowDefinition.java[WorkflowDefinition]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/ast/WorkflowDefinition.java[WorkflowDefinition],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/WorkflowEngine.java[WorkflowEngine],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/EngineStep.java[EngineStep],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/GuardEvaluator.java[GuardEvaluator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/LoopBackBudget.java[LoopBackBudget]
 
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserTest.java[WorkflowParserTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowParserRefusalTest.java[WorkflowParserRefusalTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/dsl/WorkflowPrinterTest.java[WorkflowPrinterTest],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/ast/AstNodeModelTest.java[AstNodeModelTest]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/ast/AstNodeModelTest.java[AstNodeModelTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/WorkflowEngineTest.java[WorkflowEngineTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/GuardEvaluatorTest.java[GuardEvaluatorTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineEventTest.java[EngineEventTest]
 
-Documentation: link:developer/workflow-dsl.adoc[Developer Guide § The Workflow Language]
+Documentation: link:developer/workflow-dsl.adoc[Developer Guide § The Workflow Language],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide]
 
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-1[PM-WATCH-DSL-1], link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-9[PM-WATCH-DSL-9], link:implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-1[PM-WATCH-FS-1], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-11[PM-WATCH-GEN-11], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-15[PM-WATCH-GEN-15], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-20[PM-WATCH-GEN-20], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-22[PM-WATCH-GEN-22], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-23[PM-WATCH-GEN-23], link:implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-6[PM-WATCH-TOOL-6]
 
