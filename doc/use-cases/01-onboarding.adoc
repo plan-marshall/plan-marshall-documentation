@@ -27,7 +27,7 @@ Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the on
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal of the machine.
 Goal:: get from a freshly installed `PM-MCP` to a machine on which the first project can be set up, in one guided run.
-Trigger:: the operator opens the console, `pm-operator` without a verb, on a machine that is not fully onboarded: it asks where to go on, in the web app (link:02-web-app.adoc#UC-WEB-1[UC-WEB-1], which then shows the onboarding) or here, in the terminal. There is no verb of its own for the onboarding. A later run of one aspect starts from the machine settings of the web app or with `pm-operator config <aspect>`.
+Trigger:: the operator enters on a machine that is not fully onboarded (link:02-entry.adoc#UC-ENT-1[UC-ENT-1]) and chooses to go on in the terminal or in the web app. A later run of one aspect starts from the machine settings of either client.
 Preconditions:: the binaries are installed (link:../specification/cli-and-security/01-cli-and-installer.adoc#installation-layout[Installation Layout]); the runtime can be started.
 Flow::
 +
@@ -77,7 +77,7 @@ Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
 Requirements:: none yet; the parts that exist are named in each use case below.
-Design:: link:../design/02-onboarding.adoc#frame[Onboarding Screens], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#frame[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]
 
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
@@ -115,7 +115,7 @@ Outcome:: as <<UC-ONB-1>>, with every value the automatic run chose shown to the
 Changes::
 * *Automatic onboarding* (<<change-auto>>).
 Requirements:: none yet.
-Design:: link:../design/02-onboarding.adoc#auto[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#auto[Web App, Onboarding]
 
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Languages
@@ -149,7 +149,7 @@ Outcome:: the interface language and the model language recorded.
 Changes::
 * *Languages and internationalisation* (<<change-i18n>>).
 Requirements:: the model language exists per project as `user_language` (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]); an interface language does not.
-Design:: link:../design/02-onboarding.adoc#language[Onboarding Screens], link:../design/03-texts-and-languages.adoc[Texts and Languages]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]
 
 [#UC-ONB-4]
 == UC-ONB-4: Choose the First Harness
@@ -229,7 +229,7 @@ Changes::
 * *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
-Design:: link:../design/02-onboarding.adoc#harness[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
 
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Harnesses and Models for the Work
@@ -272,7 +272,7 @@ Changes::
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
-Design:: link:../design/02-onboarding.adoc#models[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]
 
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
@@ -323,7 +323,7 @@ Changes::
 * *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
-Design:: link:../design/02-onboarding.adoc#roles[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#roles[Web App, Onboarding]
 
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
@@ -363,7 +363,7 @@ Outcome:: the machine's credential store is recorded; every credential and the e
 Changes::
 * *Credential store as an operator choice* (<<change-credential-store>>).
 Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
-Design:: link:../design/02-onboarding.adoc#credential-store[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#credential-store[Web App, Onboarding]
 
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
@@ -416,7 +416,7 @@ Changes::
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
-Design:: link:../design/02-onboarding.adoc#providers[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#providers[Web App, Onboarding]
 
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
@@ -455,7 +455,7 @@ Outcome:: the machine's default for every axis; a project's setup may set its ow
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
 Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
-Design:: link:../design/02-onboarding.adoc#plan-defaults[Onboarding Screens]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#plan-defaults[Web App, Onboarding]
 
 [#changes]
 == Changes to the Specification
@@ -490,11 +490,10 @@ Affects:: link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (`scope ma
 
 Gap:: every machine-level choice is a `pm-operator` verb today; the web app is specified only as a view and for questions, waivers and the operator actions on plans.
 Fix::
-* The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app as forms, and the console `pm-operator` as an interactive terminal dialogue. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
+* The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app and the terminal client, each as its design says. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
 * A choice is an operator act in either: audited with channel `web` and the `device_id`, or channel `cli`; never relayed by a model and never taken through MCP elicitation. The terminal keeps the operator checks of `pm-operator` (an interactive terminal, no coding-agent environment).
-* Every aspect also has a direct verb for scripts and later changes (`pm-operator config language|harness|models|roles|credentials|providers|plan-defaults`), which runs the aspect's sub-workflow with its arguments as the choices and asks at the first state that needs a choice it was not given, or with `--no-input` stops there (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/01-commands.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]). Like every operator verb it runs in an interactive terminal only, typed in the console or as one shell command.
-* *The console.* `pm-operator` without a verb opens the operator's console: verbs are typed without the program name, and what the runtime pushes while it is open is shown above the line being typed (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc[Terminal Client, The Console]). Above all, a question a running plan or epic asks the operator is announced there and answered there (`questions`, `answer <id>`), with the channel `cli`, beside the web app and the entry session; the first valid answer wins, as for the other channels. It is a content answer, never an override, and like every choice of the console it is the operator's own act at an interactive terminal.
-* Command names, options, and identifiers are the same in every language; only the texts are translated (<<change-i18n>>).
+* Every aspect can also be changed alone later, with its current values as the proposal: the aspect's sub-workflow runs as a later run. A client may take the choices of an aspect as answers given in advance and ask only for the ones it was not given; the terminal client does (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/01-commands.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]).
+* Identifiers, and the commands and options of a client, are the same in every language; only the texts are translated (<<change-i18n>>).
 Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`).
 
 [#change-auto]
@@ -502,7 +501,7 @@ Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app
 
 Gap:: every step asks; an operator who does not want to weigh options has no way through but accepting each proposal by hand.
 Fix::
-* `onboard.mode` offers _automatic_, in the web app and in the terminal; it has no option of a verb of its own.
+* `onboard.mode` offers _automatic_, in both clients alike.
 * One consent (`auto.consent`) lists every scan and probe of the run and covers exactly those, once; it is not remembered. The automatic run asks no model, so it costs no tokens; the steward can be asked later from the settings.
 * Each sub-workflow runs with its proposal accepted; a state that cannot be decided without the operator (a login, a secret, no harness found) is shown as in the guided run, and the run continues after it.
 * `auto.result` lists every value with its reason (detected, default, the only option) and the check that confirmed it; each entry opens its step to change it.
@@ -516,7 +515,7 @@ Fix::
 * *Two languages, kept apart.* The *interface language* governs every text the system shows the operator: the web app, the messages and prompts of `pm-operator` and `pm-mcp`, the facts a state shows. The *model language* governs what a model is told to write and is given to read (task content, questions, answers, summaries). They are separate settings because models work differently in different languages; the model language defaults to the interface language and can differ from it. Model-facing instructions (the units' task texts, the role artifacts) stay in English whatever the model language; the model language is passed as an instruction to write in it.
 * *One source of texts.* Every text has a key in one message catalogue per language, in the plain-Java module that both the runtime and the command-line binaries depend on (`pm-api`, link:../specification/module-structure.adoc[Module Structure]). The command-line binaries take their texts from it directly; the runtime serves the catalogue of a language to the web app (`GET /api/v1/messages/{locale}`), so the web app holds no text of its own besides its fallback for a failed load.
 * *Language packs.* A pack is one file per language and area (`messages/<area>.<locale>.properties` in UTF-8, ICU message format for plurals and arguments), with English as the complete base and every other pack checked against it at build time: a key missing in a pack fails the build, a key in a pack and not in English fails it too. English and German ship from the start.
-* *What is never translated.* Command names, options, identifiers, state ids, link relations, store keys, log messages (link:../LogMessages.adoc[Log Messages]), and the domain vocabulary of the glossary (link:../design/03-texts-and-languages.adoc#glossary[Texts and Languages, Glossary]): _Request_, _Pull Request_, _Merge_, _Commit_, _Branch_, _Harness_, _Role_, _Plan_ and the others listed there stay as they are in every language.
+* *What is never translated.* Command names, options, identifiers, state ids, link relations, store keys, log messages (link:../LogMessages.adoc[Log Messages]), and the domain vocabulary of the glossary (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc#glossary[Texts and Languages, Glossary]): _Request_, _Pull Request_, _Merge_, _Commit_, _Branch_, _Harness_, _Role_, _Plan_ and the others listed there stay as they are in every language.
 * *Settings.* `machine-config.json` gains `language.interface` (a locale with a pack, default the system locale where a pack exists, else `en`) and `language.model` (`same` or a locale); the project's `user_language` becomes the project's override of `language.model`.
 Affects:: link:../specification/module-structure.adoc[Module Structure] (`pm-api` catalogue), link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`user_language`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App].
 
@@ -529,7 +528,7 @@ Fix::
 * An icon of the `source` form is fetched by the runtime, never by the browser: on the operator's consent (consent kind `fetch_icons`), once, from that URL, stored in the machine store `<PM_MCP_BASE>/icons/`, and served to the web app from the runtime's own origin. A browser that loaded it from the maker's server would send the operator's address to that server on every view and would break the content security policy (`img-src` falls under `default-src 'self'`).
 * Without a fetched or bundled icon, the harness is shown with a generated monogram (initials on a colour derived from the client id). The monogram is the default for every harness until the legal question below is settled; a profile then gains its `source` icon only once its maker's terms or a confirmation allow it.
 * The icon only identifies the harness where the harness itself is shown; it is never used as the product's own mark, in a heading, or anywhere that suggests the maker endorses `PM-MCP`.
-Open points:: whether showing a maker's icon is allowed at all, and which icons may be bundled, is a legal question kept with the business documents of the operator; the research is in link:../design/02-onboarding.adoc#icons[Onboarding Screens, Harness Icons].
+Open points:: whether showing a maker's icon is allowed at all, and which icons may be bundled, is a legal question kept with the business documents of the operator; the research is in link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/harness-icons.adoc#icons[Web App, Harness Icons].
 Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema], link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/cli-and-security/03-web-server.adoc#web-security-headers[Request Validation & Security Headers].
 
 [#change-plan-axes]
