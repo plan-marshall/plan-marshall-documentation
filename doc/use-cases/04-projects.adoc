@@ -98,7 +98,7 @@ Changes::
 * *Onboarding a project as one process* (<<change-project-onboarding>>).
 * *Project values over machine values* (<<change-project-levels>>).
 Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1] (enrolment, the lifecycle gate), link:../Requirements.adoc#PM-EXT-3[PM-EXT-3] (module discovery, build map, architecture enrichment), link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2] (the enrolment as the source of execution); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], the setup in link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
 
 [#UC-PRJ-2]
 == UC-PRJ-2: Explore Projects
@@ -119,7 +119,7 @@ Outcome:: the operator has found the project and is on the way to an epic, a pla
 Changes::
 * *The projects of the machine* (<<change-project-explorer>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
 
 [#UC-PRJ-3]
 == UC-PRJ-3: Release a Project
@@ -151,6 +151,7 @@ Outcome:: the project runs no work of `PM-MCP`; released, it can be enrolled aga
 Changes::
 * *Releasing ends work as the operator ends it* (<<change-project-release>>).
 Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1]; the release and the unenrolment are specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc#release[Project Explorer, Release and Unenrol]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
 
 [#changes]
 == Changes to the Specification

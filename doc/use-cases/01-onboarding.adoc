@@ -115,7 +115,7 @@ Outcome:: as <<UC-ONB-1>>, with every value the automatic run chose shown to the
 Changes::
 * *Automatic onboarding* (<<change-auto>>).
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#auto[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#auto[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-auto[Terminal Client, The Automatic Run]
 
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Languages
@@ -149,7 +149,7 @@ Outcome:: the interface language and the model language recorded.
 Changes::
 * *Languages and internationalisation* (<<change-i18n>>).
 Requirements:: the model language exists per project as `user_language` (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]); an interface language does not.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-language[Terminal Client, Languages]
 
 [#UC-ONB-4]
 == UC-ONB-4: Choose the First Harness
@@ -229,7 +229,7 @@ Changes::
 * *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, The First Harness]
 
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Harnesses and Models for the Work
@@ -272,7 +272,7 @@ Changes::
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Harnesses and Models]
 
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
@@ -323,7 +323,7 @@ Changes::
 * *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#roles[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]
 
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
@@ -363,7 +363,7 @@ Outcome:: the machine's credential store is recorded; every credential and the e
 Changes::
 * *Credential store as an operator choice* (<<change-credential-store>>).
 Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#credential-store[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]
 
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
@@ -416,7 +416,7 @@ Changes::
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#providers[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]
 
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
@@ -455,7 +455,7 @@ Outcome:: the machine's default for every axis; a project's setup may set its ow
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
 Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#plan-defaults[Web App, Onboarding]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#plan-defaults[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]
 
 [#changes]
 == Changes to the Specification
@@ -537,7 +537,7 @@ Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile S
 Gap:: how a plan lands, how it works, and how often it asks are scattered or missing: the finalize phase always lands through a branch and a pull request (or hands back without a push remote), `merge.auto_merge` and `questions.*` are per-project operator keys with a machine default in `project_defaults`, `review_outline` is a choice at a plan's start, and there is neither a way to commit on `main` or to leave the changes as files, nor a test-first method.
 Fix::
 * *Axes and variants are workflow units.* Each axis is a call site of the plan workflow, and each variant a sub-workflow of it: landing `land.pull-request` (branch, pull request, merge, today's finalize), `land.main` (commit and push on the base branch, no pull request), `land.files` (no commit: the changes stay in the working tree, the plan ends handed back); method `method.test-first` and `method.tests-after` (the order of the implementing and the testing tasks in the execute phase); asking `ask.every-phase`, `ask.key-points`, `ask.questions-only` (which phase transitions wait for the operator, the generalisation of plan-marshall's `*_without_asking` settings).
-* *Selection is composition.* The plan instance binds the chosen variant of each axis at event `start`; the variants not chosen are pruned with the reason `plan_default`, so the process in force shows the choice.
+* *Selection is composition.* The plan instance binds the chosen variant of each axis where the plan first needs it (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]), the project's or machine's value where the plan sets none, and a later change composes a new instance version; the variants not chosen are pruned with the reason `plan_default`, so the process in force shows the choice.
 * *Three levels.* Machine default (this use case, `machine-config.json` `plan_defaults`), the project's choice (its setup), and the plan's own, set where the plan first needs it or later (<<change-plan-overrides>>). The nearest level wins; a level that says nothing defers to the next. The landing axis of a project belongs to the team: it is kept with the team's configuration (`.marshall/config/`), because how a repository lands is a convention of the repository, and it overrides the machine default; the method and asking axes of a project are the operator's (`local-config.json`).
 * *Validation.* A variant that cannot run is refused where it is chosen: `land.pull-request` without a provider, `land.main` on a protected base branch (known from the provider), with the reason.
 * `merge.auto_merge` and `review_outline` become parts of the asking axis; of `questions.*` only what Waiting for the Operator keeps stays (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]): the modes, the wait and the deadline go. Where the asking axis sets the outline review, the plan does not ask it again (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]).
