@@ -37,10 +37,10 @@ Beyond the sections each change names in its _Affects_:
 |a consent store in the machine layout; the closed list of consent kinds, with one for running an unknown program to verify its profile; which consents can never be remembered; one state with several consents answered separately; endpoints to list and withdraw remembered consents.
 
 |link:../use-cases/01-onboarding.adoc#change-machine-scope[Machine Scope]
-|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for cost estimates; how a sub-workflow writes a project or plan level.
+|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for cost estimates; how a sub-workflow writes a project or plan level.
 
 |link:../use-cases/01-onboarding.adoc#change-two-channels[Operator Choices]
-|the runtime refuses an aspect-owned key in `config set` with an error code; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
+|the configuration over the local API: every value with its origin (`default`, `machine`, `project`, `team`, `plan`) and what it overrides, `set` and `unset` per key and level, and a later run of an aspect for a project or a plan; the runtime refuses an aspect-owned key in `config set` with an error code; a verb that needs a step of the onboarding not done yet is refused with an error code that names the terminal client; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
 
 |link:../use-cases/01-onboarding.adoc#change-auto[Automatic Onboarding]
 |the closed list of reasons and the item schema of `auto.result`, matching the design's reasons.
@@ -52,7 +52,7 @@ Beyond the sections each change names in its _Affects_:
 |the icon store in the machine layout, an endpoint that serves an icon, the outbound fetch through the proxy, and the monogram's colour rule, the same in both clients.
 
 |link:../use-cases/01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]
-|the prune reason `plan_default`; the units of the variants; the method's order of tasks; the team key of the landing; the axes in the project setup and at the plan's start; a provider read of branch protection; and it must drop "`questions.*` stays as it is", which Waiting for the Operator replaces.
+|the prune reason `plan_default`; error codes for the axes of a running plan, bound at its start, and for the landing of a project, owned by its team; the units of the variants; the method's order of tasks; the team key of the landing; the axes in the project setup and at the plan's start; a provider read of branch protection; and it must drop "`questions.*` stays as it is", which Waiting for the Operator replaces.
 
 |link:../use-cases/01-onboarding.adoc#change-harness-scan[Harness Scan], link:../use-cases/01-onboarding.adoc#change-login-probe[Login Probe], link:../use-cases/01-onboarding.adoc#change-unknown-harness[Unknown Harness]
 |an install hint per profile; the login command of the probe; how a probe runs (a job, its confinement); every closed list of client ids that would refuse a harness added by the operator.
@@ -61,7 +61,7 @@ Beyond the sections each change names in its _Affects_:
 |the stores in the layouts and their resources; the steward's submit schemas; where the shipped default assignment and its advisory live, and a role's group for the grouped views; the rule "an artifact replaces as a whole" against an assignment of three fields; the qualification digest over the effective values; the steward's own harness against the resolution order.
 
 |link:../use-cases/01-onboarding.adoc#change-credential-store[Credential Store], link:../use-cases/01-onboarding.adoc#change-provider-defaults[Provider Defaults], link:../use-cases/01-onboarding.adoc#change-provider-verification[Provider Verification], link:../use-cases/01-onboarding.adoc#change-web-credentials[Credentials in the Web App]
-|`PM-CRED-4`; where an interrupted move resumes from; the enrolment integrity key in the move; an error code for a recorded store that is unavailable; one naming of the stores; review bots among the providers; where a verification's last result lives and the schema of its check lines; the LAN refusal's code.
+|`PM-CRED-4`; an error code for a credential entered before a store is chosen; where an interrupted move resumes from; the enrolment integrity key in the move; an error code for a recorded store that is unavailable; one naming of the stores; review bots among the providers; where a verification's last result lives and the schema of its check lines; the LAN refusal's code.
 
 |link:../use-cases/01-onboarding.adoc#change-plan-overrides[Plan Overrides]
 |the composition event `override`; setting overrides at the plan's start; a write that answers the new instance version.
@@ -70,11 +70,19 @@ Beyond the sections each change names in its _Affects_:
 |switching an open loopback listener to the LAN, against "refused while enabled with the other exposure"; an event of a pairing; a new code that reaches only the terminal client, never a stream a browser reads; a description of a paired device.
 
 |link:../use-cases/03-plans.adoc#change-decision-structure[The Decision Structure], link:../use-cases/03-plans.adoc#change-own-words[Own Words], link:../use-cases/03-plans.adoc#change-cli-answers[Answers from the Terminal Client]
-|the named schemas of a decision, an answer, an interpretation, and a vote on a part with several options or a value; who sets what a decision blocks and how reversible it is, also for server-raised questions; who may revise a decision; the support per option derived by the runtime (counts, models, band, dissent), within the quorum's at most three votes; the asking role and phase on the record; the device and channel of an answer; how the runtime tells the channel `cli` apart; a new outcome for _none fits_; access to a decision's evidence over the local API; the list of open decisions across scopes.
+|the named schemas of a decision, an answer, an interpretation, and a vote on a part with several options or a value; who sets what a decision blocks and how reversible it is, also for server-raised questions; who may revise a decision; the support per option derived by the runtime (counts, models, band, dissent), within the quorum's at most three votes; the asking role and phase on the record; the device and channel of an answer; how the runtime tells the channel `cli` apart; a new outcome for _none fits_; access to a decision's evidence over the local API; the list of open decisions across scopes, with since when each waits (`delivered_at`); what follows from an answer, composed by the runtime for `decision.confirm`; the progress of the interpreting role while the operator waits; the refusal of an answer to an older revision and of an answer to a part whose dependency is unanswered.
 
 |link:../use-cases/03-plans.adoc#change-running-work[Running Work], link:../use-cases/03-plans.adoc#change-titles[Titles], link:../use-cases/03-plans.adoc#change-phase-start[Phase Start], link:../use-cases/03-plans.adoc#change-needs-operator[Needs the Operator], link:../use-cases/03-plans.adoc#change-overview-resource[Overview Resource]
 |`last_activity_at`; a closed activity state of a plan (working, waiting for the operator, stalled, paused); an orchestrator's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
+
+|link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
+|its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
+
+|Test seam of the operator checks
+|if the package `cli-test-infra` chooses a seam the operator checks accept only in tests, a statement of it in Operator Channel Isolation, item 2.
 |===
+
+UC-PLN-1 (following a plan down to its parts) and UC-PLN-3 (designing a plan's process) propose no change yet: their levels and building blocks are open points of the use cases, to be worked out there before any specification.
 
 [#conflicts]
 == Conflicts Between the Changes
@@ -103,7 +111,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`operator-interaction-contract`
 |`pm-mcp-clients`
-|a state's representation for a client and the operator's links over the local API; the event catalogue (names, payloads, `reset`); texts as message keys with arguments; the client inputs (locale, `PATH`, SSH); the client-owned files
+|a state's representation for a client and the operator's links over the local API; the event catalogue (names, payloads, `reset`); texts as message keys with arguments; the client inputs (locale, `PATH`, SSH); the client-owned files; the configuration with origins and levels; the corrections of the mock runtime's specification
 |`api-contract`; `operator-wait-and-machine-scope`
 
 |`message-catalogue`
