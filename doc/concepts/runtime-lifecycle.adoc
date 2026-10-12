@@ -58,9 +58,10 @@ A crash leaves work half done: transactions interrupted between their journal an
 
 *The wait.* A call addressing a project whose recovery has not finished waits for it, at most 10 seconds (the project recovery wait). Then the call is answered with the retryable error `runtime_recovering`, and the recovery goes on; a repeated call is served once it has finished. Calls addressing other projects are served meanwhile, and a project whose recovery failed blocks only itself.
 
-*Step order.* The steps run in a fixed order, because each relies on the ones before it:
+*Step order.* The eleven steps run in a fixed order, because each relies on the ones before it:
 
 . enrolment integrity;
+. owed enrolment audit records;
 . jobs and workers of the previous runtime instance;
 . leases;
 . roll-forward of interrupted transaction journals;
@@ -71,7 +72,7 @@ A crash leaves work half done: transactions interrupted between their journal an
 . pending-record sweep;
 . baseline worktree sweep.
 
-Three steps are implemented. The *lease step* marks the leases of the project whose holder, a runtime identified by process id and start instant, is no longer alive as orphaned, so the owning plan, epic or workspace can adopt them on its next transition; it removes a lease only on positive evidence that it was abandoned, and never touches the leases of another project. The *roll-forward* completes, for every scope of the project, a transaction a crash interrupted after its journal was written (link:store-integrity.adoc[Concepts § Store Integrity]); a journal that does not match what it describes modifies nothing and stops the recovery of the project as an integrity breach. The *cross-scope reconciliation* runs after it, when every authoritative store is complete, and makes the derived writes that a crash left undone. The other seven steps are named in the order already; they do their work when the stores and components they need exist, and report until then that they are not implemented. A step that fails stops the recovery of its project, and only of its project.
+Five steps are implemented. The *enrolment integrity step* first settles a write of the project's enrolment pair that a crash stopped, then runs the enrolment check (link:enrolment.adoc#check[Concepts § Enrolment, The Check]); a refusal fails the step and blocks only its project. The *owed-record step* hands over, under the project's enrolment lock, the audit records the project's enrolment writes still owe; a record the audit log refuses again stays owed and does not fail the recovery. The background pass also hands over the records of projects that are no longer enrolled. The *lease step* marks the leases of the project whose holder, a runtime identified by process id and start instant, is no longer alive as orphaned, so the owning plan, epic or workspace can adopt them on its next transition; it removes a lease only on positive evidence that it was abandoned, and never touches the leases of another project. The *roll-forward* completes, for every scope of the project, a transaction a crash interrupted after its journal was written (link:store-integrity.adoc[Concepts § Store Integrity]); a journal that does not match what it describes modifies nothing and stops the recovery of the project as an integrity breach. The *cross-scope reconciliation* runs after it, when every authoritative store is complete, and makes the derived writes that a crash left undone. The other six steps are named in the order already; they do their work when the stores and components they need exist, and report until then that they are not implemented. A step that fails stops the recovery of its project, and only of its project.
 
 *Sweep rule.* Every step that removes or releases something selects only from positive evidence of abandonment: a dead owner identified by process id and start instant, a terminal state, or an expired lease or retention period. A name that fails to parse as an identifier is never evidence, and every swept directory excludes its reserved entries by construction. A recovery that removes nothing it is unsure of can be run again after any crash without harm.
 

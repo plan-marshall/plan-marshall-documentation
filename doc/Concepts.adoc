@@ -16,6 +16,9 @@ The concepts explain *why* `PM-MCP` is built the way it is and *what* its parts 
 |===
 |Concept |What it explains
 
+|link:concepts/enrolment.adoc[Enrolment]
+|How a project is taken into use: one enrolment file per project, the HMAC sidecar that proves the runtime wrote it, the per-use checks, a refusal that blocks only its project, the re-baseline and its residual risk, the compiled lifecycle gate with its pilots, and an unenrol that never strands live work.
+
 |link:concepts/harness-as-worker/README.adoc[Harness as Worker]
 |`PM-MCP` drives plans and epics; harness processes with their models are supervised workers that the server starts, offers tasks, watches, and replaces. The journey from plan-marshall to this design, the architecture, the task protocol, roles as configuration, and the delivery of skills.
 

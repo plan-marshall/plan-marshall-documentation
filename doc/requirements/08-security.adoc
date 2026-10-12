@@ -82,6 +82,17 @@ By connecting hosts over `stdio` and relaying to the runtime over a user-private
 
 See the link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
+Implementation (of the last bullet, the per-use checks of an enrolment file and its sidecar: a symbolic link, a foreign owner or a mode broader than `0600` refused with `enrolment_insecure`, audited, blocking only its project): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentFileCheck.java[EnrolmentFileCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[EnrolmentCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[AuditEvent]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentFileCheckTest.java[EnrolmentFileCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[EnrolmentCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[StoreRefusalTest]
+
+Documentation: link:concepts/enrolment.adoc#check[Concepts § Enrolment, The Check], link:developer/enrolment-store.adoc#check[Developer Guide § Enrolment Store, The Enrolment Check]
+
 Implementation watch: link:implementation-watch/cli-and-security.adoc#PM-WATCH-CLI-21[PM-WATCH-CLI-21], link:implementation-watch/cli-and-security.adoc#PM-WATCH-CLI-27[PM-WATCH-CLI-27], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-4[PM-WATCH-RUN-4]
 
 [#PM-SEC-5]
@@ -107,6 +118,21 @@ Subprocesses spawned by PM-MCP for builds, CLI-variant git and CI provider opera
 * The system must show the operator, when a project opts into the container engine (`PM-EXEC-4`), that its jobs hold the authority of the Docker group, whose daemon runs outside the job's confinement and can read and write every host path, `<PM_MCP_BASE>` included; the opt-in is recorded in the audit log and every job of the project states `confinement: partial(container_engine)`.
 
 See the link:specification/job-runtime.adoc[Job Runtime Specification] and link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification] for implementation details.
+
+Implementation (the enrolment part of the HMAC bullet: the HMAC-SHA-256 over the canonical content of every enrolment file in its sidecar record, written with every runtime write, the key in the keyring under the operator lane or in `<PM_MCP_BASE>/state/` with mode `0600`, the check that refuses `enrolment_tampered` with an audit record for that project only, and the re-baseline; the check in the recovery and before verify-not-resolve, the operator verb, `harnesses.json`, and the job-runtime bullets are not implemented yet; the residual risk of the enrolment HMAC is documented): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentKey.java[EnrolmentKey],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentHmac.java[EnrolmentHmac],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[EnrolmentCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[EnrolmentSidecar],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[AuditEvent]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentKeyTest.java[EnrolmentKeyTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentHmacTest.java[EnrolmentHmacTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[EnrolmentCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest]
+
+Documentation: link:concepts/enrolment.adoc#integrity[Concepts § Enrolment, Integrity], link:concepts/enrolment.adoc#residual-risk[Concepts § Enrolment, Residual Risk], link:developer/enrolment-store.adoc#integrity-key[Developer Guide § Enrolment Store, The Integrity Key]
 
 Implementation watch: link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-2[PM-WATCH-JOB-2], link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-20[PM-WATCH-JOB-20], link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-21[PM-WATCH-JOB-21], link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-35[PM-WATCH-JOB-35], link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-36[PM-WATCH-JOB-36]
 

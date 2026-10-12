@@ -32,6 +32,30 @@ Project execution capabilities must be strictly opt-in via operator enrolment, a
 
 See the link:specification/job-runtime.adoc[Job Runtime Specification] and link:specification/store-schemas.adoc[Store Schemas Specification] for implementation details.
 
+Implementation (the enrolment file of a project as a closed, typed record with its strict reading and canonical bytes, the store under the project's own lock, the integrity sidecar record with the HMAC under the operator-lane key in the keyring or the key file, the enrolment check whose `enrolment_tampered` refusal is audited and blocks only its project, the runtime's `enrol` write, the `unenrol` refused with `scope_active` naming the live work and leaving the machine store untouched, and the re-baseline; the operator verbs and their endpoints, the check in the recovery and before verify-not-resolve, a live-work source, the sweep, the store root check, the harness enrolment, and verify-not-resolve are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ProjectEnrolment.java[ProjectEnrolment],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentCodec.java[EnrolmentCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[EnrolmentSidecar],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentStore.java[EnrolmentStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/LiveWork.java[LiveWork],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/AuditEvent.java[AuditEvent],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentKey.java[EnrolmentKey],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentHmac.java[EnrolmentHmac],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[EnrolmentCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentCodecTest.java[EnrolmentCodecTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentStoreTest.java[EnrolmentStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[StoreRefusalTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/LiveWorkTest.java[LiveWorkTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/service/AuditEventTest.java[AuditEventTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentKeyTest.java[EnrolmentKeyTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentHmacTest.java[EnrolmentHmacTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[EnrolmentCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest]
+
+Documentation: link:concepts/enrolment.adoc[Concepts § Enrolment], link:developer/enrolment-store.adoc[Developer Guide § Enrolment Store]
+
 [#PM-EXEC-3]
 === PM-EXEC-3: Python Interpreter Pinning & Hash Verification
 

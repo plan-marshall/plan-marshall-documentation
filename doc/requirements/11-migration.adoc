@@ -20,6 +20,17 @@
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/job-runtime.adoc[Job Runtime Specification], link:specification/mcp-tools.adoc[MCP Tools Specification], and link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification] for implementation details.
 
+Implementation (of the lifecycle gate bullet: the gate as a compiled constant, closed in this release, its decision per project from the verified enrolment, a pilot admitted and every other project refused `lifecycle_closed` while it is closed, a released project refused whatever the gate, and the `pilot` flag written by the runtime's `enrol` and covered by the enrolment HMAC; the refusal of the bootstrap's scope creation and the `pm-operator enrol --pilot` verb are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LifecycleGate.java[LifecycleGate],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ProjectEnrolment.java[ProjectEnrolment],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[EnrolmentCheck]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LifecycleGateTest.java[LifecycleGateTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[EnrolmentCheckTest]
+
+Documentation: link:concepts/enrolment.adoc#lifecycle-gate[Concepts § Enrolment, The Lifecycle Gate and Pilots], link:developer/enrolment-store.adoc#lifecycle-gate[Developer Guide § Enrolment Store, The Lifecycle Gate]
+
 [#PM-MIG-2]
 === PM-MIG-2: Separate State Trees & Legacy Coexistence
 
@@ -34,6 +45,13 @@ See the link:specification/store-schemas.adoc[Store Schemas Specification], link
 * Every JSON and JSONL store must include a mandatory integer `format_version` field without exception: the server-owned stores, the git-tracked team configuration files `.marshall/config/*.json`, and the operator files (`local-config.json`, `machine-config.json`, enrolment files, the harness enrolment `harnesses.json`, credential files of `PM-CRED-3`); every workflow unit declares its DSL format in its header.
 
 See the link:specification/filesystem-layout.adoc[Filesystem Layout Specification], link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/job-runtime.adoc[Job Runtime Specification], and link:specification/mcp-tools.adoc[MCP Tools Specification] for implementation details.
+
+Implementation (of the `format_version` bullet, the enrolment files and their sidecar records: the mandatory integer `format_version`, read first and every other version refused naming the file; the format refusal shared by the store documents is linked from `PM-IMPL-2`): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentCodec.java[EnrolmentCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[EnrolmentSidecar]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentCodecTest.java[EnrolmentCodecTest]
+
+Documentation: link:concepts/enrolment.adoc#enrolment-file[Concepts § Enrolment, One File per Project], link:developer/enrolment-store.adoc#schema-and-codec[Developer Guide § Enrolment Store, Schema and Codec]
 
 Implementation watch: link:implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-7[PM-WATCH-TOOL-7]
 

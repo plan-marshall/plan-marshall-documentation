@@ -21,7 +21,8 @@ The runtime (`pm-mcpd`) persists machine-wide configuration, cross-process `File
 ├── harnesses.json.hmac                  # HMAC-SHA-256 sidecar of harnesses.json (mode 0600)
 ├── enrolments/                          # Operator enrolments, one file per project (mode 0700)
 │   ├── <project_id>.json                # Root, wrappers, tools, templates, scripts, budgets (mode 0600)
-│   └── <project_id>.json.hmac           # HMAC-SHA-256 sidecar of that file, written with every enrolment write (mode 0600)
+│   ├── <project_id>.json.hmac           # HMAC-SHA-256 sidecar of that file, written with every enrolment write (mode 0600)
+│   └── <project_id>.json.audit-intent   # Audit records an enrolment write still owes; exists only while one is owed (mode 0600)
 │
 ├── roles/                               # Machine role set: operator role artifacts (mode 0700)
 │   └── <role>.json                      # Role artifact; replaces the shipped artifact of the same name (no qualification records)
@@ -67,7 +68,8 @@ The runtime (`pm-mcpd`) persists machine-wide configuration, cross-process `File
 │   │                                    # Machine store locks, one sibling lock per renamed store,
 │   │                                    # acquired alphabetically after all scope locks:
 │   ├── build-slots.lock                 # state/build-slots.json
-│   ├── credentials.lock                 # credentials/ (fallback credential files)
+│   ├── credentials.lock                 # credentials/ (fallback credential files); creation of the
+│   │                                    # enrolment integrity key in the keyring, before any enrolment lock
 │   ├── enrolments/
 │   │   └── <project_id>.lock            # enrolments/<project_id>.json and its .hmac (lexicographic by project_id)
 │   ├── harnesses.lock                   # harnesses.json and its .hmac
@@ -123,7 +125,7 @@ The runtime creates every file under `<PM_MCP_BASE>` with mode `0600` and every 
 
 |`<PM_MCP_BASE>/state/enrolment-hmac.key`
 |`0600` (`-rw-------`)
-|Enrolment HMAC key on hosts without an OS keyring only; its residual risk is documented with the enrolment integrity (`PM-SEC-5`).
+|Enrolment HMAC key on hosts without an OS keyring only; its residual risk is documented with the enrolment integrity (link:../../concepts/enrolment.adoc#residual-risk[Concepts § Enrolment, Residual Risk]; `PM-SEC-5`).
 
 |`<PM_MCP_BASE>/projects/` and every `<project_id>/` below it
 |`0700` (`drwx------`)

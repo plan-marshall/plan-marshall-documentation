@@ -76,18 +76,21 @@ The system must separate internal persistence formats from model-facing wire rep
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/hypermedia-format.adoc[Hypermedia Format & TOON Encoding Specification], and link:specification/identifiers.adoc[Identifier Registry] for implementation details.
 
-Implementation (the `format_version` bullet for the store documents and records of the package `core.store`: the refusal that names the file with the version found and the current one, the strict reading every store codec shares, and the per-record refusal of a JSONL store): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
+Implementation (the `format_version` bullet for the store documents and records of the package `core.store` and for the enrolment files with their sidecar records: the refusal that names the file with the version found and the current one, the strict reading every store codec shares, and the per-record refusal of a JSONL store): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StoreRefusal.java[StoreRefusal],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/StrictJson.java[StrictJson],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LeaseCodec.java[LeaseCodec],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/TransactionJournal.java[TransactionJournal],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/DigestSidecar.java[DigestSidecar],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JsonlStoreFile.java[JsonlStoreFile]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/JsonlStoreFile.java[JsonlStoreFile],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentCodec.java[EnrolmentCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[EnrolmentSidecar]
 
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/StoreRefusalTest.java[StoreRefusalTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LeaseCodecTest.java[LeaseCodecTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/TransactionJournalTest.java[TransactionJournalTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/DigestSidecarTest.java[DigestSidecarTest],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JsonlStoreFileTest.java[JsonlStoreFileTest]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JsonlStoreFileTest.java[JsonlStoreFileTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentCodecTest.java[EnrolmentCodecTest]
 
 Implementation (the analysis result record, one line of `analysis.jsonl`, with its canonical JSON line and its strict reading, and the finding record with its `format_version`; writing either store is not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisResult.java[AnalysisResult],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/analysis/AnalysisResultCodec.java[AnalysisResultCodec],
@@ -98,7 +101,7 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/analysis/AnalysisResultSchemaTest.java[AnalysisResultSchemaTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/findings/FindingSchemaParityTest.java[FindingSchemaParityTest]
 
-Documentation: link:concepts/store-integrity.adoc#format-versions[Concepts § Store Integrity, Format Versions], link:developer/store-substrate.adoc#format-versions[Developer Guide § Store Substrate, Format Versions and Refusals], link:developer/findings-and-analysis.adoc#analysis-result[Developer Guide § Findings and Code Analysis, The Analysis Result and Its Codec]
+Documentation: link:concepts/store-integrity.adoc#format-versions[Concepts § Store Integrity, Format Versions], link:developer/store-substrate.adoc#format-versions[Developer Guide § Store Substrate, Format Versions and Refusals], link:developer/findings-and-analysis.adoc#analysis-result[Developer Guide § Findings and Code Analysis, The Analysis Result and Its Codec], link:developer/enrolment-store.adoc#schema-and-codec[Developer Guide § Enrolment Store, Schema and Codec]
 
 Implementation watch: link:implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-1[PM-WATCH-CLIENT-1], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-45[PM-WATCH-STORE-45]
 
@@ -198,7 +201,7 @@ Persisted stores must preserve defect-driven data integrity invariants, detect o
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], and link:specification/model-work.adoc[Model Work Specification] for implementation details.
 
-Implementation (the lock order with its assertion, the lock manager, the sibling lock files and the atomic write, the lock-free snapshot read that reports a digest mismatch as unverified, the common lease record with its store, the stale lease sweep, the shared format refusal, the JSONL append with its tail repair, the per-scope transaction journal with its roll-forward recovery, the digest sidecar with its verification under the lock and its re-baseline, and the ordered write across scopes with its reconciler seam; the `integrity_breach` condition, `accept-edit`, the concrete cross-scope flows, the footprint reconciliation, the lesson claims, the four lease stores with their own documents, the task leases, and the wiring of the lock manager, the recovery and the reconcilers into the daemon are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockLevel.java[LockLevel],
+Implementation (the lock order with its assertion, the lock manager, the sibling lock files and the atomic write, the lock-free snapshot read that reports a digest mismatch as unverified, the common lease record with its store, the stale lease sweep, the shared format refusal, the JSONL append with its tail repair, the per-scope transaction journal with its roll-forward recovery, the digest sidecar with its verification under the lock and its re-baseline, the ordered write across scopes with its reconciler seam, the enrolment store under the per-project enrolment lock of the machine store level, and the re-baseline of an enrolment that rewrites its sidecar record and reports the recorded against the current size and SHA-256; the `integrity_breach` condition, `accept-edit`, the concrete cross-scope flows, the footprint reconciliation, the lesson claims, the four lease stores with their own documents, the task leases, and the wiring of the lock manager, the recovery and the reconcilers into the daemon are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockLevel.java[LockLevel],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockKey.java[LockKey],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/LockOrder.java[LockOrder],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/service/LockManager.java[LockManager],
@@ -219,7 +222,9 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/DigestSidecar.java[DigestSidecar],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeIntegrity.java[ScopeIntegrity],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/OrderedWrite.java[OrderedWrite],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/CrossScopeReconciler.java[CrossScopeReconciler]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/CrossScopeReconciler.java[CrossScopeReconciler],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentStore.java[EnrolmentStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments]
 
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockOrderTest.java[LockOrderTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/LockKeyTest.java[LockKeyTest],
@@ -241,9 +246,11 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeTransactionTest.java[ScopeTransactionTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/JournalRecoveryTest.java[JournalRecoveryTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeIntegrityTest.java[ScopeIntegrityTest],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/OrderedWriteTest.java[OrderedWriteTest]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/OrderedWriteTest.java[OrderedWriteTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentStoreTest.java[EnrolmentStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest]
 
-Documentation: link:concepts/locks-and-leases.adoc[Concepts § Locks and Leases], link:concepts/store-integrity.adoc[Concepts § Store Integrity], link:developer/locks-and-leases.adoc[Developer Guide § Locks and Leases], link:developer/store-substrate.adoc[Developer Guide § Store Substrate]
+Documentation: link:concepts/locks-and-leases.adoc[Concepts § Locks and Leases], link:concepts/store-integrity.adoc[Concepts § Store Integrity], link:concepts/enrolment.adoc#rebaseline[Concepts § Enrolment, Re-Baseline], link:developer/locks-and-leases.adoc[Developer Guide § Locks and Leases], link:developer/store-substrate.adoc[Developer Guide § Store Substrate], link:developer/enrolment-store.adoc#store[Developer Guide § Enrolment Store, The Store]
 
 Implementation watch: link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-24[PM-WATCH-GEN-24], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-46[PM-WATCH-GEN-46], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-64[PM-WATCH-PHASE-64], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-10[PM-WATCH-STORE-10], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-11[PM-WATCH-STORE-11], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-22[PM-WATCH-STORE-22], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-43[PM-WATCH-STORE-43], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-44[PM-WATCH-STORE-44], link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-47[PM-WATCH-STORE-47]
 

@@ -1,0 +1,131 @@
+= Enrolment
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Concepts.adoc[Concepts] » Enrolment
+
+`PM-MCP` serves a project only when the operator has enrolled it: the enrolment is the operator's opt-in, and it is the record of everything the runtime may run for that project. Because the runtime acts on what the record says, the record must be one the runtime wrote on the operator's behalf, unchanged since. This document explains how an enrolment is kept, how the runtime tells an untouched enrolment from an edited or exposed one, what a refusal blocks, and how the lifecycle gate decides whether a project may create plans. How the code implements it is in link:../developer/enrolment-store.adoc[Developer Guide § Enrolment Store]; the locks it runs under are explained in link:locks-and-leases.adoc[Locks and Leases].
+
+The project's recovery runs the check as its first step, before the project is first served (link:runtime-lifecycle.adoc#per-project-recovery[Runtime Lifecycle § Per-Project Recovery]). The operator verbs that ask for these writes (`pm-operator enrol`, `unenrol`, `accept-edit enrolment`) and the other points in the runtime that must run the check (verify-not-resolve, `pm-mcp enter`) are not built yet; they are specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[CLI, Coordination & Security Specification § Enrolment, Lifecycle Gate & Release] and link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-integrity[§ Enrolment Integrity].
+
+[#enrolment-file]
+== One File per Project
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-MIG-2[PM-MIG-2], link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
+
+Every enrolled project has its own file, `<PM_MCP_BASE>/enrolments/<project_id>.json`. It records the main checkout of the project (`project_root`), the build wrappers with the files that decide their flags, the host tools with their digests, the build command templates the project overrides, provider verification overrides, the approved project scripts, language servers, the operator's command budgets, the write paths of the project's jobs, the captured build environment, the container-engine opt-in, the `pilot` flag of the lifecycle gate (<<lifecycle-gate>>), and the instant of a release.
+
+The set of enrolled projects is nothing but the listing of `enrolments/`: every file `<project_id>.json` whose name is a valid project id. There is no index to keep in step, and a sidecar or a half-written temporary file is never mistaken for an enrolment.
+
+`enrolments/` belongs to the operator; the per-project machine store below `projects/<project_id>/` belongs to the server. Keeping the two apart is what lets an enrolment be removed without touching what the project's plans left behind (<<unenrol>>).
+
+The file has one shape. Its `format_version` is read first, and a file of another version is refused as `format_outdated` or `format_newer`, naming the file (link:store-integrity.adoc#format-versions[Store Integrity § Format Versions]). The schema is closed at every level of nesting: every field at most once, no field it does not declare, every required field present, every value inside its pattern or its closed set of names. A file that names another `project_id` than the one in its file name is refused as unreadable.
+
+What the runtime writes is the _canonical_ form of the enrolment: every field, defaults included, in the order of the schema, and the entries of every map in a stable order. The same enrolment therefore always gives the same bytes, and those bytes are what its integrity is computed over.
+
+[#integrity]
+== Integrity
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-5[PM-SEC-5], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+The enrolment decides which executables, arguments and paths a project's jobs may use. A process that can write `enrolments/` without going through the runtime, a host shell driven by a model being the obvious one, could widen all of that by editing one file. The runtime therefore proves to itself, before it trusts an enrolment, that it wrote the file and that nobody changed it since.
+
+The proof is a sidecar beside the file, `<PM_MCP_BASE>/enrolments/<project_id>.json.hmac`. It is a small closed, versioned record of what the runtime wrote:
+
+----
+{ "format_version": 1,
+  "size":   <byte length of the canonical file>,
+  "sha256": "<lowercase-hex SHA-256 of the canonical file>",
+  "hmac":   "<lowercase-hex HMAC-SHA-256 over the exact canonical bytes>" }
+----
+
+The HMAC is computed under the enrolment integrity key, an operator-lane secret that only the runtime reads. Where the machine has an OS keyring, the key is the keyring entry of the instance under the fixed account `enrolment-integrity-key`; on a host without a keyring it is the file `<PM_MCP_BASE>/state/enrolment-hmac.key`, which must belong to the running user and carry no permission bit outside `0600`. The key is 256 random bits, created by the first write that needs it and never replaced. It is created only under the credentials lock (`locks/credentials.lock`), which an enrolment and a re-baseline take before the project's lock, so two runtime instances never create two keys; because a keyring write replaces an existing entry, the runtime also reads the entry back after writing it and uses the key it finds there. The key file is created atomically: the key is written to a temporary file in the same directory with mode `0600` and synced, published under its name by a hard link that never replaces an existing file, and the directory is synced, so a crash leaves the complete key or no key file. An enrolment creates the key only when no key exists and no enrolment file exists. A key that is absent while enrolment files exist, typically because the key backend was switched between the keyring and the key file, would strand every enrolment written under the other one; the enrolment is therefore refused as `enrolment_tampered`, with a reason that names the key-source switch and the command `pm-operator accept-edit enrolment <project_id>` of the first enrolled project, and nothing is written. The re-baseline is the operator's explicit act and is the write that creates the key over existing enrolments (<<rebaseline>>). The key appears in no log record and no message, and a key that exists but cannot be read (a key file with a foreign owner or a broader mode, a key that does not decode, a failing keyring) is a failure of its own, never mistaken for a key that does not exist yet, and never replaced.
+
+The size and the SHA-256 serve the operator: they are what a re-baseline shows as recorded against current (<<rebaseline>>). The HMAC serves the runtime: without the key nobody can produce the HMAC of an edited file, so an edit made behind the runtime, however carefully the size and SHA-256 are adjusted to match, is detected.
+
+Every write of an enrolment holds the project's own lock, `locks/enrolments/<project_id>.lock`, so two writes of one project never interleave the file and its sidecar. A write stages the file and its sidecar completely, synced, beside them under names that carry the transaction of the write, and only then renames the file and the sidecar into place. A write stopped on the way is settled by the project's recovery or by the next write of the project: a completely staged pair is rolled forward, an incomplete staging is discarded and the enrolment stays as it was. A pair that is not settled, a file whose sidecar does not match it, is still refused by the check, never trusted. The audit record of an enrolment write (`enrol`, `unenrol`, the re-baseline) is owed before the write and survives an audit log that cannot be written or a crash, so it is handed over later rather than lost (link:store-integrity.adoc#audit-delivery[Store Integrity § Audit Records of a Store Change]).
+
+[#check]
+== The Check
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-4[PM-SEC-4], link:../Requirements.adoc#PM-SEC-5[PM-SEC-5]_
+
+Before the runtime uses anything in an enrolment it runs the enrolment check under the project's lock. The steps run in this order, and the first that fails refuses the enrolment:
+
+----
+  1 per-use checks   the file and its sidecar: no symbolic link, owned by the     -> enrolment_insecure
+                     running user, no permission bit outside 0600
+  2 pair             neither file nor sidecar                                     -> absent (not enrolled)
+                     a sidecar without its file, a file without its sidecar       -> enrolment_tampered
+  3 sidecar          read strictly as the closed record above                     -> unreadable,
+                                                                                     format_outdated, format_newer
+  4 digest           size and SHA-256 of the file against the record              -> enrolment_tampered
+  5 HMAC             HMAC of the file under the key against the record;           -> enrolment_tampered
+                     no key at all is a mismatch too
+  6 enrolment        the file read strictly as the project's enrolment            -> unreadable,
+                                                                                     format_outdated, format_newer
+----
+
+The per-use checks come first because they say whether the file can be trusted to be the operator's at all. A file that another user owns, or that other users may read or write, or a symbolic link that points somewhere else, is refused as `enrolment_insecure`; a narrower mode such as `0400` passes. The checks read the file's own attributes and never follow a link, and they are bound to the read: the runtime checks the attributes, opens the file without following a link, reads it from that one open and reads the attributes again, and refuses a file that was replaced or changed while it was read. Every later step uses the bytes of that one read; the target of a symbolic link is never read. They complement the audit of `<PM_MCP_BASE>`, `enrolments/` and `run/` at runtime start: that audit refuses the start, these checks refuse only the project.
+
+When step 5 finds no key at all, the reason of the refusal names a switch of the key source between the keyring and the key file as the usual cause.
+
+An `enrolment_tampered` refusal names the operator command that resolves it, `pm-operator accept-edit enrolment <project_id>`: the operator reviews the file and re-baselines it (<<rebaseline>>). Until then nothing in the file is trusted. Both integrity refusals are logged and recorded in the audit log with the project and the reason; an audit log that cannot be written does not lift the refusal. A refusal of a strict read (steps 3 and 6) keeps its own outcome and is recorded in the audit log as `enrolment_invalid`, with the outcome and the file as its reason.
+
+[#isolation]
+== A Refusal Blocks Only Its Project
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-SEC-4[PM-SEC-4]_
+
+Every project has its own file, its own sidecar and its own lock, and the check reads only the project it was asked for. A tampered, insecure or unreadable enrolment therefore refuses that one project; every other enrolled project is checked on its own and keeps being served, and an insecure enrolment never stops the runtime from starting.
+
+[#policy]
+== Policy Before Signing
+_Requirements: link:../Requirements.adoc#PM-EXEC-1[PM-EXEC-1], link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2]_
+
+An HMAC proves that the runtime wrote a file; it says nothing about whether what the file allows is allowed. Before the runtime signs an enrolment, at an enrolment and at a re-baseline, it therefore checks the values the specification states rules for, and refuses a violation as `enrolment_invalid`: the refusal is logged and recorded in the audit log, nothing is written, no audit record is owed and no key is created.
+
+* An argument vector of a build or discovery template or of a provider verification may use only the placeholder `{module}`, and only inside its module-argument group.
+* A write path of the project's jobs may not be the base directory `<PM_MCP_BASE>`, lie below it or contain it. The path is judged by where it really leads: the runtime follows the part of the path that exists, symbolic links included, and appends the names that do not exist yet, so a directory still to be created below a link into the base is refused too. A `..` below the part that exists cannot be resolved against anything and is refused, and so is a path whose existing part cannot be resolved, such as a dangling link: the runtime does not sign what it cannot judge. The check is made when the enrolment is signed; a link created later is not seen, and the confinement of the job is what holds at run time.
+* The captured build environment may not hold a credential variable (a name ending with `_TOKEN`, `_PASSWORD`, `_SECRET` or `_KEY`) or `DBUS_SESSION_BUS_ADDRESS`, `XDG_RUNTIME_DIR` or `MVND_DAEMON_STORAGE`.
+
+Still open in the specification and not checked: the set of shell metacharacters an argument vector may not contain, whether the forbidden free flags apply to enrolled templates at all, the full list of credential variable patterns, and how a write path that is not absolute is judged. The uniqueness of the project root (`enrolment_root_conflict`) is not checked yet either.
+
+[#rebaseline]
+== Re-Baseline
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
+
+An edit the operator meant is accepted by re-baselining the file: the runtime writes a new sidecar record over the file as it is now, and leaves the file itself unchanged. It first settles a write of the file and its sidecar that was stopped half way, completing it when it was staged completely and discarding it otherwise, so the file it signs is the settled one and a stopped write can never replace the re-baselined pair later. It writes the record only for a file that exists, passes the per-use checks, reads strictly as an enrolment of its project and passes the policy before signing (<<policy>>), so a re-baseline never blesses a file the runtime could not use. The checks, the strict read and the new record cover the same single read of the file, so the re-baseline signs exactly the bytes it checked. A file that fails a check is refused as `enrolment_insecure`, logged and recorded in the audit log like a refusal of the check, and nothing is written. It reports what the old sidecar recorded, the size and SHA-256 the operator is to compare, and the new values; when no readable old record exists, there is nothing recorded to show. It also tells the operator which stopped write it settled before signing: when it completed one, the file it signed is the recovered write, which may differ from the file the operator reviewed. The re-baseline is an operator act and is recorded in the audit log.
+
+After a switch of the key source, the first re-baseline creates the new key; every other enrolment, written under the old key, then fails its check with an HMAC mismatch naming its own project, and is re-baselined the same way, one by one.
+
+[#residual-risk]
+== Residual Risk
+_Requirements: link:../Requirements.adoc#PM-SEC-5[PM-SEC-5]_
+
+The HMAC is the control against a process that writes the enrolment directly. It has two limits, both accepted, and the per-use checks have a third:
+
+* On a host without a keyring the key is a file, and every process of the same user can read it. The HMAC then still detects an edit made without the key, but not a deliberate forgery by a process that read the key first.
+* A re-baseline is an operator act, and whatever can act as the operator can re-baseline a tampered file. The operator channel guards against accidental and naive invocation, not against a model-driven shell that deliberately defeats its checks; that is the accepted risk of the operator channel (link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]).
+* The window between the per-use checks and the read is narrowed, not closed. Java offers no way to read the attributes of an open file, so the runtime infers that it read the file it checked from the attributes before the open and after the read. The mode of the operator-owned `enrolments/` directory stays the outer boundary.
+
+[#lifecycle-gate]
+== The Lifecycle Gate and Pilots
+_Requirements: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1], link:../Requirements.adoc#PM-MIG-5[PM-MIG-5]_
+
+`PM-MCP` is taken into use project by project, and its plan lifecycle (the `plan` and `epic` scopes) is not offered everywhere before it is proven. The lifecycle gate decides, per project, whether a plan or an epic may be created.
+
+The gate is a constant compiled into the release, never a setting: no configuration key, environment variable or file opens it. It stays closed in every release before the Stage 4 exit criteria are met. While it is closed, only a project enrolled as a _pilot_ (`pilot: true` in its enrolment) may create plans and epics, and every other project is refused with `lifecycle_closed`; clones used for parallel runs against `plan-marshall` are enrolled as pilots. Once a release opens the gate, `pilot` has no effect and every enrolled project is admitted. A released project (`released_at` set) is refused whatever the gate, until it is enrolled again.
+
+----
+                      released_at set   pilot: true   pilot: false
+  gate closed         lifecycle_closed  admitted      lifecycle_closed
+  gate open           lifecycle_closed  admitted      admitted
+----
+
+The flag cannot be set behind the operator's back: `pilot` is part of the enrolment, so an enrolment edited to `pilot: true` fails its check before the gate ever reads it. `pilot` is set and cleared by enrolling the project again, with or without the pilot option; an enrolment always clears `released_at`. Because the gate is asked at each creation, clearing `pilot` affects only later creations; plans and epics that exist continue.
+
+[#unenrol]
+== Unenrol
+_Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2]_
+
+Removing an enrolment while the project still has work in flight would leave that work without the record it runs under. `unenrol` therefore asks, under the project's enrolment lock, for the project's live work: its plans and epics that have not reached a terminal state and its running jobs. While there is any, it is refused with `scope_active`, naming every item (for example `plan add-login`), and nothing is removed. Without live work it removes the enrolment file and its sidecar, and nothing else: the project's machine store below `projects/<project_id>/` stays byte for byte as it was. It also cancels an enrolment write that was stopped before anything was in place and left only its staged files, so a stopped enrolment cannot come back after the project was unenrolled. Both the removal and the refusal are recorded in the audit log.
+
+An unenrol that is stopped halfway, after the enrolment file was removed and before its sidecar was, is settled by the runtime in the background: the audit record of the removal is delivered as not confirmed and the leftover sidecar is removed. The operator may also simply run `unenrol` again.
