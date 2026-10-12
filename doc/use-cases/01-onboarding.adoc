@@ -115,7 +115,7 @@ Outcome:: as <<UC-ONB-1>>, with every value the automatic run chose shown to the
 Changes::
 * *Automatic onboarding* (<<change-auto>>).
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#auto[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-auto[Terminal Client, The Automatic Run]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#auto[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-auto[Terminal Client, The Automatic Run]
 
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Languages
@@ -323,7 +323,7 @@ Changes::
 * *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#roles[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]
 
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
@@ -363,7 +363,7 @@ Outcome:: the machine's credential store is recorded; every credential and the e
 Changes::
 * *Credential store as an operator choice* (<<change-credential-store>>).
 Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#credential-store[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]
 
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
@@ -416,7 +416,7 @@ Changes::
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#providers[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]
 
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
@@ -455,7 +455,7 @@ Outcome:: the machine's default for every axis; a project's setup may set its ow
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
 Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#plan-defaults[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#plan-defaults[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]
 
 [#changes]
 == Changes to the Specification
