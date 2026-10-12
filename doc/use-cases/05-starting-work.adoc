@@ -106,9 +106,10 @@ Flow::
        │                       epic's machine store, into which the
        │                       source directory moves
        ▼
-  [M] epic.decompose           the role decompose reads the stored sources
-       │                       and drafts the workstreams and the staged
-       │                       plans
+  ↳ epic.decomposition         the role decompose drafts the workstreams
+       │                       and the staged plans from the stored sources;
+       │                       the operator reviews and shapes them before
+       │                       anything is committed (<<UC-STA-6>>)
        ▼
   epic.*                       the epic runs and starts its plans;
                                how many run at once is asked when the first
@@ -119,11 +120,12 @@ Variations::
 * *Adopting* an epic that exists in the ledger but not on this machine (another machine started it) is offered instead of a new one, as today (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Epic Bootstrap]).
 * *Its plans and the epic talk through the server*: a plan sends to its epic's inbox, and the epic to a plan's mailbox (link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/model-work/08-epic-coordination.adoc#plan-mailbox[Plan Mailbox]); no text passes from one to the other through the operator.
 * A source that fails, leaving, and abandoning are as in <<UC-STA-1>>.
-Outcome:: the epic exists with its sources stored and listed in its ledger, has drafted its workstreams and plans from them, and starts its plans as they become launchable.
+Outcome:: the epic exists with its sources stored and listed in its ledger, its workstreams and plans drafted from them and agreed by the operator, and starts its plans as they become launchable.
 Changes::
 * *All interaction in the operator's clients* (<<change-clients-only>>).
 * *Starting from the clients* (<<change-start-from-clients>>).
 * *The source directory* (<<change-source-directory>>), including the epic's sources.
+* *The decomposition is reviewed* (<<change-decomposition-review>>).
 * *Asked when needed* (<<change-options-when-needed>>).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc[Starting Work]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc[Terminal Client, Starting Work]
@@ -254,6 +256,57 @@ Changes::
 * *A recipe is a workflow* (<<change-recipe-workflow>>).
 Requirements:: the recipes are specified in link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points].
 
+[#UC-STA-6]
+== UC-STA-6: Decompose an Epic
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client, with the epic's planning role.
+Goal:: get from what the epic starts from to its workstreams and plans, cut the way the operator wants them, before any plan starts.
+Trigger:: a new epic (<<UC-STA-2>>); the operator's _decompose again_ (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]); or the epic's own finding that staged rows are stale (`epic.recut`).
+Flow::
++
+[source,text]
+----
+  [M] decomposition.draft      the role decompose reads the sources (and, on
+       │                       a later run, the ledger: what shipped, what
+       │                       runs, the operator's instruction) and drafts
+       │                       the workstreams and per workstream the staged
+       │                       plans: objective, deliverables, expected
+       │                       surface, dependencies, order
+       ▼
+  [S] decomposition.check      the server's checks: the surfaces of plans
+       │                       that may run together are disjoint, the
+       │                       dependencies form no cycle, every plan has a
+       │                       workstream; each finding shown with its plan
+       ▼
+  [O] decomposition.review     the workstreams and their plans, as a tree,
+       │                       with the checks; per plan: keep, edit, drop;
+       │                       add a plan in the operator's words; talk; or
+       │                       for the whole: draft again with an instruction
+       ├── edit, add ─────────► [O] the instruction  ─► [M] decomposition.rewrite
+       │                             the role drafts or rewrites the plan
+       │                             ─► [O] read-back: accept, instruct
+       │                             again, discard ─► decomposition.check
+       ├── talk ──────────────► [O]⇄[M] free text about the cut; each change
+       │                             proposed is applied only through
+       │                             read-back ─► decomposition.check
+       ├── draft again ───────► decomposition.draft, with the instruction
+       ▼ agree, every check passing
+  [S] decomposition.commit     the workstreams and the staged plans written
+       │                       to the ledger and landed
+       ▼
+  epic.next-work               the epic starts the plans that can start
+----
+Variations::
+* *A later run* keeps what shipped, what runs, and what is paused; it changes only staged plans, and the review shows each change against the staged plan it replaces.
+* *A failing check* blocks _agree_ and names the plans concerned; the operator edits, drops, or has the plan drafted again.
+* *Leaving* keeps the draft and the decisions made on it; the review continues where it stopped, in either client. The epic starts no plan before the first decomposition is agreed.
+* *The operator's words* are interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]).
+Outcome:: the epic's workstreams and staged plans are in its ledger as the operator agreed them, and the epic starts its plans from them.
+Changes::
+* *The decomposition is reviewed* (<<change-decomposition-review>>).
+Requirements:: the decomposition is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`, `epic.recut`) and link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness].
+
 [#changes]
 == Changes to the Specification
 
@@ -380,3 +433,13 @@ Fix::
 * *The start asks only the sources*, and the title and id proposed from them.
 * *Every other option is an operator wait at the state that first needs it*, with its proposal: the posture where the plan's lane is chosen, the base branch before the plan's branch is created, the outline review when the outline is ready, the number of plans an epic runs at once when its first plan is to start. An option the project or the machine sets (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]) is not asked.
 Affects:: link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`parallelization_scope`).
+
+[#change-decomposition-review]
+=== The Decomposition Is Reviewed
+
+Gap:: `epic.decompose` and `epic.recut` serve one task of the role `decompose`, whose submits are committed by `epic.commit-decomposition` without anyone seeing them: the cut of an initiative into plans, the decision that shapes all the epic's work, is never shown to the operator, who can neither shape it nor ask for another cut.
+Fix::
+* *A sub-workflow `epic.decomposition`* of the epic: the role's draft, the server's checks (surface disjointness, dependencies without a cycle, a workstream per plan), and the operator wait `decomposition.review`, in which the operator keeps, edits, drops, or adds plans, talks with the role, or has it draft again with an instruction; every change a model proposes reaches the draft only through the operator's read-back; nothing is committed before the operator agrees and every check passes.
+* `epic.decompose` and `epic.recut` call it; a later run (the operator's _decompose again_, or stale rows) changes only staged rows and shows each change against the row it replaces.
+* The epic starts no plan before its first decomposition is committed.
+Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.decompose`, `epic.commit-decomposition`, `epic.recut`), link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness], link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the submits of `decompose` for a rewrite and for talk).
