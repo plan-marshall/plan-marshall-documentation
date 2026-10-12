@@ -64,7 +64,7 @@ Before the runtime uses anything in an enrolment it runs the enrolment check und
                                                                                      format_outdated, format_newer
 ----
 
-The per-use checks come first because they say whether the file can be trusted to be the operator's at all. A file that another user owns, or that other users may read or write, or a symbolic link that points somewhere else, is refused as `enrolment_insecure`; a narrower mode such as `0400` passes. The checks read the file's own attributes and never follow a link. They complement the audit of `<PM_MCP_BASE>`, `enrolments/` and `run/` at runtime start: that audit refuses the start, these checks refuse only the project.
+The per-use checks come first because they say whether the file can be trusted to be the operator's at all. A file that another user owns, or that other users may read or write, or a symbolic link that points somewhere else, is refused as `enrolment_insecure`; a narrower mode such as `0400` passes. The checks read the file's own attributes and never follow a link, and they are bound to the read: the runtime checks the attributes, opens the file without following a link, reads it from that one open and reads the attributes again, and refuses a file that was replaced or changed while it was read. Every later step uses the bytes of that one read; the target of a symbolic link is never read. They complement the audit of `<PM_MCP_BASE>`, `enrolments/` and `run/` at runtime start: that audit refuses the start, these checks refuse only the project.
 
 When step 5 finds no key at all, the reason of the refusal names a switch of the key source between the keyring and the key file as the usual cause.
 
@@ -80,7 +80,7 @@ Every project has its own file, its own sidecar and its own lock, and the check 
 == Re-Baseline
 _Requirements: link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2], link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
 
-An edit the operator meant is accepted by re-baselining the file: the runtime writes a new sidecar record over the file as it is now, and leaves the file itself unchanged. It does so only for a file that exists, passes the per-use checks and reads strictly as an enrolment of its project, so a re-baseline never blesses a file the runtime could not use. It reports what the old sidecar recorded, the size and SHA-256 the operator is to compare, and the new values; when no readable old record exists, there is nothing recorded to show. The re-baseline is an operator act and is recorded in the audit log.
+An edit the operator meant is accepted by re-baselining the file: the runtime writes a new sidecar record over the file as it is now, and leaves the file itself unchanged. It does so only for a file that exists, passes the per-use checks and reads strictly as an enrolment of its project, so a re-baseline never blesses a file the runtime could not use. The checks, the strict read and the new record cover the same single read of the file, so the re-baseline signs exactly the bytes it checked. A file that fails a check is refused as `enrolment_insecure`, logged and recorded in the audit log like a refusal of the check, and nothing is written. It reports what the old sidecar recorded, the size and SHA-256 the operator is to compare, and the new values; when no readable old record exists, there is nothing recorded to show. The re-baseline is an operator act and is recorded in the audit log.
 
 After a switch of the key source, the first re-baseline creates the new key; every other enrolment, written under the old key, then fails its check with an HMAC mismatch naming its own project, and is re-baselined the same way, one by one.
 
@@ -88,10 +88,11 @@ After a switch of the key source, the first re-baseline creates the new key; eve
 == Residual Risk
 _Requirements: link:../Requirements.adoc#PM-SEC-5[PM-SEC-5]_
 
-The HMAC is the control against a process that writes the enrolment directly. It has two limits, both accepted:
+The HMAC is the control against a process that writes the enrolment directly. It has two limits, both accepted, and the per-use checks have a third:
 
 * On a host without a keyring the key is a file, and every process of the same user can read it. The HMAC then still detects an edit made without the key, but not a deliberate forgery by a process that read the key first.
 * A re-baseline is an operator act, and whatever can act as the operator can re-baseline a tampered file. The operator channel guards against accidental and naive invocation, not against a model-driven shell that deliberately defeats its checks; that is the accepted risk of the operator channel (link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]).
+* The window between the per-use checks and the read is narrowed, not closed. Java offers no way to read the attributes of an open file, so the runtime infers that it read the file it checked from the attributes before the open and after the read. The mode of the operator-owned `enrolments/` directory stays the outer boundary.
 
 [#lifecycle-gate]
 == The Lifecycle Gate and Pilots
