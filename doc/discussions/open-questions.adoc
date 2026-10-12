@@ -30,29 +30,6 @@ Options:: (1) Switch `plan-marshall-mcp` to private when the work package starts
 Recommendation:: 2. It keeps the repository public for as long as planned, and the tests prove the mechanism either way.
 Blocks:: the work package `default-units-and-drift-tests` of `plan-marshall-mcp`, and the wording of the Milestone 3 exit.
 
-[#decisions]
-== Questions and Decisions
-
-Points of the question specification that the decision structure (link:../use-cases/03-plans.adoc#change-decision-structure[The Decision Structure]) has to settle when it is written into the specifications.
-
-[#decision-expiry]
-=== The Expiry of a Decision
-
-Question:: What does a question record when it closes without an answer, where today's rules leave it open?
-Why it is open:: (1) A question set whose records close partly `answered` and partly `assumed` takes one outcome transition, and no document says which. (2) The clarification fallback records the `default_assumption` as an amendment, but the `answered` line requires a `branch_key`, and the `default_assumption` is optional: nothing says what is recorded when it is empty. (3) Mode `none` applies "the recommended option, else the `default_assumption`", but every question has exactly one recommended option, so the second branch is never taken, and an init classifier without a safe default has no `returned` route in mode `none`, while its expiry fallback has one.
-Options:: (1) Patch each rule where it stands. (2) Make the expiry rule part of every decision, set by its declaration in the unit: wait on, apply a named default (an option, or the default assumption recorded as an own option of the plan), escalate, or return; every class states its rule, and mode `none` applies the same rule at once.
-Recommendation:: 2. It is what the decision structure needs anyway: the channel shows the expiry rule the decision carries, and the policy stays in the units.
-Blocks:: the specification of the decision structure.
-
-[#decision-deadline-session]
-=== The Deadline in the Entry Session
-
-Question:: Is the deadline of a question shown in the entry session?
-Why it is open:: The representations render deadlines "recorded, never rendered" (link:../specification/mcp-tools/01-core-workflow-tools.adoc#question-waiver-facts[Question Facts], model-facing minimality); UC-PLN-2 lets every client show the deadline, and the entry session relays questions to the user.
-Options:: (1) Keep it out of the representation; the web app and the terminal client show it. (2) Render it in the facts of the entry session for the user.
-Recommendation:: 1. The model gains nothing from it, a late answer is refused anyway, and the operator's clients show it.
-Blocks:: nothing; the entry session stays as specified until decided.
-
 == Tools and Machines
 
 [#python-for-differential-tests]
