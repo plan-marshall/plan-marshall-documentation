@@ -24,8 +24,9 @@ Flow::
        ▼
   [O] project.consent          may the server look at the checkout? (its git
        │                       configuration, build wrappers, host tools,
-       │                       language servers, project scripts; nothing
-       │                       runs but the version probes)
+       │                       language servers, project scripts; nothing of
+       │                       the checkout runs: its wrappers and scripts are
+       │                       read, never executed)
        ├── no ──────────────► stays at project.consent
        ▼ yes | yes, don't ask again
   [S] project.detect           the remote, the base branch, the build wrappers,
@@ -120,7 +121,7 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 Gap:: a project is enrolled only by the terminal verb `pm-operator enrol`, whose inputs are not specified (where the project's id comes from, how wrappers, host tools, language servers, scripts, and the build environment are found); the enrolment precedes the setup and is never one of its states; the setup is driven only by a coding-agent session (`/mcp-marshall-steward`), its choices are links the session relays, and the web app never shows them (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units]; link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App]).
 Fix::
 * A project onboarding unit of the machine scope runs `project.checkout` to `project.enrol` and then the project setup; its choices are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to both clients; the setup keeps its states and gains the operator's choices of the project (<<change-project-levels>>).
-* *Detection*, after the operator's consent (a consent kind `inspect_checkout`): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. Nothing runs but version probes.
+* *Detection*, after the operator's consent (a consent kind `inspect_checkout`): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. Nothing of the checkout runs before the project is enrolled: a build wrapper and a script are read (a wrapper's version from its pinned properties), never executed; only host tools found on the operator's `PATH` run their version probe.
 * *Identity*: the project's id is proposed from the remote's name, valid by the identifier grammar and unique on the machine; the display name from the remote's owner and name; the operator may change both before enrolment, the display name also later.
 * *The build environment* is the operator's login environment as the terminal client captures and sends it, never the runtime's own (link:../specification/runtime-model/01-processes-and-transport.adoc#_environment[Environment]); a project onboarded from the web app takes the build environment the terminal client last captured on this machine and says so, and with none names the terminal command that captures it.
 * *The setup from any client*: the entry session keeps driving it where the operator starts it from a coding agent; the two clients drive it through its operator waits; whichever answers first wins.
