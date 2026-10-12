@@ -93,7 +93,6 @@ UC-PLN-3 (designing a plan's process) proposes no change yet: its building block
 * The entry opens the loopback listener first, then the LAN on a yes; today's lifecycle refuses the second exposure.
 * Machine Scope's gate names the web app; the design names both clients.
 * The messages endpoint has two paths.
-* `project_defaults` beside `plan_defaults` and `language.model`.
 
 [#slicing]
 == Packages
@@ -134,6 +133,16 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |The Plan's Process as a Structure, Events of the Process: the process resource with the state of every node, and its events
 |`operator-interaction-contract`; `phase-sub-workflows`; UC-PLN-1 agreed
 
+|`project-onboarding-unit`
+|`pm-mcp-core`
+|Onboarding a Project as One Process, Project Values over Machine Values: the project onboarding unit of the machine scope (checkout, consent, detection, identity, enrolment, then the setup), the setup's choices as operator waits, the project's values over the machine's
+|`operator-wait-and-machine-scope`; UC-PRJ-1 agreed
+
+|`project-contract`
+|`pm-mcp-clients`
+|The Projects of the Machine, and the client side of a project's onboarding: the list of every enrolled project, favourites, recent and most used, the onboarding's states for the clients
+|`operator-interaction-contract`; `project-onboarding-unit`; UC-PRJ-1 and UC-PRJ-2 agreed
+
 |`decision-contract`
 |`pm-mcp-clients`
 |The Decision Structure, Own Words, Answers from the Terminal Client
@@ -150,4 +159,4 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`operator-interaction-contract`; UC-ENT-1 agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`.
