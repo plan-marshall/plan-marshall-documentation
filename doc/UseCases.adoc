@@ -56,4 +56,8 @@ Design:: the design documents that show it, per client (link:https://github.com/
 |`UC-PLN`
 |link:use-cases/03-plans.adoc[03-plans.adoc]
 |Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, and designing a plan's process.
+
+|`UC-PRJ`
+|link:use-cases/04-projects.adoc[04-projects.adoc]
+|Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and exploring the projects with favourites, recent and most used, from which an orchestrator or a plan is started.
 |===

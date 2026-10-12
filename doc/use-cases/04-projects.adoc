@@ -1,0 +1,136 @@
+= Use Cases: Projects (UC-PRJ)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Projects
+
+The operator brings a project into `PM-MCP` and finds it again: onboarding a project (its enrolment and its setup, with the machine's values as the proposal), and exploring the enrolled projects, from which the operator starts an orchestrator or a plan, or looks at the project's running work. The operator does this in the web app or in the terminal client; how each shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+
+[#UC-PRJ-1]
+== UC-PRJ-1: Onboard a Project
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: get from a repository checkout to a project in which plans and orchestrators can run, in one guided run: enrolled, set up for the team, and configured for the operator, starting from what the machine already provides and asking only for what the project needs of its own.
+Trigger:: the operator adds a project in the explorer (<<UC-PRJ-2>>); in the terminal also in a checkout, where the working directory is the proposal. A later run of one aspect of a project starts from the project in the explorer.
+Preconditions:: the machine is onboarded (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]).
+Flow::
++
+[source,text]
+----
+  [O] project.checkout         the checkout of the repository: a path; the
+       │                       terminal proposes its working directory
+       ▼
+  [O] project.consent          may the server look at the checkout? (its git
+       │                       configuration, build wrappers, host tools,
+       │                       language servers, project scripts; nothing
+       │                       runs but the version probes)
+       ├── no ──────────────► stays at project.consent
+       ▼ yes | yes, don't ask again
+  [S] project.detect           the remote, the base branch, the build wrappers,
+       │                       the host tools the project uses, the language
+       │                       servers, the scripts; a check line for each
+       ▼
+  [O] project.identity         the project's id, proposed from the remote's
+       │                       name; its display name; for a release whose
+       │                       plan lifecycle is not open yet, whether the
+       │                       project is a pilot, and what that means
+       ▼
+  [O] project.enrolment        everything to be enrolled, each with where it
+       │                       comes from (detected, the machine, the default);
+       │                       the container engine only as a separate choice
+       │                       with its warning
+       ▼
+  [S] project.enrol            the enrolment and the project's machine store
+       ▼
+  [S] setup.*                  the project setup, its choices as operator
+       │                       waits of both clients: the team's settings
+       │                       (base branch, branch prefix, lanes), the
+       │                       providers, the build map, the finalize steps
+       ▼
+  [O] project.operator         what the project uses of the machine and what
+       │                       it sets of its own: the model language, the
+       │                       allowed models, the role assignment, the
+       │                       providers and their credentials, the plan
+       │                       defaults, the integration variants, the commit
+       │                       identity; the machine's value is the proposal
+       ▼
+  [S] setup.qualify, enrich    role qualification and enrichment, as the
+       │                       setup runs them, with their costs consented
+       ▼
+  [O] setup.commit-changes     the team's configuration to commit, or to leave
+       ▼
+  project.completed            names what comes next: an orchestrator, a plan,
+                               or the project's running work
+----
+Variations::
+* *Machine values as the proposal.* Every value the project can take from the machine is proposed from it and marked so; accepting it records nothing for the project, which keeps following the machine. Only a changed value is recorded for the project (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]).
+* *A later run of one aspect* opens its states with the project's current values, as the first run and a later change are one process.
+* *A step that cannot pass* (a credential refused, a tool missing, the build map not derivable) shows its check line with the cause and the fix and waits for the operator; the project is enrolled but not ready until it passes.
+* *An enrolled project without setup*, such as one enrolled with `pm-operator enrol`, continues at its setup.
+* *A released project* is offered to be enrolled again, which reopens its plan lifecycle.
+Outcome:: the project is enrolled and set up; its team configuration is committed or left to commit; it takes from the machine what it does not set itself.
+Changes::
+* *Onboarding a project as one process* (<<change-project-onboarding>>).
+* *Project values over machine values* (<<change-project-levels>>).
+Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1] (enrolment, the lifecycle gate), link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2] (the enrolment as the source of execution); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], the setup in link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
+
+[#UC-PRJ-2]
+== UC-PRJ-2: Explore Projects
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: find a project among many quickly, see its state at a glance, and from it start an orchestrator, start a plan, or look at its running work.
+Trigger:: the operator opens the projects of the machine.
+Flow::
+. *Favourites first*: the projects the operator marked as favourites, in the operator's order.
+. *Recent*: the projects the operator worked with last, newest first.
+. *All projects*: every enrolled project, ordered by name, with a filter; and as a second order, the most used: the projects the operator worked with most over the last weeks.
+. *A project* shows its display name, whether it is ready (set up, or what its setup still needs), whether something in it needs the operator, its active plans and orchestrators, and when it was last active.
+. *Selecting a project* offers its actions: _add an orchestrator_, _add a plan_ (the use cases of starting each follow), _running work_ (the project's level of link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), and its setup (<<UC-PRJ-1>>, a later run). A project that is not ready offers its setup first.
+. *Marking*: the operator marks and unmarks a favourite and orders the favourites; the marks are the operator's, the same in both clients.
+Variations:: a project that is released is listed with that mark and offers to be enrolled again; an unenrolled project is not listed. _Recent_ and _most used_ count what the operator did in a project in either client: opening it, starting an orchestrator or a plan, answering a decision, changing its configuration.
+Outcome:: the operator has found the project and is on the way to an orchestrator, a plan, or its running work.
+Changes::
+* *The projects of the machine* (<<change-project-explorer>>).
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
+
+[#changes]
+== Changes to the Specification
+
+The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-project-onboarding]
+=== Onboarding a Project as One Process
+
+Gap:: a project is enrolled only by the terminal verb `pm-operator enrol`, whose inputs are not specified (where the project's id comes from, how wrappers, host tools, language servers, scripts, and the build environment are found); the enrolment precedes the setup and is never one of its states; the setup is driven only by a coding-agent session (`/mcp-marshall-steward`), its choices are links the session relays, and the web app never shows them (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units]; link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App]).
+Fix::
+* A project onboarding unit of the machine scope runs `project.checkout` to `project.enrol` and then the project setup; its choices are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to both clients; the setup keeps its states and gains the operator's choices of the project (<<change-project-levels>>).
+* *Detection*, after the operator's consent (a consent kind `inspect_checkout`): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. Nothing runs but version probes.
+* *Identity*: the project's id is proposed from the remote's name, valid by the identifier grammar and unique on the machine; the display name from the remote's owner and name; the operator may change both before enrolment, the display name also later.
+* *The build environment* is the operator's login environment as the terminal client captures and sends it, never the runtime's own (link:../specification/runtime-model/01-processes-and-transport.adoc#_environment[Environment]); a project onboarded from the web app takes the build environment the terminal client last captured on this machine and says so, and with none names the terminal command that captures it.
+* *The setup from any client*: the entry session keeps driving it where the operator starts it from a coding agent; the two clients drive it through its operator waits; whichever answers first wins.
+* `pm-operator enrol` stays as the direct verb, a later run of `project.identity` to `project.enrol` with its arguments as the answers.
+Affects:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], link:../specification/store-schemas/11-enrolment-store.adoc#enrolment-store[Enrolment Store], link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine], link:../specification/state-catalogue/06-setup-epic-other.adoc#state-catalogue-setup[Setup States], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:01-onboarding.adoc#change-consent[Consent Before Acting] (the kind `inspect_checkout`).
+
+[#change-project-levels]
+=== Project Values over Machine Values
+
+Gap:: a project's operator values fall back to the machine only for the keys of `project_defaults`; the aspects the machine's onboarding records (the model language, the allowed models, the role assignment, the providers, the plan defaults) have no place in the project's setup, the integration variant and the commit identity are per project only, and the setup never asks the operator's settings, which only `pm-operator config --project` writes.
+Fix::
+* `project.operator` shows every aspect a project may set (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]) with the machine's value as the proposal; accepting the proposal records nothing for the project, a changed value is recorded in the project's operator configuration or its own store (its role assignment, its model catalogue).
+* The integration variant and the provider credential are proposed from the machine's provider defaults (link:01-onboarding.adoc#change-provider-defaults[Machine Provider Defaults]); the commit identity from the machine's last one, else the global git identity.
+* `project_defaults` of the machine configuration is the machine's value of the project's operator keys, and the onboarding's machine values (`language.model`, `plan_defaults`, the role assignment, the model catalogue) are the machine's values of their aspects; one rule, the nearest level wins, for all of them.
+Affects:: link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/07-project-configuration.adoc[Project Configuration] (the resolution chains), link:../specification/domain-extensions/06-configuration.adoc#config-split[Configuration Split], link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants].
+
+[#change-project-explorer]
+=== The Projects of the Machine
+
+Gap:: no client can list every enrolled project: the overview lists only projects with running work; a project has no display name; nothing records which projects the operator favours, used last, or uses most.
+Fix::
+* `GET /api/v1/projects?all` lists every enrolled project with its display name, its remote, whether it is ready (its setup completed, or what it needs), its `needs_operator` summary, its counts of active plans and orchestrators, its last activity, and whether it is released.
+* The operator's favourites and their order are kept by the runtime in a machine store (`explorer.json`), written by the operator's acts in either client; the runtime also records, per project, when the operator last worked in it and how often over a rolling window, from the operator's acts in either client (opening a project, starting an orchestrator or a plan, answering a decision, changing its configuration).
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:03-plans.adoc#change-titles[Titles and Names] (the display name), link:03-plans.adoc#change-overview-resource[The Overview Resource and Its Events].
