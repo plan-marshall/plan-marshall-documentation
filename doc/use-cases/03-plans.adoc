@@ -21,41 +21,70 @@ Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app, in the terminal client, or in the entry session of the plan.
-Goal:: learn at once that a plan or an epic waits for a decision, decide it with what the plan offers (its options, the recommendation and its rationale, the default assumption, the deadline), and never answer by accident.
-Trigger:: a question record of a plan or an epic is delivered to the operator (link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record]): a worker asked, or a decision quorum escalated; or a worker files a waiver request.
+Goal:: learn at once that a plan or an epic waits for a decision, understand what is asked and why, decide it with what the plan offers, or in the operator's own words, and never decide by accident.
+Trigger:: a decision of a plan or an epic is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it because its confidence stayed below the threshold the decision declaration sets (link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
 Preconditions:: the operator has a client open, or is reached by a notification of one.
 Flow::
 +
 [source,text]
 ----
-  [S] question.open            the record is delivered: the question, its
-       │                       options, the recommendation with its rationale,
-       │                       the default assumption, the deadline
+  [S] decision.open            the decision is delivered as the workflow made it:
+       │                       what is asked and why now, the evidence, what it
+       │                       blocks, how reversible it is, its parts with their
+       │                       options, and what the workflow supplies: a
+       │                       recommendation, the votes and dissent of a quorum
        ▼
-  [S] question.announce        every open client of the operator shows that a
-       │                       decision waits, with its plan and deadline;
-       │                       none of them takes the operator's focus, and
-       │                       nothing typed before it was shown answers it
+  [S] decision.announce        every open client of the operator shows that it
+       │                       waits, with its plan and what it blocks; none
+       │                       takes the operator's focus, and nothing typed
+       │                       before it was shown answers it
        ▼
-  [O] question.answer          the operator opens it in any client and chooses
-       │                       an option; the recommendation is preselected
-       ├── answered in another client ──► question.closed  every client says
-       │                                                   where and how
-       ├── deadline ────────────────────► question.expired  the class fallback
-       │                                                    (for auto: the
-       │                                                    recommendation)
+  [O] decision.answer          per part: choose an option, give a value, or
+       │                       answer in the operator's own words, with an
+       │                       optional note; or for the whole decision: none
+       │                       fits ("think again"), or later
+       ├── own words ─────────► [M] decision.interpret   a role task maps the
+       │                             │                   words onto the parts:
+       │                             │                   an option, an option with
+       │                             │                   a condition, a new option
+       │                             │                   in the operator's words,
+       │                             │                   "you decide", or unclear
+       │                             ▼
+       │                        [O] decision.read-back   "I understood: …";
+       │                             │                   confirm, edit the words,
+       │                             │                   or choose an option
+       │                             ├── unclear ──► [O] decision.clarify
+       │                             │                    one question, then
+       │                             │                    decision.interpret again
+       │                             ▼ confirmed
+       │                        decision.answer, the part answered
+       ├── answered in another channel ──► decision.closed   every client says
+       │                                                     where and how
+       ▼ every required part answered
+  [O] decision.confirm         the whole answer, part by part, with what follows
+       │                       from it; asked where the decision has several
+       │                       parts or is not reversible
        ▼
-  [S] question.record          validated and recorded with its channel; the
-       │                       first valid answer wins
+  [S] decision.record          validated and recorded with its channel; the
+       │                       first valid answer wins; until then the plan
+       │                       waits, without a time limit
        ▼
-  question.closed
+  decision.closed
 ----
-Variations:: a waiver request is announced the same way; it is answered by a waiver, which is an operator override and never a content answer, so it has no preselection. Before the deadline the clients remind the operator. A client that was not open learns of the open records when it opens.
-Outcome:: the plan goes on with the operator's decision, or with its fallback at the deadline; the record names the channel the answer came from.
+Variations::
+* *What the workflow decides, the channel carries.* Whether a decision reaches the operator at all, whether a quorum voted on it first, the threshold below which it escalates, whether it carries a recommendation, whether own words are allowed, which role interprets them and how often it may ask back: each is modelled in the plan's workflow units and decision declarations, and every client shows and answers every variant the units can produce, never adding a rule of its own.
+* *Parts depend on each other*: a part that depends on another is offered once that part is answered, and changing the earlier answer reopens it.
+* *The interpretation sees the operator's words, the question, and the options, never the recommendation or the votes*, so that it does not lean towards them; nothing is recorded before the operator confirmed the read-back, and words that fit no option are recorded as the operator's own option, in the operator's words.
+* *A waiver request* is announced the same way; it is answered by a waiver, which is an operator override and never a content answer, so it has no preselection and no interpretation.
+* *No time limit*: either the quorum is confident and decides, as its declaration says, or the operator decides, and the plan waits until the operator has; no decision expires and none is taken by the passing of time (<<change-no-expiry>>). A client that was not open learns of the open decisions when it opens.
+Outcome:: the plan goes on with the operator's decision, in the operator's words where the operator used them, or with the decision of a confident quorum; the record names the channel, the device, and whether the answer was chosen, interpreted and confirmed, or delegated.
 Changes::
+* *The decision structure* (<<change-decision-structure>>).
+* *Answers in the operator's own words* (<<change-own-words>>).
+* *No time limit on a decision* (<<change-no-expiry>>).
 * *Answers from the terminal client* (<<change-cli-answers>>).
-Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view of questions is designed by its package `web-design`.
+Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions], the quorum in link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view is designed by its package `web-design`.
 
 [#UC-PLN-3]
 == UC-PLN-3: Design a Plan's Process
@@ -70,6 +99,42 @@ Requirements:: none yet: no requirement lets the operator change the process of 
 == Changes to the Specification
 
 The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-decision-structure]
+=== The Decision Structure
+
+Gap:: a question carries a text of at most 500 characters, 2 to 5 options, and one recommended option with one confidence and one rationale; a quorum's vote names only the option it chose. There is no place for the description and evidence of a decision, no confidence per option, no decision in several parts, no statement of what the decision blocks or how reversible it is, and no answer but an option of the list.
+Fix::
+* *Decision*: the question set becomes a decision of its own, with a stable id and a revision: a title, a short header, a description with its evidence (files, diffs, findings, links), what it blocks (the plan, a task, nothing), how reversible its outcome is (reversible, costly, irreversible), and its parts.
+* *Part*: each question of the set is a part with a stable id, its question, an answer type (one option, several options, a value), the options, and an optional dependency on options of another part; whether own words and notes are allowed is declared per part.
+* *Option*: a stable key, a short label, a description of its trade-off, its consequences, an optional preview (a diff, a text), and its *support* where a quorum voted: how many votes chose it, from which roles and models, and the dissent with its reason. A self-reported confidence stays a detail of each vote; the clients never present it as the probability that an option is right.
+* *Recommendation*: a field of the part (the option, its rationale, who recommends it), never a part of an option's label.
+* *Answer*: per part the chosen options or the value, the operator's own words, and a note; for the whole decision also _none fits_ (the plan rethinks) and _later_; with the channel, the device, and the revision it answers, so that a stale answer from a second client is refused.
+* *Events*: the runtime announces a decision opened, changed, answered, and closed, with its id and revision, on the event streams of the plan, the epic, and the workspace.
+Affects:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope], link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record], link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum] (votes per option), link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record], link:../specification/hypermedia-format/02-link-grammar.adoc#named-parameter-schemas[Named Parameter Schemas] (`question-envelope`, `question-answer`), link:../specification/mcp-tools/01-core-workflow-tools.adoc#question-waiver-facts[Question Facts], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (endpoints and events).
+
+[#change-own-words]
+=== Answers in the Operator's Own Words
+
+Gap:: an answer must name one of the listed options; its optional text changes nothing (except the revision text of the outline review), and nothing maps the operator's words onto the decision.
+Fix::
+* Where the part allows it, the operator answers in own words. The decision enters `decision.interpret`: a role task declared by the decision's unit (by default a read-only role without tools) receives the question, the options, and the words, and never the recommendation or the votes; its result is closed: an option, an option with a condition, a new option in the operator's words, a delegation ("you decide"), or unclear, each with the passages of the words it rests on.
+* The runtime checks the result before it is shown: the option exists, the quoted passages occur in the words. A result that fails the check is shown as unclear.
+* `decision.read-back` shows the result in one sentence beside the operator's words; nothing is recorded before the operator confirms it. Unclear leads to `decision.clarify`, one question, at most as often as the unit allows, then back to the choice of an option.
+* Words that fit no option are recorded as the operator's own option, in the operator's words; the interpretation never substitutes the closest option. A delegation is recorded as such, and only where the decision allows one.
+* The operator's words are untrusted text for every model that reads them later: shown as text, quoted inside facts, never followed as instructions.
+Affects:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (answers), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States] (the states of the interpretation), link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the interpreting role), link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record] (chosen, interpreted, delegated).
+
+[#change-no-expiry]
+=== No Time Limit on a Decision
+
+Gap:: a delivered question waits at most `questions.wait_seconds` (default 1800) in the modes `auto` and `quorum`, and then takes a fallback of its class (the recommended option, the `default_assumption`, or `returned`); mode `none` applies the recommendation at once without asking anyone, and a waiver request expires after its waiver wait. So the passing of time decides on the operator's behalf, and the rules for it leave cases open (a set closing partly answered and partly assumed; an empty `default_assumption`; a mode `none` branch that is never taken).
+Fix::
+* A decision is taken by one of two deciders, as its declaration in the unit says: a quorum that is confident by the declared threshold, or the operator. Nothing is decided by time, and nothing by a rule that asks no one.
+* A decision delivered to the operator waits until the operator answers it, through any channel; the plan waits with it, holding no worker and no model slot, and is shown as waiting for the operator, never as stalled. The modes `auto` and `none`, `questions.wait_seconds`, the deadline `expires_at`, the class fallbacks on expiry, and the closure `assumed` are removed; mode `operator` is what every delivered decision does, and mode `quorum` is a declaration of the unit.
+* A waiver request waits the same way until the operator waives or declines it; its expiry is removed.
+* The operator ends a waiting plan by deciding, or by the operator's own overrides (`abort`), never by letting time pass.
+Affects:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Question Delivery] (modes and expiry), link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Question Wait] and the waiver wait, link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] (`expires_at`, `closure: assumed`, channel `assumption`), link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`questions.*`), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States] (the `TIME` event and the fallback outcomes), link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum], link:../requirements/02-workflow.adoc[PM-WF-12] (`questions.mode`).
 
 [#change-cli-answers]
 === Answers from the Terminal Client
