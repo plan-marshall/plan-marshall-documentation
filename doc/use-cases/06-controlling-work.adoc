@@ -137,7 +137,6 @@ Variations::
 * *Watches still open* when the epic is through are listed by the archive check; archiving keeps them in the archived ledger, so nothing the epic watched is lost.
 * *An epic task waiting for the operator* (a held item, a decision) is shown with the actions and reached from them (link:03-plans.adoc#UC-PLN-2[UC-PLN-2]).
 Outcome:: the epic has started its next plan, is archived because it is through, or is cancelled with its plans as the operator chose.
-Open points:: whether an epic can be paused as a whole (today the operator pauses its plans one by one, and the epic starts no plan while its scope is full).
 Changes::
 * *An epic's actions* (<<change-epic-actions>>).
 * *An epic's findings and watches* (<<change-findings-watches>>).

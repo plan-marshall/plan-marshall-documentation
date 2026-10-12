@@ -47,7 +47,7 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-ONB`
 |link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
-|Making a machine ready, guided or automatically: the languages, the first harness, the harnesses and models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default.
+|Making a machine ready, guided or automatically: the languages, the harnesses (one scan, one default), the models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default.
 
 |`UC-ENT`
 |link:use-cases/02-entry.adoc[02-entry.adoc]

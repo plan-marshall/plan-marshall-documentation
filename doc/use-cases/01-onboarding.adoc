@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Onboarding
 
-The operator makes a machine ready for `PM-MCP`: the languages it speaks, one harness to work with, the harnesses and models other plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
+The operator makes a machine ready for `PM-MCP`: the languages it speaks, the harnesses it works with, the models plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
 
 Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app or in the terminal: both render the same states, and each use case is designed for both. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
 
@@ -16,10 +16,88 @@ Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the on
 *Every verification reports back.* A state that checks something (a harness, a profile, a credential store, a provider) shows each check as its own line that ends in a checkmark or in an error; an error names what failed, the answer that was received, and the fix. No check passes silently, and none fails without saying why.
 
 [#consent-first]
-*Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes. A remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
+*Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes; only where the action is optional (an icon, an advice, a script whose result can stay unknown, the description of modules) does the process go on without it. Every kind of consent, where it is asked, and whether it can be remembered is listed in <<consents>>; a remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
 
 [#machine-defaults]
 *The machine sets defaults, not final values.* Every value the onboarding records is the default of every project, and a project may set its own: the model language, the allowed models, the role assignment, the providers, and the plan defaults. Only what is a fact of the machine itself has no project value: the interface language (the operator's own), the enrolled harnesses (the programs installed here, with their paths and digests), and the credential store (where this machine keeps its secrets). A plan overrides what <<change-plan-overrides>> names.
+
+[#consents]
+== Consents
+
+The closed list of the consent kinds, for every use case that asks one (<<change-consent>>). The consent pattern, its texts, and the listing of the remembered consents are designed once for both clients (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc[Consents]); the remembered ones are listed and withdrawn in the machine settings of either client.
+
+[cols="2,4,3,2,2",options="header"]
+|===
+|Kind |What the operator allows |Asked in |Remembered |With _no_
+
+|`scan_harnesses`
+|look for the executables of the harnesses the profiles know, and run their version probe
+|`harness.consent` (<<UC-ONB-4>>)
+|yes, for the machine
+|stays
+
+|`fetch_icons`
+|download the makers' icons of the found harnesses, once, through the runtime
+|`harness.icons-consent` (<<UC-ONB-4>>)
+|yes, for the machine
+|goes on with monograms
+
+|`probe_harness_login`
+|run the login probe of each chosen harness: its command, or one minimal headless call with its token cost
+|`harness.probe-consent` (<<UC-ONB-4>>)
+|yes, for the machine
+|stays
+
+|`verify_harness_profile`
+|run a harness the binary does not know, to verify its draft profile, with the token cost of its stages
+|`harness.add-consent` (<<UC-ONB-4>>)
+|never
+|stays
+
+|`probe_harness_models`
+|run the model probe of each enrolled harness
+|`catalogue.consent` (<<UC-ONB-5>>)
+|yes, for the machine
+|stays
+
+|`model_advice`
+|a task of the steward, with its expected cost
+|`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>)
+|yes, for the machine
+|goes on without the advice
+
+|`scan_providers`
+|look for the CLI tools of the providers and the credentials already stored
+|`providers.consent` (<<UC-ONB-8>>)
+|yes, for the machine
+|stays
+
+|the automatic run
+|every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only
+|`auto.consent` (<<UC-ONB-2>>)
+|never
+|back to `onboard.mode`
+
+|`inspect_checkout`
+|read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the version probes of host tools from the absolute directories of the login `PATH`
+|`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
+|yes, for the project
+|stays
+
+|`run_checkout_scripts`
+|run the named scripts of a project's checkout, each with its arguments, confined like a job
+|`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
+|yes, for the project and the digest of each script
+|goes on, what needs the scripts unknown
+
+|`model_cost`
+|a role task whose expected cost is shown first: the qualification of the roles, the description of the modules
+|`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
+|yes, for the project
+|qualification: stays; description: goes on without
+|===
+
+A grant is not a consent: reading the issues of another repository (link:05-starting-work.adoc#UC-STA-4[UC-STA-4]) is a cross-repository read grant, kept with the grants.
 
 [#UC-ONB-1]
 == UC-ONB-1: Onboard a Machine
@@ -46,11 +124,11 @@ Flow::
   └────────────┬─────────────┘
                ▼
   ┌──────────────────────────┐
-  │ onboard.first-harness    │  UC-ONB-4   no model yet: server and operator only
-  └────────────┬─────────────┘
+  │ onboard.harnesses        │  UC-ONB-4   one scan, every harness found; no
+  └────────────┬─────────────┘             model yet: server and operator only
                ▼
   ┌──────────────────────────┐
-  │ onboard.harness-catalogue│  UC-ONB-5   from here on a model may advise
+  │ onboard.models           │  UC-ONB-5   from here on a model may advise
   └────────────┬─────────────┘
                ▼
   ┌──────────────────────────┐
@@ -72,7 +150,7 @@ Flow::
   onboard.completed                  names the next step: enrol and set up a project
 ----
 Variations:: the operator stops at any state; the next run resumes there, in the web app or the terminal alike. The remembered consents are listed in the machine's settings, where the operator withdraws any of them (<<change-consent>>). A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
-Outcome:: the languages chosen, one harness enrolled, the catalogue of usable harnesses and models recorded, every role assigned a harness and a model, the credential store chosen, the machine's providers recorded, and the default way plans run.
+Outcome:: the languages chosen, the harnesses enrolled with one of them the default, the catalogue of allowed models recorded, every role assigned a harness and a model, the credential store chosen, the machine's providers recorded, and the default way plans run.
 Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
@@ -91,14 +169,15 @@ Flow::
 [source,text]
 ----
   [O] auto.consent             one consent for everything the automatic run
-       │                       does, listed in full: the scans and probes of
-       │                       UC-ONB-4 to UC-ONB-8, and that it asks no model
+       │                       does, listed in full: the consents of UC-ONB-4
+       │                       to UC-ONB-8 (<<consents>>), for this run only, and
+       │                       that it asks no model
        ├── no ──────────────► onboard.mode   nothing was done
        ▼ yes
   [S] auto.run                 each sub-workflow with its proposal accepted:
        │                       the system language for both languages, the
-       │                       first supported harness, every found harness
-       │                       and its models, the default role assignment,
+       │                       every supported harness found, the first one
+       │                       the default, and their models, the default role assignment,
        │                       the OS credential store where available, the
        │                       providers whose tools are found, the default
        │                       plan behaviour; every check reports ✓ or ✗
@@ -152,12 +231,12 @@ Requirements:: the model language exists per project as `user_language` (link:..
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-language[Terminal Client, Languages]
 
 [#UC-ONB-4]
-== UC-ONB-4: Choose the First Harness
+== UC-ONB-4: Enrol the Harnesses
 
 Status:: `DRAFT`
 Actor:: the operator.
-Goal:: have one harness enrolled that the server can start workers with, so that the later steps of onboarding can use a model.
-Trigger:: <<UC-ONB-1>>, state `onboard.first-harness`.
+Goal:: have every harness of this machine that the operator wants to work with enrolled, from one scan, with one of them the default the later steps of onboarding use.
+Trigger:: <<UC-ONB-1>>, state `onboard.harnesses`, or a later run of it from the machine settings (a harness installed since, or one to remove).
 Preconditions:: none: this step runs before any harness is enrolled, so no state of it may need a model.
 Flow::
 +
@@ -167,35 +246,50 @@ Flow::
 
   [O] harness.consent          may the server look for harnesses on this
        │                       machine and run their version probe?
+       │                       (consent kind scan_harnesses)
        ├── no ──────────────► stays at harness.consent; nothing else happens
        │                      (skipped when the consent is remembered)
        ▼ yes | yes, don't ask again
-  [S] harness.scan             finds the executables of the harnesses the
+  [S] harness.scan             one scan: the executables of every harness the
        │                       profiles know, with their versions
        ├── none found ──────► [S] harness.none     names how to install a known
        │                            │                one, and offers to add another
        │                            │ recheck ──► harness.scan
        │                            │ add another ──► harness.add
        ▼ found one or more
-  [O] harness.choose           the found harnesses, each with version,
-       │                       supported or not, worker-eligible or not;
-       │                       the first supported one preselected
-       ├── add another (under "Advanced") ──► harness.add
+  [O] harness.icons-consent    may the server fetch the makers' icons of the
+       │                       found harnesses? (consent kind fetch_icons)
+       ├── no ──────────────► the harnesses are shown with their monograms;
+       │                      the step goes on (an icon is no condition)
+       ▼ yes | yes, don't ask again   (skipped when remembered)
+  [S] harness.fetch-icons      each icon fetched once and stored; a failed
+       │                       fetch leaves the monogram
        ▼
-  [O] harness.probe-consent    may the server run the login probe of the
-       │                       chosen harness? (its command, or a minimal
-       │                       headless call and its token cost)
+  [O] harness.choose           every found harness, each with version,
+       │                       supported or not, worker-eligible or not;
+       │                       every supported one preselected, the first of
+       │                       them as the default
+       ├── add another (under "Advanced") ──► harness.add
+       ▼ the chosen ones, one of them the default
+  [O] harness.probe-consent    may the server run the login probe of each
+       │                       chosen harness? (each command, or a minimal
+       │                       headless call and its token cost; consent
+       │                       kind probe_harness_login)
        ├── no ──────────────► stays at harness.probe-consent
        ▼ yes | yes, don't ask again   (skipped when remembered)
-  [S] harness.probe            version in the supported range; the harness
-       │                       is logged in; each check ✓ or ✗ with its cause
-       ├── fails ───────────► [S] harness.blocked  names the cause and the fix
+  [S] harness.probe            per chosen harness: version in the supported
+       │                       range, logged in; each check ✓ or ✗ with its
+       │                       cause
+       ├── one fails ───────► [O] harness.blocked  names the harness, the cause,
+       │                            │              and the fix
        │                            │ recheck ──► harness.probe
-       │                            │ choose another ──► harness.choose
-       ▼ passes
-  [O] harness.confirm          path, version and digest to be recorded
+       │                            │ leave it out ──► harness.confirm without it
+       │                            │ choose again ──► harness.choose
+       ▼ every chosen one passes
+  [O] harness.confirm          per harness: path, version and digest to be
+       │                       recorded; the default marked
        ▼
-  [S] harness.enrol            writes the harness enrolment
+  [S] harness.enrol            writes the harness enrolments and the default
        ▼
   harness.done
 
@@ -206,7 +300,8 @@ Flow::
        │                       from the template of the closest known harness
        ▼
   [O] harness.add-consent      may the server run it to verify the draft?
-       │                       (the stages, and their token cost)
+       │                       (the stages, and their token cost; consent
+       │                       kind verify_harness_profile, never remembered)
        ├── no ──────────────► stays at harness.add-consent
        ▼ yes
   [S] harness.verify-profile   profile verification, one line per stage,
@@ -218,61 +313,64 @@ Flow::
        ▼
   [S] harness.install-profile  into the machine profile set
        ▼
-  harness.probe                continues as for a found harness
+  harness.choose               the added harness among the found ones
 ----
-Variations:: a known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
-Outcome:: one worker-eligible harness is enrolled on the machine.
+Variations::
+* A known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
+* A later run scans again: a harness found that is not enrolled is offered, an enrolled one no longer found is shown as missing and offered for removal; the default can change, and a harness that roles use cannot be removed before they are reassigned (<<UC-ONB-6>>).
+Outcome:: every harness the operator chose is enrolled on the machine, one of them the default.
 Changes::
-* *Consent* (<<change-consent>>): the scan starts only after the operator's consent.
-* *Harness scan* (<<change-harness-scan>>): the server finds the harnesses itself.
+* *Consent* (<<change-consent>>, <<consents>>): the scan, the icons, the probes, and running an unknown harness each wait for the operator's consent.
+* *Harness scan* (<<change-harness-scan>>): the server finds every harness itself, once.
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
-* *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon.
+* *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon, fetched on consent.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, The First Harness]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]
 
 [#UC-ONB-5]
-== UC-ONB-5: Choose the Harnesses and Models for the Work
+== UC-ONB-5: Choose the Models for the Work
 
 Status:: `DRAFT`
 Actor:: the operator, advised by a model.
-Goal:: decide which harnesses and which of their models the server may use for the roles of every plan.
-Trigger:: <<UC-ONB-1>>, state `onboard.harness-catalogue`, or a later reconfiguration.
-Preconditions:: <<UC-ONB-4>> done: one harness is enrolled.
+Goal:: decide which models of the enrolled harnesses the server may use for the roles of every plan.
+Trigger:: <<UC-ONB-1>>, state `onboard.models`, or a later run of it.
+Preconditions:: <<UC-ONB-4>> done: the harnesses are enrolled, one of them the default.
 Flow::
 +
 [source,text]
 ----
-  [O] catalogue.consent        may the server run the found harnesses' model
-       │                       probes and ask a model for advice? (each a
-       │                       consent of its own, shown with its cost)
-       ├── no ──────────────► stays at catalogue.consent
+  [O] catalogue.consent        may the server run the model probes of the
+       │                       enrolled harnesses, and ask a model for
+       │                       advice? (two consents, each shown with its
+       │                       cost: probe_harness_models, model_advice)
+       ├── no to the probes ──► stays at catalogue.consent
        ▼ yes | yes, don't ask again
-  [S] catalogue.scan           the found harnesses (as in harness.scan) and the
-       │                       models each one offers
+  [S] catalogue.models         the models each enrolled harness offers, from
+       │                       its model probe, or none where it cannot list
+       │                       them
+       ├── no to the advice ──► catalogue.select, without a recommendation
        ▼
-  [M] catalogue.advise         a role task on the enrolled harness: which
-       │                       harnesses and models suit which kind of work,
-       │                       with cost, limits and a recommendation
+  [M] catalogue.advise         a role task of the steward on the default
+       │                       harness: which models suit which kind of work,
+       │                       with cost, limits, and a recommendation
        ▼
-  [O] catalogue.select         harnesses to enrol, models to allow;
-       │                       the recommendation is preselected
-       ▼
-  [S] catalogue.enrol          each further harness through harness.probe,
-       │                       harness.confirm, harness.enrol (UC-ONB-4)
+  [O] catalogue.select         the models to allow per harness; the
+       │                       recommendation preselected; model ids typed
+       │                       for a harness that cannot list them
        ▼
   [S] catalogue.record         records the allowed models per harness
        ▼
   catalogue.done
 ----
-Variations:: the model task fails or is skipped: `catalogue.select` is shown without a recommendation. The operator allows no further harness: the catalogue holds the first harness and its models.
-Outcome:: a recorded catalogue of the enrolled harnesses and the models allowed on each.
+Variations:: the model task fails or is left: `catalogue.select` is shown without a recommendation. A harness whose models the operator allows none of is enrolled but used by no role.
+Outcome:: a recorded catalogue of the models allowed on each enrolled harness.
 Changes::
-* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
+* *Consent* (<<change-consent>>, <<consents>>): the model probes and the advice wait for the operator's consent.
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Harnesses and Models]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Models]
 
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
@@ -467,8 +565,8 @@ The changes these use cases need, each modelled as the fix of a gap. They are pr
 
 Gap:: nothing in the specification asks before the server looks at the machine, runs a program it found, or spends model tokens; the trust model of the onboarding (<<consent-first>>) has no place to live.
 Fix::
-* Every such action has a consent kind from a closed list: `scan_harnesses` (look for harness executables and run their version probe), `probe_harness_login`, `probe_harness_models`, `scan_providers` (look for CLI tools and stored credentials), `model_advice` (a `steward` task, with its expected cost), `fetch_icons` (download the official icons of the found harnesses), `inspect_checkout` and `run_checkout_scripts` (a project's checkout, link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]), `model_cost` (a role task whose expected cost the operator approves first: the qualification of roles, the enrichment of the architecture).
-* Each action's state is preceded by a consent state `<sub-workflow>.consent` with the operator links `yes`, `yes_remember`, and `no`. `no` leaves the scope in the consent state and records nothing; the state offers the same links again. The server never takes the action without one of the two yes links.
+* Every such action has a consent kind from a closed list, the one of <<consents>>: `scan_harnesses`, `fetch_icons`, `probe_harness_login`, `verify_harness_profile`, `probe_harness_models`, `model_advice`, `scan_providers`, `inspect_checkout`, `run_checkout_scripts` (link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]), `model_cost`; the automatic run asks the ones it needs as one consent for that run.
+* Each action's state is preceded by a consent state (`<sub-workflow>.consent`, or `<sub-workflow>.<action>-consent` where a step asks several) with the operator links `yes`, `yes_remember` (only where the kind can be remembered), and `no`. `no` leaves the scope in the consent state and records nothing, and the state offers the same links again; only for an optional action (<<consents>>, column _With no_) does the process go on without it. The server never takes the action without one of the two yes links.
 * A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`, and for a kind of a project its `project_id` and, for `run_checkout_scripts`, the digest of each script it covers, so that a changed script is asked again); its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it; both are audited.
 * A consent covers its action kind, never a wider one: consent to `scan_harnesses` runs no login or model probe.
 Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc[Units, Jobs & Decisions] (the consent state as a pattern of the machine scope), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Audit Trail].
@@ -481,7 +579,7 @@ Fix::
 * A fourth top-level scope `machine`, exactly one per machine, with its state in `<PM_MCP_BASE>/machine/mcp/status.json`.
 * Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow of it.
 * Like the project setup it has no terminal state and rests in `onboard.completed`; `onboard.entry` records `onboard_run: first_run | reconfigure` and the aspect.
-* A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.harness-catalogue` may start one.
+* A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.models` may start one.
 * The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the setup gate of every start (`start.open`, today `start.resolve`) refuses to start a plan or an epic and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
 Affects:: link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (`scope machine`), link:../specification/workflow-dsl/04-ast-node-model.adoc[AST Node Model] (`WorkflowScope`), link:../specification/filesystem-layout.adoc[Filesystem Layout], link:../specification/state-catalogue.adoc[State Catalogue], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-start.resolve[`start.resolve`].
 
@@ -525,7 +623,7 @@ Affects:: link:../specification/module-structure.adoc[Module Structure] (`pm-api
 Gap:: a profile names a harness only by text; the screens that list harnesses and roles cannot show the harness's icon.
 Fix::
 * A profile field `icon` with one of two forms: `source` with the URL of the maker's official icon file, or `bundled` with the name of an icon shipped in the binary, only for an icon whose maker gave written permission to ship it.
-* An icon of the `source` form is fetched by the runtime, never by the browser: on the operator's consent (consent kind `fetch_icons`), once, from that URL, stored in the machine store `<PM_MCP_BASE>/icons/`, and served to the web app from the runtime's own origin. A browser that loaded it from the maker's server would send the operator's address to that server on every view and would break the content security policy (`img-src` falls under `default-src 'self'`).
+* An icon of the `source` form is fetched by the runtime, never by the browser: on the operator's consent (consent kind `fetch_icons`, asked in `harness.icons-consent` after the scan; with _no_ the monograms are shown and the step goes on), once, from that URL, stored in the machine store `<PM_MCP_BASE>/icons/`, and served to the web app from the runtime's own origin. A browser that loaded it from the maker's server would send the operator's address to that server on every view and would break the content security policy (`img-src` falls under `default-src 'self'`).
 * Without a fetched or bundled icon, the harness is shown with a generated monogram (initials on a colour derived from the client id). The monogram is the default for every harness until the legal question below is settled; a profile then gains its `source` icon only once its maker's terms or a confirmation allow it.
 * The icon only identifies the harness where the harness itself is shown; it is never used as the product's own mark, in a heading, or anywhere that suggests the maker endorses `PM-MCP`.
 Open points:: whether showing a maker's icon is allowed at all, and which icons may be bundled, is a legal question kept with the business documents of the operator; the research is in link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/harness-icons.adoc#icons[Web App, Harness Icons].
@@ -550,7 +648,7 @@ Gap:: `pm-operator enrol-harness <client>` needs the harness named; host detecti
 Fix::
 * `harness.scan` looks for the `headless.executable` of every profile in the effective profile set, in the directories of the operator's login `PATH` and in the profile's new field `headless.install_locations` (a list of paths with `~` and the platform's application directories).
 * It runs nothing but the profile's version probe on what it finds; a found executable is a candidate, and only `harness.enrol` records its absolute path and digest, as `enrol-harness` does.
-* A profile marked `headless: null` or `worker.eligible: false` is shown and marked, never offered as the first harness.
+* A profile marked `headless: null` or `worker.eligible: false` is shown and marked, never offered for enrolment as a worker or as the default.
 Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile Schema], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment].
 
 [#change-login-probe]
@@ -590,7 +688,7 @@ Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Sto
 Gap:: no role advises on machine-level choices.
 Fix::
 * A shipped `read_only` role `steward` serves `catalogue.advise` and `roles.propose`. It reads the profiles, the catalogue, the roles with their classes, and the qualification records of the machine's projects; it submits a recommendation with a rationale, never a choice.
-* Its own harness and model are the first harness's default, set in `onboard.first-harness`.
+* It runs on the default harness, set in `onboard.harnesses`, with that harness's default model.
 * It runs before any project exists and has no project to be qualified in: like `judge`, it is exempt from qualification; what it submits is a recommendation the operator confirms, never a choice.
 Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set], link:../specification/model-work/01-roles-and-configuration.adoc[Roles & Configuration] (qualification and its exemptions).
 
