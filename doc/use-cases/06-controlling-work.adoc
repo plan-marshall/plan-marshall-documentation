@@ -32,14 +32,23 @@ Flow::
 
   [S] plan.actions             the actions of the plan's state:
        │                       running: pause, cancel
-       │                       idle (paused, or emitted by its epic and not
-       │                       started yet): start, abandon
-       ├── pause ────────────► [S] plan.pause      no new task and no new job;
-       │                             │             a running job finishes, a
-       │                             │             running task is withdrawn and
-       │                             │             offered again on start
+       │                       pausing: start (the pause is withdrawn), cancel
+       │                       paused: start, abandon
+       ├── pause ────────────► [O] plan.pause-when   when it holds:
+       │                             │             • now: running tasks are
+       │                             │               withdrawn, running jobs
+       │                             │               stopped; both run again on
+       │                             │               start
+       │                             │             • after the current task ←:
+       │                             │               what runs finishes, nothing
+       │                             │               new starts
+       │                             │             • after the current phase:
+       │                             │               the phase runs to its end
        │                             ▼
-       │                        idle, paused
+       │                        [S] plan.pausing   runs until that point, then
+       │                             │             holds
+       │                             ▼
+       │                        paused
        ├── start ────────────► [S] plan.start      runs on from where it rests
        ├── cancel ───────────► [O] plan.confirm-end   what ends: the running
        │                             │                work, the open pull
@@ -57,8 +66,9 @@ Flow::
                                started, cancelled, abandoned, with the reason
 ----
 Variations::
-* *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan.
-* *Cancel* and *abandon* are the same end, named by the state the plan was in: a running plan is cancelled, an idle one abandoned.
+* *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan. A pause after the current task or phase holds at an operator wait, too, since nothing runs there.
+* *A plan always runs once it exists*: a plan the operator starts (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]) and a plan an epic starts run at once; the only plan that exists and does not run is a paused one.
+* *Cancel* and *abandon* are the same end, named by the state the plan was in: a running or pausing plan is cancelled, a paused one abandoned.
 * *Its epic reacts* in its own workflow: it may stage the plan's row again, hold the rows that depend on it, or ask the operator (<<UC-CTL-2>>); a plan the epic started is never ended by the epic without the operator.
 * *A plan that runs no longer* (it has ended) offers no action but its view.
 Outcome:: the plan is paused, running, or archived as the operator chose, and its epic knows.
@@ -80,12 +90,14 @@ Flow::
 +
 [source,text]
 ----
-  [S] epic.actions             next plan, findings review, watches review,
-       │                       archive, cancel
+  [S] epic.actions             next plan, decompose again, findings review,
+       │                       watches review, archive, cancel
+       ├── decompose again ──► ↳ epic.decomposition (link:05-starting-work.adoc#UC-STA-6[UC-STA-6]), with the
+       │                         operator's instruction
        ├── next plan ────────► [S] epic.next-plan   the next launchable row in
        │                             │              the queue's order: the plan
-       │                             │              emitted from its staged
-       │                             │              section and started
+       │                             │              started from its staged
+       │                             │              section, implicitly created
        │                             ├── none launchable ──► why, per row (a
        │                             │                       dependency, a lock,
        │                             │                       the scope full)
@@ -95,7 +107,7 @@ Flow::
        ├── watches review ───► ↳ epic.review (<<UC-CTL-3>>), the watches
        ├── archive ──────────► [S] epic.archive-check   tests that it is
        │                             │                  through: no plan
-       │                             │                  running or idle, every
+       │                             │                  running or paused, every
        │                             │                  row shipped or ended, no
        │                             │                  open finding, the ledger
        │                             │                  landed, the completion
@@ -105,7 +117,7 @@ Flow::
        │                             ▼ through
        │                        [S] epic.archive    the ledger moved to the
        │                                            archive and landed
-       ├── cancel ───────────► [O] epic.confirm-cancel   its running and idle
+       ├── cancel ───────────► [O] epic.confirm-cancel   its running and paused
        │                             │                   plans: cancel them too,
        │                             │                   or let them run on
        │                             │                   without the epic; the
@@ -125,6 +137,7 @@ Outcome:: the epic has started its next plan, is archived because it is through,
 Changes::
 * *An epic's actions* (<<change-epic-actions>>).
 * *An epic's findings and watches* (<<change-findings-watches>>).
+* *The decomposition is reviewed* (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its states in link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]
 
@@ -196,11 +209,11 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 [#change-plan-pause]
 === Pausing and Starting a Plan
 
-Gap:: the operator can only abort a plan (`pm-operator abort plan`); there is no pause, no state of a plan that exists but does not run, and the activity state _paused_ of Running Work (link:03-plans.adoc#change-needs-operator[What Needs the Operator]) has nothing behind it. A plan an epic emits starts at once; it cannot be held back.
+Gap:: the operator can only abort a plan (`pm-operator abort plan`); there is no pause, no state of a plan that exists but does not run, and the activity state _paused_ of Running Work (link:03-plans.adoc#change-needs-operator[What Needs the Operator]) has nothing behind it.
 Fix::
-* A plan is *running* or *idle*. Idle is a plan that exists and does not run: paused by the operator, or emitted by its epic and not started yet.
-* *Pause* is an operator act over the local API: the engine serves no new task and starts no new job of the plan; a running job finishes and its result is kept; a running task is withdrawn as on a recycle and offered again on start. The plan's operator waits stay open.
-* *Start* resumes a paused plan from its current state, and starts an emitted one.
+* A plan is *running*, *pausing* (running until the point its pause names), or *paused*. A plan always runs once it exists: starting a plan, by the operator or by its epic, creates and runs it in one act, and the epic's plans are never created to wait; _emit_ is not a step of its own.
+* *Pause* is an operator act over the local API with the point where the plan holds: *now* (running tasks withdrawn as on a recycle, running jobs stopped, both run again on start), *after the current task* (the default: what runs finishes and its result is kept, nothing new starts), or *after the current phase* (the phase's sub-workflow runs to its end, the next phase is not entered). The plan's operator waits stay open.
+* *Start* resumes a paused plan from its current state; on a pausing plan it withdraws the pause.
 Affects:: link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessions & Workers] (the withdrawal of a task), link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (the plan's activity), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI].
 
 [#change-plan-end]
@@ -208,7 +221,7 @@ Affects:: link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessi
 
 Gap:: `pm-operator abort plan` moves a plan to `plan.aborted`, which is never archived: the aborted plan stays among the project's plans. Its open pull request is left as it is.
 Fix::
-* *Cancel* (a running plan) and *abandon* (an idle one) end the plan through `plan.aborted` with the outcome `cancelled` or `abandoned` and the operator's reason, then archive it like a completed plan; its lesson claim is released as today.
+* *Cancel* (a running or pausing plan) and *abandon* (a paused one) end the plan through `plan.aborted` with the outcome `cancelled` or `abandoned` and the operator's reason, then archive it like a completed plan; its lesson claim is released as today.
 * *The pull request*: the operator chooses in the confirmation whether an open pull request of the plan is closed (with a comment naming the reason) or left open; its branch stays.
 * `pm-operator abort plan` becomes the shell form of cancel and abandon.
 Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), link:03-plans.adoc#change-running-work[Running Work] (an aborted plan is not active).
@@ -227,8 +240,9 @@ Affects:: link:../specification/model-work/08-epic-coordination.adoc#plan-scope-
 
 Gap:: the operator can only abort an epic (`pm-operator abort epic`); it starts its plans only by itself, archives only when its completion review says so, and has nothing to show the operator why it is or is not through.
 Fix::
-* *Next plan*: an operator act that has `epic.next-work` emit and start the next launchable row now, in the queue's order, under the same admission tests (dependencies, surfaces, locks); with no launchable row it answers why per row; with the scope full it offers to raise `parallelization_scope` by one.
-* *Archive*: the operator's request runs the archive check (no plan running or idle, every row shipped or ended, no open finding, the ledger landed, the completion review done) and archives through `epic.archive` only when it passes; otherwise it answers what is open. Open watches go into the archive.
+* *Next plan*: an operator act that has `epic.next-work` start the next launchable row now (which creates its plan implicitly), in the queue's order, under the same admission tests (dependencies, surfaces, locks); with no launchable row it answers why per row; with the scope full it offers to raise `parallelization_scope` by one.
+* *Decompose again*: the operator's instruction starts `epic.decomposition` (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]) over the staged rows.
+* *Archive*: the operator's request runs the archive check (no plan running or paused, every row shipped or ended, no open finding, the ledger landed, the completion review done) and archives through `epic.archive` only when it passes; otherwise it answers what is open. Open watches go into the archive.
 * *Cancel*: `pm-operator abort epic` with the operator's choice for its plans: cancel them too (each through <<change-plan-end>>), or let them run on detached (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Children of a Terminal Epic]).
 Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.next-work`, `epic.archive`, `epic.review-completion`), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI].
 

@@ -91,7 +91,10 @@ Beyond the sections each change names in its _Affects_:
 |the recipe descriptor's workflow and parameters; what goes of the recipe states in Phases 1 and 3; the operator wait of each option and where it sits; the operator wait for `parallelization_scope`.
 
 |link:../use-cases/06-controlling-work.adoc#change-plan-pause[Pausing and Starting], link:../use-cases/06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning], link:../use-cases/06-controlling-work.adoc#change-epic-informed[The Epic Is Told]
-|the plan's activity `idle` beside the terminal states; what a pause does to a job in its retry loop and to a held lock; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of an aborted plan and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
+|the plan's activity `pausing` and `paused` beside the terminal states, and the point of a pause (now, after the task, after the phase); what a pause now does to a job in its retry loop and to a held lock; where a pause after the phase holds when the phase ends in a loop-back; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of an aborted plan and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
+
+|link:../use-cases/05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]
+|the draft as a record apart from the ledger until agreed; the server's checks over a draft; the submits of `decompose` for a rewrite and for talk; how a later run marks a change against a staged row; what `epic.next-work` does while the first decomposition waits.
 
 |link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
 |the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, rewrite, and talk; the `needs_operator` kind of new findings.
@@ -206,10 +209,15 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |An Epic's Findings and Watches, The Review
 |`plan-and-epic-control`; UC-CTL-3 agreed
 
+|`epic-decomposition`
+|`pm-mcp-core`
+|The Decomposition Is Reviewed
+|`operator-wait-and-machine-scope`; UC-STA-6 agreed
+
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work: the actions of a plan and an epic, the archive check, the review's states
-|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; UC-CTL agreed
+|the client side of Controlling Work and of the decomposition: the actions of a plan and an epic, the archive check, the states of the reviews and of the decomposition
+|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL and UC-STA-6 agreed
 
 |`start-contract`
 |`pm-mcp-clients`

@@ -63,7 +63,7 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-STA`
 |link:use-cases/05-starting-work.adoc[05-starting-work.adoc]
-|Starting work: a plan or an epic from its sources (descriptions, documents, issues of GitHub, GitLab, or Codeberg, lessons, local changes, pull requests), gathered and stored by the server in a source directory; running a recipe.
+|Starting work: a plan or an epic from its sources (descriptions, documents, issues of GitHub, GitLab, or Codeberg, lessons, local changes, pull requests), gathered and stored by the server in a source directory; running a recipe; decomposing an epic into plans with the operator.
 
 |`UC-CTL`
 |link:use-cases/06-controlling-work.adoc[06-controlling-work.adoc]
