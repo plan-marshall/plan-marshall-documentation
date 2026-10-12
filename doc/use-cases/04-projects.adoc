@@ -68,7 +68,13 @@ Flow::
        │                       files, and the modules the parser of each build
        │                       system finds (Maven, Gradle, npm, Python)
        ▼
-  [S] setup.qualify-roles      role qualification, its cost consented
+  [O] setup.qualify-consent    the qualification's expected cost (consent
+       │                       kind model_cost)
+       ▼
+  [S] setup.qualify-roles      role qualification
+       ▼
+  [O] setup.enrich-consent     the enrichment's expected cost (model_cost);
+       │                       no: the project is ready without descriptions
        ▼
   [M] setup.enrich-architecture  each module's responsibility, purpose, and
        │                       key packages, by the role enrich, one task per
@@ -106,7 +112,7 @@ Flow::
 . *Recent*: the projects the operator worked with last, newest first.
 . *All projects*: every enrolled project, ordered by name, with a filter; and as a second order, the most used: the projects the operator worked with most over the last weeks.
 . *A project* shows its display name, whether it is ready (set up, or what its setup still needs), whether something in it needs the operator, its active plans and epics, and when it was last active.
-. *Selecting a project* offers its actions: _add an epic_ (link:05-starting-work.adoc#UC-STA-2[UC-STA-2]), _add a plan_ (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]), _running work_ (the project's level of link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), and its setup (<<UC-PRJ-1>>, a later run). A project that is not ready offers its setup first.
+. *Selecting a project* offers its actions: _add an epic_ (link:05-starting-work.adoc#UC-STA-2[UC-STA-2]), _add a plan_ (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]), _running work_ (the project's level of link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), and its setup (<<UC-PRJ-1>>, a later run), from which it is also released or unenrolled (<<UC-PRJ-3>>). A project that is not ready offers its setup first.
 . *Marking*: the operator marks and unmarks a favourite and orders the favourites; the marks are the operator's, the same in both clients.
 Variations:: a project that is released is listed with that mark and offers to be enrolled again; an unenrolled project is not listed. _Recent_ and _most used_ count what the operator did in a project in either client: opening it, starting an epic or a plan, answering a decision, changing its configuration.
 Outcome:: the operator has found the project and is on the way to an epic, a plan, or its running work.
@@ -114,6 +120,37 @@ Changes::
 * *The projects of the machine* (<<change-project-explorer>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]
+
+[#UC-PRJ-3]
+== UC-PRJ-3: Release a Project
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: take a project out of `PM-MCP`'s work, for a while (release) or for good (unenrol), knowing what happens to its running work.
+Trigger:: the operator chooses _Release_ or _Unenrol_ in the project's setup (<<UC-PRJ-2>>).
+Flow::
++
+[source,text]
+----
+  [O] project.release-confirm  what it does: releasing ends every plan of
+       │                       the project (each archived as cancelled, its
+       │                       epics told) and closes its plan lifecycle;
+       │                       unenrolling is refused while work runs and
+       │                       removes the enrolment; the reason
+       ├── unenrol, work runs ──► refused, the running work listed, each
+       │                          leading to its actions
+       ▼ confirm
+  [S] project.release          the plans ended as UC-CTL-1 ends them, then
+       │                       the lifecycle closed; or the enrolment removed
+       ▼
+  released | unenrolled        a released project stays listed, offering to
+                               be enrolled again; an unenrolled one leaves
+                               the list
+----
+Outcome:: the project runs no work of `PM-MCP`; released, it can be enrolled again with its values.
+Changes::
+* *Releasing ends work as the operator ends it* (<<change-project-release>>).
+Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1]; the release and the unenrolment are specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release].
 
 [#changes]
 == Changes to the Specification
@@ -125,7 +162,7 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 
 Gap:: a project is enrolled only by the terminal verb `pm-operator enrol`, whose inputs are not specified (where the project's id comes from, how wrappers, host tools, language servers, scripts, and the build environment are found); the enrolment precedes the setup and is never one of its states; the setup is driven only by a coding-agent session (`/mcp-marshall-steward`), its choices are links the session relays, and the web app never shows them (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units]; link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App]).
 Fix::
-* A project onboarding unit of the machine scope runs `project.checkout` to `project.enrol` and then the project setup; its choices are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to both clients; the setup keeps its states and gains the operator's choices of the project (<<change-project-levels>>).
+* A project onboarding unit runs `project.checkout` to `project.enrol` and then the project setup, in a scope of its own per project being onboarded (an entry like a plan's start until `project.enrol`, then the project's workspace scope), so that several projects are onboarded at once and the machine scope's state is never touched; it starts only while the machine's onboarding is complete; its choices are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to both clients; the setup keeps its states and gains the operator's choices of the project (<<change-project-levels>>).
 * *Detection*, after the operator's consent (a consent kind `inspect_checkout`): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. What can be read is read (a build wrapper's version from its pinned properties); only host tools found on the operator's `PATH` run their version probe without more.
 * *Running the checkout's own scripts* needs the operator's consent per project (a consent kind `run_checkout_scripts`), asked in `project.run-consent` with every script and its arguments named, before any of them runs. It is the same trust the enrolment grants anyway, since the enrolled wrapper runs in every build of the project's plans; the yes is recorded with the project's enrolment, and a later run of the onboarding asks again only for a script that changed (its digest). The probes run as jobs, through the job launcher with the confinement of a job, never in the runtime's own process.
 * *Identity*: the project's id is proposed from the remote's name, valid by the identifier grammar and unique on the machine; the display name from the remote's owner and name; the operator may change both before enrolment, the display name also later.
@@ -152,3 +189,12 @@ Fix::
 * `GET /api/v1/projects?all` lists every enrolled project with its display name, its remote, whether it is ready (its setup completed, or what it needs), its `needs_operator` summary, its counts of active plans and epics, its last activity, and whether it is released.
 * The operator's favourites and their order are kept by the runtime in a machine store (`explorer.json`), written by the operator's acts in either client; the runtime also records, per project, when the operator last worked in it and how often over a rolling window, from the operator's acts in either client (opening a project, starting an epic or a plan, answering a decision, changing its configuration).
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:03-plans.adoc#change-titles[Titles and Names] (the display name), link:03-plans.adoc#change-overview-resource[The Overview Resource and Its Events].
+
+[#change-project-release]
+=== Releasing Ends Work as the Operator Ends It
+
+Gap:: `pm-operator release-project` aborts every plan and epic of the project through the engine-owned abort, without an archive and without telling their epics, and neither the release nor `unenrol` is an act of the clients.
+Fix::
+* Release and unenrol are operator acts of both clients, confirmed with what they end; the release ends each plan as a cancel does (link:06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning Archive]) and cancels each epic of the project with its plans.
+Affects:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
+

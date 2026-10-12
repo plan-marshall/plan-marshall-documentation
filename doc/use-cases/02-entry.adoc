@@ -20,20 +20,29 @@ Flow::
 ----
   [S] = the server or the terminal client   [O] = the operator
 
-  [S] start.runtime            starts the runtime when none runs, opens the
+  [S] entry.runtime            starts the runtime when none runs, opens the
        │                       loopback web listener
        ▼
-  [S] start.pairing            a pairing code, unless a browser of this
+  [S] entry.check-onboarded    is the machine's onboarding complete?
+       ├── no ──────────────► [O] entry.where-to-onboard   here in the terminal,
+       │                           │                      or in the web app?
+       │                           ├── terminal ──► the onboarding (UC-ONB-1),
+       │                           │                in the terminal client
+       │                           ▼ web app
+       │                      entry.pairing, the web app opens at the
+       │                      onboarding
+       ▼ yes
+  [S] entry.pairing            a pairing code, unless a browser of this
        │                       machine is paired already (web open)
        ▼
-  [S] start.where              a desktop session, or an SSH session
+  [S] entry.where              a desktop session, or an SSH session
        │                       (SSH_CONNECTION, SSH_TTY)?
-       ├── desktop ─────────► [S] start.browser    opens the default browser
-       │                            │ cannot start ──► start.show
+       ├── desktop ─────────► [S] entry.browser    opens the default browser
+       │                            │ cannot start ──► entry.show
        │                            ▼
-       │                       start.show
+       │                       entry.show
        ▼ SSH
-  [S] start.show               the ways in, each to copy:
+  [S] entry.show               the ways in, each to copy:
        │                       • URL  http://127.0.0.1:<port>/pair#code=…
        │                       • over SSH: the forward command for the
        │                         operator's own computer
@@ -42,28 +51,57 @@ Flow::
        │                         on their own
        │                       • the code, its expiry
        ▼
-  [O] start.wait               the ways in stay at hand: copy one, a new
+  [O] entry.wait               the ways in stay at hand: copy one, a new
        │                       code, another device; the operator works on
        │ code redeemed ───────► reported; a fresh code for a further device
-       │ another device ─────► start.other-device
+       │ another device ─────► entry.other-device
        ▼ the operator is done
   done                         the runtime keeps running
 
-  [O] start.other-device       reach it from a phone or another computer on
+  [O] entry.other-device       reach it from a phone or another computer on
        │                       the network? HTTPS on all interfaces with a
        │                       self-signed certificate, fingerprint to compare
-       ├── no (default) ─────► start.wait, unchanged
+       ├── no (default) ─────► entry.wait, unchanged
        ▼ yes
-  [S] start.lan                LAN listener; shows the URL with the host
+  [S] entry.lan                LAN listener; shows the URL with the host
 ----
 Variations:: the operator forwards to another local port (`-L 8000:127.0.0.1:<port>`): the app works the same. A browser of this machine that is paired already is not paired again.
-Outcome:: the web app is open in a browser of the operator's choice, paired; nothing is reachable from the network unless the operator said yes in `start.other-device`.
+Outcome:: the web app is open in a browser of the operator's choice, paired; nothing is reachable from the network unless the operator said yes in `entry.other-device`.
 Changes::
 * *The terminal client as the entry* (<<change-start>>).
 * *Loopback `Host` without the port* (<<change-loopback-host>>).
 * *A fresh code after a redemption* (<<change-fresh-code>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-entry[Terminal Client, The Entry]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+
+[#UC-ENT-2]
+== UC-ENT-2: Manage Paired Devices
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: see which browsers can act on the machine and take that right away from any of them.
+Trigger:: the operator opens the paired devices in the machine's settings, or acts on a pairing reported above the prompt (<<UC-ENT-1>>).
+Flow::
++
+[source,text]
+----
+  [S] devices.list             every paired device: its label, when it was
+       │                       paired and last used, from where (loopback or
+       │                       the network), and which one is this
+       ▼
+  [O] devices.act              rename one, revoke one, revoke all others, or
+       │                       turn the network listener off
+       ├── revoke ──────────► [S] devices.revoke   the device's token is void
+       │                           at once; its open pages are closed with the
+       │                           reason
+       ▼
+  devices.list
+----
+Variations:: revoking the device the operator acts from asks first and leaves the web app at the pairing page. The terminal client needs no pairing and is never listed.
+Outcome:: only the devices the operator wants can act on the machine.
+Changes::
+* *Devices in both clients* (<<change-devices>>).
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
 
 [#changes]
 == Changes to the Specification
@@ -78,7 +116,7 @@ Fix::
 * `pm-operator` without a verb is the entry and runs the flow of <<UC-ENT-1>> without waiting in it: on an onboarded machine at once, on a machine not fully onboarded when the operator chooses the web app. There is no verb `start`; `web open` stays as the explicit verb.
 * It recognises an SSH session by `SSH_CONNECTION` or `SSH_TTY`, then opens no browser and shows the forward command built from the user name and the machine's host name.
 * The browser is opened with a pairing code only while no browser of this machine is paired; otherwise the terminal client prints the URL.
-* `start.wait` is not a screen of its own: the ways in stay at hand in the terminal client while the operator works on. Like every operator verb the entry runs only in an interactive terminal, because it issues a pairing code.
+* `entry.wait` is not a screen of its own: the ways in stay at hand in the terminal client while the operator works on. Like every operator verb the entry runs only in an interactive terminal, because it issues a pairing code.
 * Other devices only on the operator's yes (then a confirmation): it then enables the LAN listener as `web enable --lan` does, with the same certificate and fingerprint, and shows the QR code of the pairing URL.
 Affects:: link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer] (command listing), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
 
@@ -99,3 +137,12 @@ Gap:: one pairing code is open at a time and single use; while the terminal clie
 Fix::
 * While the terminal client is open, a redeemed code is replaced at once by a new one, shown with its URL and QR code on request; the operator can also replace it. At most one code is open at any time, as now.
 Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
+
+[#change-devices]
+=== Devices in Both Clients
+
+Gap:: the paired devices are listed and revoked only by `pm-operator web devices`; the web app shows none, a device has no label the operator chose, and a revoked device's open pages are not told.
+Fix::
+* `GET /api/v1/devices` and the acts rename and revoke over the local API, for both clients; a revocation ends the device's event streams with a reason the web app shows.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
+

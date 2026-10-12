@@ -51,15 +51,15 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-ENT`
 |link:use-cases/02-entry.adoc[02-entry.adoc]
-|Getting to work: the first command after installing, the onboarding when the machine is not ready, the web app connected from a desktop or over SSH.
+|Getting to work: the first command after installing, the onboarding when the machine is not ready, the web app connected from a desktop or over SSH; managing the paired devices.
 
 |`UC-PLN`
 |link:use-cases/03-plans.adoc[03-plans.adoc]
-|Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, and designing a plan's process.
+|Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, designing a plan's process, and following an epic; the work that ended.
 
 |`UC-PRJ`
 |link:use-cases/04-projects.adoc[04-projects.adoc]
-|Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and exploring the projects with favourites, recent and most used, from which an epic or a plan is started.
+|Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and releasing a project; exploring the projects with favourites, recent and most used, from which an epic or a plan is started.
 
 |`UC-STA`
 |link:use-cases/05-starting-work.adoc[05-starting-work.adoc]
@@ -67,5 +67,5 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-CTL`
 |link:use-cases/06-controlling-work.adoc[06-controlling-work.adoc]
-|Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; an epic's next plan, cancel, and archive once it is through; reviewing an epic's findings and watches item by item with its planning role.
+|Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; an epic's next plan, cancel, and archive once it is through; reviewing an epic's findings and watches item by item with its planning role; resolving what holds a plan.
 |===

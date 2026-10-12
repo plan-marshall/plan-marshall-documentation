@@ -71,7 +71,7 @@ Flow::
                ▼
   onboard.completed                  names the next step: enrol and set up a project
 ----
-Variations:: the operator stops at any state; the next run resumes there, in the web app or the terminal alike. A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
+Variations:: the operator stops at any state; the next run resumes there, in the web app or the terminal alike. The remembered consents are listed in the machine's settings, where the operator withdraws any of them (<<change-consent>>). A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
 Outcome:: the languages chosen, one harness enrolled, the catalogue of usable harnesses and models recorded, every role assigned a harness and a model, the credential store chosen, the machine's providers recorded, and the default way plans run.
 Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
@@ -451,7 +451,7 @@ Flow::
   defaults.done
 ----
 Variations:: the operator accepts the shipped defaults: one choice completes the step.
-Outcome:: the machine's default for every axis; a project's setup may set its own, and a plan its own at its start.
+Outcome:: the machine's default for every axis; a project's setup may set its own, and a plan its own where it first needs it, or later (<<change-plan-overrides>>).
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
 Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
@@ -467,9 +467,9 @@ The changes these use cases need, each modelled as the fix of a gap. They are pr
 
 Gap:: nothing in the specification asks before the server looks at the machine, runs a program it found, or spends model tokens; the trust model of the onboarding (<<consent-first>>) has no place to live.
 Fix::
-* Every such action has a consent kind from a closed list: `scan_harnesses` (look for harness executables and run their version probe), `probe_harness_login`, `probe_harness_models`, `scan_providers` (look for CLI tools and stored credentials), `model_advice` (a `steward` task, with its expected cost), `fetch_icons` (download the official icons of the found harnesses).
+* Every such action has a consent kind from a closed list: `scan_harnesses` (look for harness executables and run their version probe), `probe_harness_login`, `probe_harness_models`, `scan_providers` (look for CLI tools and stored credentials), `model_advice` (a `steward` task, with its expected cost), `fetch_icons` (download the official icons of the found harnesses), `inspect_checkout` and `run_checkout_scripts` (a project's checkout, link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]), `model_cost` (a role task whose expected cost the operator approves first: the qualification of roles, the enrichment of the architecture).
 * Each action's state is preceded by a consent state `<sub-workflow>.consent` with the operator links `yes`, `yes_remember`, and `no`. `no` leaves the scope in the consent state and records nothing; the state offers the same links again. The server never takes the action without one of the two yes links.
-* A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`); its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it; both are audited.
+* A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`, and for a kind of a project its `project_id` and, for `run_checkout_scripts`, the digest of each script it covers, so that a changed script is asked again); its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it; both are audited.
 * A consent covers its action kind, never a wider one: consent to `scan_harnesses` runs no login or model probe.
 Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc[Units, Jobs & Decisions] (the consent state as a pattern of the machine scope), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Audit Trail].
 
@@ -482,7 +482,7 @@ Fix::
 * Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow of it.
 * Like the project setup it has no terminal state and rests in `onboard.completed`; `onboard.entry` records `onboard_run: first_run | reconfigure` and the aspect.
 * A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.harness-catalogue` may start one.
-* The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the plan bootstrap's setup gate (`start.resolve`) refuses to start a plan or an epic and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
+* The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the setup gate of every start (`start.open`, today `start.resolve`) refuses to start a plan or an epic and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
 Affects:: link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (`scope machine`), link:../specification/workflow-dsl/04-ast-node-model.adoc[AST Node Model] (`WorkflowScope`), link:../specification/filesystem-layout.adoc[Filesystem Layout], link:../specification/state-catalogue.adoc[State Catalogue], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-start.resolve[`start.resolve`].
 
 [#change-two-channels]
@@ -538,10 +538,10 @@ Gap:: how a plan lands, how it works, and how often it asks are scattered or mis
 Fix::
 * *Axes and variants are workflow units.* Each axis is a call site of the plan workflow, and each variant a sub-workflow of it: landing `land.pull-request` (branch, pull request, merge, today's finalize), `land.main` (commit and push on the base branch, no pull request), `land.files` (no commit: the changes stay in the working tree, the plan ends handed back); method `method.test-first` and `method.tests-after` (the order of the implementing and the testing tasks in the execute phase); asking `ask.every-phase`, `ask.key-points`, `ask.questions-only` (which phase transitions wait for the operator, the generalisation of plan-marshall's `*_without_asking` settings).
 * *Selection is composition.* The plan instance binds the chosen variant of each axis at event `start`; the variants not chosen are pruned with the reason `plan_default`, so the process in force shows the choice.
-* *Three levels.* Machine default (this use case, `machine-config.json` `plan_defaults`), the project's choice (its setup), and the plan's own at its start (<<change-plan-overrides>>). The nearest level wins; a level that says nothing defers to the next. The landing axis of a project belongs to the team: it is kept with the team's configuration (`.marshall/config/`), because how a repository lands is a convention of the repository, and it overrides the machine default; the method and asking axes of a project are the operator's (`local-config.json`).
+* *Three levels.* Machine default (this use case, `machine-config.json` `plan_defaults`), the project's choice (its setup), and the plan's own, set where the plan first needs it or later (<<change-plan-overrides>>). The nearest level wins; a level that says nothing defers to the next. The landing axis of a project belongs to the team: it is kept with the team's configuration (`.marshall/config/`), because how a repository lands is a convention of the repository, and it overrides the machine default; the method and asking axes of a project are the operator's (`local-config.json`).
 * *Validation.* A variant that cannot run is refused where it is chosen: `land.pull-request` without a provider, `land.main` on a protected base branch (known from the provider), with the reason.
-* `merge.auto_merge` and `review_outline` become parts of the asking axis; `questions.*` stays as it is.
-Affects:: link:../specification/workflow-dsl/09-plan-instance.adoc#composition-rules[Composition Rules], link:../specification/phase-workflows/06-finalize-re-entry-and-merge.adoc[Finalize, Re-Entry & Merge], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration].
+* `merge.auto_merge` and `review_outline` become parts of the asking axis; of `questions.*` only what Waiting for the Operator keeps stays (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]): the modes, the wait and the deadline go. Where the asking axis sets the outline review, the plan does not ask it again (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]).
+Affects:: link:../specification/workflow-dsl/09-plan-instance.adoc#composition-rules[Composition Rules], link:../specification/phase-workflows/06-finalize-re-entry-and-merge.adoc[Finalize, Re-Entry & Merge], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration], link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc[Questions, Waivers & Operator Influence] and link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine] (no in-run operator decision), link:../requirements/08-security.adoc[PM-SEC-3].
 
 [#change-harness-scan]
 === Harness Scan
@@ -591,7 +591,8 @@ Gap:: no role advises on machine-level choices.
 Fix::
 * A shipped `read_only` role `steward` serves `catalogue.advise` and `roles.propose`. It reads the profiles, the catalogue, the roles with their classes, and the qualification records of the machine's projects; it submits a recommendation with a rationale, never a choice.
 * Its own harness and model are the first harness's default, set in `onboard.first-harness`.
-Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set].
+* It runs before any project exists and has no project to be qualified in: like `judge`, it is exempt from qualification; what it submits is a recommendation the operator confirms, never a choice.
+Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set], link:../specification/model-work/01-roles-and-configuration.adoc[Roles & Configuration] (qualification and its exemptions).
 
 [#change-default-assignment]
 === Default Role Assignment
@@ -652,8 +653,8 @@ Affects:: link:../specification/cli-and-security/02-credentials-and-operator.ado
 
 Gap:: a plan has no override of a provider, a role, or a model.
 Fix::
-* A plan store `overrides.json`, written only by the operator (web app, later `pm-operator`): per role `harness`, `model` and `effort`; the variant of an integration; the optional providers (code analysis, review bots) the plan uses.
-* Set when the plan is created, or later; a later change composes a new instance version with the composition event `override`, under the position rule, and is audited.
+* A plan store `overrides.json`, written only by the operator, in either client: per role `harness`, `model` and `effort`; the variant of an integration; the optional providers (code analysis, review bots) the plan uses.
+* Set where the plan first needs the value (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]), or later from the plan's settings (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]); a later change composes a new instance version with the composition event `override`, under the position rule, and is audited.
 * An override passes the same validation as the machine values (enrolled harness, allowed model, available provider).
 Affects:: link:../specification/workflow-dsl/09-plan-instance.adoc[Plan Instance] (composition event), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc[Plan Instance Store], link:../specification/model-work/04-worker-launch.adoc#harness-selection[Harness Selection].
 
