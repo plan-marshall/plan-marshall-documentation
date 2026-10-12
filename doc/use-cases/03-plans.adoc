@@ -1,0 +1,82 @@
+= Use Cases: Plans (UC-PLN)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Plans
+
+The operator works with running plans and epics: follows them down to the part that needs attention, decides what a plan asks, and shapes the process a plan runs. The operator does this in the web app or in the terminal client; each use case says what the operator achieves, and how each client shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+
+[#UC-PLN-1]
+== UC-PLN-1: Follow a Plan Down to Its Parts
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: follow a plan or an epic from its overview down to the part that needs attention, and understand what it is doing and why.
+Open points:: which levels the drill-down has (epic, plan, phase, step, task, job, finding, decision) and what each level shows; which of them the terminal client shows beyond `pm-operator status`.
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
+
+[#UC-PLN-2]
+== UC-PLN-2: Decide What a Plan Asks
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app, in the terminal client, or in the entry session of the plan.
+Goal:: learn at once that a plan or an epic waits for a decision, decide it with what the plan offers (its options, the recommendation and its rationale, the default assumption, the deadline), and never answer by accident.
+Trigger:: a question record of a plan or an epic is delivered to the operator (link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record]): a worker asked, or a decision quorum escalated; or a worker files a waiver request.
+Preconditions:: the operator has a client open, or is reached by a notification of one.
+Flow::
++
+[source,text]
+----
+  [S] question.open            the record is delivered: the question, its
+       │                       options, the recommendation with its rationale,
+       │                       the default assumption, the deadline
+       ▼
+  [S] question.announce        every open client of the operator shows that a
+       │                       decision waits, with its plan and deadline;
+       │                       none of them takes the operator's focus, and
+       │                       nothing typed before it was shown answers it
+       ▼
+  [O] question.answer          the operator opens it in any client and chooses
+       │                       an option; the recommendation is preselected
+       ├── answered in another client ──► question.closed  every client says
+       │                                                   where and how
+       ├── deadline ────────────────────► question.expired  the class fallback
+       │                                                    (for auto: the
+       │                                                    recommendation)
+       ▼
+  [S] question.record          validated and recorded with its channel; the
+       │                       first valid answer wins
+       ▼
+  question.closed
+----
+Variations:: a waiver request is announced the same way; it is answered by a waiver, which is an operator override and never a content answer, so it has no preselection. Before the deadline the clients remind the operator. A client that was not open learns of the open records when it opens.
+Outcome:: the plan goes on with the operator's decision, or with its fallback at the deadline; the record names the channel the answer came from.
+Changes::
+* *Answers from the terminal client* (<<change-cli-answers>>).
+Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view of questions is designed by its package `web-design`.
+
+[#UC-PLN-3]
+== UC-PLN-3: Design a Plan's Process
+
+Status:: `DRAFT`
+Actor:: the operator.
+Goal:: shape the process a plan runs, for example add a step to finalize, by arranging the building blocks the project declares, and see before it is applied whether the server accepts it.
+Open points:: where a design lives (in the project's workflow units, in one plan, or in one plan with promotion to the project); whether a plan can be designed before it starts; which building blocks are offered; whether the terminal client offers it at all.
+Requirements:: none yet: no requirement lets the operator change the process of a plan.
+
+[#changes]
+== Changes to the Specification
+
+The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-cli-answers]
+=== Answers from the Terminal Client
+
+Gap:: a content question is answered only in the web app (channel `web`) or through the entry session's answer link (channel `session`); "there is no CLI command that answers one". The operator who works in the terminal client cannot decide what a plan asks without switching to the browser, and learns of the question only there.
+Fix::
+* The terminal client is a third channel of content answers, `cli`: it follows the runtime's events while it is open, announces every open question record and waiver request of the operator's plans and epics, and answers a question through the same scope-qualified answer endpoint as the web app, validated the same way; the first valid answer wins, a later one is refused (`already_answered`).
+* An answer from the terminal client is a content answer, never an override; a waiver request is answered by `waive`, as today. The terminal client keeps the operator checks of `pm-operator`.
+* Every client says when a question was answered in another one, and withdraws what it showed.
+Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] (the channel).

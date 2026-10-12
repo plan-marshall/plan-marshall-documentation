@@ -135,13 +135,13 @@ Both command lines are built for start time and size, without an application fra
 |`pm-operator` only: `io.nayuki:qrcodegen` for `pm-operator web pair`, rendered with Unicode half blocks, a quiet zone of 4 modules, forced black on white.
 
 |Terminal
-|picocli ANSI and `System.console()`; no JLine (no line editing is needed).
+|`pm-mcp`: picocli ANSI only. `pm-operator`: JLine 4 (`jline-reader`, `jline-terminal`, `jline-terminal-ffm`) for its console: line editing, history, completion, secret input without echo, and printing what the runtime pushes above the line being typed (`LineReader.printAbove`, link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc[`pm-mcp-clients`, Terminal Client, The Console]). Terminal access through the providers `ffm`, then `exec`; the JNI provider, which unpacks a native library at runtime, is not used.
 
 |Host detection
 |The host-detection data of the link:../client-profiles/02-placeholders-and-detection.adoc#host-integration-table[Host Integration Table] (environment signals and their precedence, the session-ID variable, the version-probe argument vector) is a compiled, data-only table in `pm-api`. `pm-mcp` reads it for the environment signature, the host session identifier, and the host build probe of `enter` and for the host session identifier of the session relay, `pm-operator` for the operator checks; the client profiles of `pm-core` read the same table, so there is one source, and profile overrides do not touch it.
 |===
 
-The modules `pm-relay` and `pm-operator` each depend on `pm-api` only (resource records, link relations, error codes, codecs, the socket client, the on-demand start procedure, the drift checks, the read-only codec of the files they read directly, <<cli-file-reads>>, and the host-detection table) and never on each other; neither depends on `pm-core`, a provider, or Quarkus, so engine and store code cannot reach a CLI binary.
+The modules `pm-relay` and `pm-operator` each depend, of the modules of the product, on `pm-api` only (resource records, link relations, error codes, codecs, the socket client, the on-demand start procedure, the drift checks, the read-only codec of the files they read directly, <<cli-file-reads>>, and the host-detection table) and never on each other; neither depends on `pm-core`, a provider, or Quarkus, so engine and store code cannot reach a CLI binary. Of third-party libraries both use picocli and `jackson-core`, and `pm-operator` also JLine 4 for its console.
 
 == Process Coordination
 _See Requirement link:../../Requirements.adoc#PM-ARCH-1[PM-ARCH-1: Process Ownership & Always-On Runtime]_

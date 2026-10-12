@@ -1,0 +1,101 @@
+= Use Cases: Entry (UC-ENT)
+:toc: left
+:toclevels: 2
+:nofooter:
+
+link:../UseCases.adoc[Use Cases] » Entry
+
+How the operator gets to work with `PM-MCP`: the first command after installing, the onboarding when the machine is not ready, and the web app connected, from a desktop or over SSH.
+
+[#UC-ENT-1]
+== UC-ENT-1: Enter and Connect
+
+Status:: `DRAFT`
+Actor:: the operator, in a terminal of the machine the runtime runs on: sitting at it, or logged in over SSH.
+Goal:: get to work with one command and no further friction: onboard the machine when it is not ready, in the terminal or in the web app, and otherwise reach the web app, whether the browser is on this machine or on the operator's own computer at the other end of an SSH connection.
+Trigger:: the operator starts the terminal client without naming anything to do, the first command after installing. On a machine not fully onboarded it asks first whether to go on in the terminal or in the web app (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); on an onboarded machine it connects the web app at once.
+Flow::
++
+[source,text]
+----
+  [S] = the server or the terminal client   [O] = the operator
+
+  [S] start.runtime            starts the runtime when none runs, opens the
+       │                       loopback web listener
+       ▼
+  [S] start.pairing            a pairing code, unless a browser of this
+       │                       machine is paired already (web open)
+       ▼
+  [S] start.where              a desktop session, or an SSH session
+       │                       (SSH_CONNECTION, SSH_TTY)?
+       ├── desktop ─────────► [S] start.browser    opens the default browser
+       │                            │ cannot start ──► start.show
+       │                            ▼
+       │                       start.show
+       ▼ SSH
+  [S] start.show               the ways in, each to copy:
+       │                       • URL  http://127.0.0.1:<port>/pair#code=…
+       │                       • over SSH: the forward command for the
+       │                         operator's own computer
+       │                         ssh -L <port>:127.0.0.1:<port> <user>@<host>
+       │                         and that VS Code and JetBrains forward it
+       │                         on their own
+       │                       • the code, its expiry
+       ▼
+  [O] start.wait               the ways in stay at hand: copy one, a new
+       │                       code, another device; the operator works on
+       │ code redeemed ───────► reported; a fresh code for a further device
+       │ another device ─────► start.other-device
+       ▼ the operator is done
+  done                         the runtime keeps running
+
+  [O] start.other-device       reach it from a phone or another computer on
+       │                       the network? HTTPS on all interfaces with a
+       │                       self-signed certificate, fingerprint to compare
+       ├── no (default) ─────► start.wait, unchanged
+       ▼ yes
+  [S] start.lan                LAN listener; shows the URL with the host
+----
+Variations:: the operator forwards to another local port (`-L 8000:127.0.0.1:<port>`): the app works the same. A browser of this machine that is paired already is not paired again.
+Outcome:: the web app is open in a browser of the operator's choice, paired; nothing is reachable from the network unless the operator said yes in `start.other-device`.
+Changes::
+* *The terminal client as the entry* (<<change-start>>).
+* *Loopback `Host` without the port* (<<change-loopback-host>>).
+* *A fresh code after a redemption* (<<change-fresh-code>>).
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-entry[Terminal Client, The Entry]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+
+[#changes]
+== Changes to the Specification
+
+The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-start]
+=== The Terminal Client as the Entry
+
+Gap:: `web open` opens a browser on this machine only and, without one, prints the URL; it knows no SSH session, no copy, and no way to another device but `web pair` and `web enable --lan`; and the operator has to know which verb comes first.
+Fix::
+* `pm-operator` without a verb is the entry and runs the flow of <<UC-ENT-1>> without waiting in it: on an onboarded machine at once, on a machine not fully onboarded when the operator chooses the web app. There is no verb `start`; `web open` stays as the explicit verb.
+* It recognises an SSH session by `SSH_CONNECTION` or `SSH_TTY`, then opens no browser and shows the forward command built from the user name and the machine's host name.
+* The browser is opened with a pairing code only while no browser of this machine is paired; otherwise the terminal client prints the URL.
+* `start.wait` is not a screen of its own: the ways in stay at hand in the terminal client while the operator works on. Like every operator verb the entry runs only in an interactive terminal, because it issues a pairing code.
+* Other devices only on the operator's yes (then a confirmation): it then enables the LAN listener as `web enable --lan` does, with the same certificate and fingerprint, and shows the QR code of the pairing URL.
+Affects:: link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer] (command listing), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
+
+[#change-loopback-host]
+=== Loopback `Host` without the Port
+
+Gap:: the `Host` validation requires `127.0.0.1:<port>` or `localhost:<port>` with the listener's own port; an SSH forward to another local port sends that port and is refused.
+Fix::
+* On the loopback listener a `Host` of `127.0.0.1`, `localhost`, or `[::1]` is accepted with any port or none. The check exists against foreign host names (DNS rebinding); the port adds nothing to it.
+* The `Origin` check of state-changing requests compares the same way on the loopback listener.
+* The LAN listener keeps the full comparison with its port.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-security-headers[Request Validation & Security Headers].
+
+[#change-fresh-code]
+=== A Fresh Code after a Redemption
+
+Gap:: one pairing code is open at a time and single use; while the terminal client shows several ways in, the first device to pair uses the code up for the others.
+Fix::
+* While the terminal client is open, a redeemed code is replaced at once by a new one, shown with its URL and QR code on request; the operator can also replace it. At most one code is open at any time, as now.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
