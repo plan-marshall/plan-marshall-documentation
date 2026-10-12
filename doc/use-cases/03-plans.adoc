@@ -11,11 +11,24 @@ The operator works with running plans and epics: follows them down to the part t
 == UC-PLN-1: Follow a Plan Down to Its Parts
 
 Status:: `DRAFT`
-Actor:: the operator.
-Goal:: follow a plan or an epic from its overview down to the part that needs attention, and understand what it is doing and why.
-Trigger:: the operator selects a plan or an orchestrator in the overview of running work (<<UC-PLN-4>>).
-Open points:: which levels the drill-down has (epic, plan, phase, step, task, job, finding, decision) and what each level shows; which of them the terminal client shows beyond `pm-operator status`.
-Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: follow a plan from its phases down to the step it is in, see at every level what is done, what runs, and what is still planned, and understand where it is and how it got there.
+Trigger:: the operator selects a plan in the overview of running work (<<UC-PLN-4>>), or names it.
+Flow::
+. *The plan.* The plan's phases, in the order the plan runs them, each with its state: _done_, _running_, _planned_, or _waiting for the operator_; the phases its composition left out (another lane, a step the project does not need) are listed apart as _not in this plan_, with the reason. A phase the plan ran more than once (a loop-back) says how often, and the run it is in.
+. *A phase.* Selecting a phase shows its workflow: its states in the order of the workflow, each with its state, and the sub-workflows it calls marked as sub-workflows, each with its state as a whole. Where the workflow branches, the branch taken is shown, and a branch not taken as _not taken_.
+. *A sub-workflow.* Selecting a sub-workflow shows its workflow the same way, and so on through every level of nesting, down to the leaves: the states that call nothing.
+. *A leaf.* A leaf shows what runs or ran in it: its job or its tasks (role, worker, attempt, outcome), its times, and its outcome; a state waiting for the operator leads into <<UC-PLN-2>>.
+. *Where it is.* At every level the path from the plan down to the level shown is visible, and the way back up; the level the plan is at is marked, and the operator can jump to it.
+Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an orchestrator has a view of its own.
+Outcome:: the operator knows, at every level of the plan's process, what is done, what runs, and what is still to come, and has found the part that needs attention.
+Changes::
+* *Phases as sub-workflows* (<<change-phase-sub-workflows>>).
+* *The plan's process as a structure* (<<change-process-resource>>).
+* *The plan's history* (<<change-plan-history>>).
+* *Events of the process* (<<change-process-events>>).
+Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan); the composed plan is specified in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], its sub-workflows in link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-view.adoc[Plan View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/16-plan-view.adoc[Terminal Client, The Plan View].
 
 [#UC-PLN-2]
 == UC-PLN-2: Decide What a Plan Asks
@@ -124,6 +137,44 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 == Changes to the Specification
 
 The changes these use cases need, each modelled as the fix of a gap; written into the requirements and specifications once the use case is `AGREED`.
+
+[#change-phase-sub-workflows]
+=== Phases as Sub-Workflows
+
+Gap:: the seven phase files are merged into one plan unit; a phase is only the `phase` clause each state carries, transitions cross from one phase file into another, and the mapping of a state to its phase cannot be derived from its id (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units]; link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Phase Value vs State Identifier]). The process of a plan is therefore one flat graph: it cannot be shown phase by phase, a phase cannot be replaced or extended on its own, and a lane is a set of states rather than a choice of phases.
+Fix::
+* The plan unit is a workflow of phases: each phase (`init`, `refine`, `outline`, `plan`, `execute`, `land`, `finalize`) is a sub-workflow the plan unit calls, and its outcome decides the plan unit's next call. A lane is the plan unit's choice of which phases it calls; a loop-back is the plan unit calling a phase again; a re-entry from finalize into execute is the finalize phase ending with that outcome.
+* A plan's phase is the phase sub-workflow on its call stack; the `phase` clause and the phase value table go.
+* The plan instance composes the plan unit and the phase sub-workflows; a pruned phase is a pruned call, with its reason.
+* The depth of the call graph and of `call_stack` grows by the phase level.
+* This is an *intent change*: it changes how every phase is written, and it makes a phase a unit the composition, and the design of a plan's process (<<UC-PLN-3>>), can choose and replace.
+Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units], link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (the `phase` clause), link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (call depth), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows], link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], every module of link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Phase Workflows], link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`phase`, `call_stack`), link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc[Loop-Back & Diagrams].
+
+[#change-process-resource]
+=== The Plan's Process as a Structure
+
+Gap:: the composed process of a plan is available only as DSL text and as a diagram, and only over MCP (`pm://plan/{plan_id}/instance`, `pm://plan/{plan_id}/diagram`); its sub-units are named by digest and not expanded. A client cannot show it level by level, and no per-node state exists.
+Fix::
+* `GET /api/v1/plans/{plan_id}/process` returns the composed process of the version in force as a tree: the plan, its phases, every workflow's states in their order, and every call with the sub-workflow it calls, expanded, down to the leaves; each node with its id, its kind (phase, sub-workflow, state, and the kind of a state), and its *state*, derived by the runtime: `done`, `running`, `planned`, `waiting_for_operator`, `failed`, `not_taken`, or `not_in_plan` with its prune reason; with how often it ran and the run it is in, its first and last entry and exit times, and for a leaf its job or tasks.
+* The path to the plan's current position is part of the answer, so a client can mark it and jump to it.
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/hypermedia-format/01-representation-and-link-forms.adoc#call-path-breadcrumb[Call Path].
+
+[#change-plan-history]
+=== The Plan's History
+
+Gap:: the plan store records where a plan is, not where it has been: apart from the firings of finalize steps, the gaps, and the closed phases of the metrics, nothing records which states and sub-workflows a plan entered and left, when, with which outcome, or which branch it took; the machine-wide audit log has transition records, but their details are not specified and no client can read them.
+Fix::
+* Each plan keeps an append-only history of its process: a state entered and left (with its outcome), a sub-workflow called and returned (with its outcome), the instance version in force, and the time; the runtime derives the states of the process structure from it.
+* It is retained with the plan and archived with it.
+Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/store-schemas/12-machine-stores.adoc#audit-log[Audit Log] (transition records).
+
+[#change-process-events]
+=== Events of the Process
+
+Gap:: the plan's event stream announces "transitions" without names or payloads, so a client cannot update a node of the process without reading it all again.
+Fix::
+* The plan's event stream announces a state entered and left, a sub-workflow called and returned, a step firing opened and closed, and a new instance version, each with the node's id and its new state; a new instance version tells the client to read the process again.
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (events); the event catalogue of link:../discussions/client-specification-changes.adoc#foundations[Specification Changes for the Clients].
 
 [#change-decision-structure]
 === The Decision Structure
