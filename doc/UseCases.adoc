@@ -8,7 +8,7 @@ link:../README.md[plan-marshall documentation] » Use Cases
 
 == Overview
 
-The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. There is one set of use cases for both clients of the operator, the web app and the terminal client: a use case says what the operator achieves, never how a client shows it. How each client shows it is worked out in its design, which is the specification of the client's implementation and lives with its code (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]); how the system does it, in the link:Specification.adoc[Specification].
+The use cases describe what a person does with `PM-MCP` and what they get out of it, from their point of view and in their words. They come before the link:Requirements.adoc[Requirements]: a use case names the requirements that serve it, and a use case that no requirement serves yet shows what the requirements still lack. The operator acts only in the two clients, the web app and the terminal client; a coding agent is a worker the runtime runs, never a place where the operator is asked or answers (link:use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]). There is one set of use cases for both clients: a use case says what the operator achieves, never how a client shows it. How each client shows it is worked out in its design, which is the specification of the client's implementation and lives with its code (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]); how the system does it, in the link:Specification.adoc[Specification].
 
 == Conventions
 
@@ -60,4 +60,8 @@ Design:: the design documents that show it, per client (link:https://github.com/
 |`UC-PRJ`
 |link:use-cases/04-projects.adoc[04-projects.adoc]
 |Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and exploring the projects with favourites, recent and most used, from which an orchestrator or a plan is started.
+
+|`UC-STA`
+|link:use-cases/05-starting-work.adoc[05-starting-work.adoc]
+|Starting work: a plan or an orchestrator from its sources (descriptions, documents, issues of GitHub, GitLab, or Codeberg, lessons, local changes, pull requests), gathered and stored by the server in a source directory; running a recipe.
 |===
