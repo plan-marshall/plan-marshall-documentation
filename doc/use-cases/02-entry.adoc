@@ -102,6 +102,7 @@ Outcome:: only the devices the operator wants can act on the machine.
 Changes::
 * *Devices in both clients* (<<change-devices>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
 
 [#changes]
 == Changes to the Specification

@@ -143,7 +143,7 @@ Changes::
 * *An epic's findings and watches* (<<change-findings-watches>>).
 * *The decomposition is reviewed* (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its states in link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]
 
 [#UC-CTL-3]
 == UC-CTL-3: Review an Epic's Findings or Watches
@@ -233,7 +233,9 @@ Flow::
        │                       • integrity pause: inspect the change, accept
        │                         it, or restore
        │                       • held item, failed landing: retry, or the
-       │                         item's own acts
+       │                         item's own acts; for the removal of moved
+       │                         documents from git also give it up (the
+       │                         files stay tracked; the source keeps its copy)
        │                       • and always: end the plan (UC-CTL-1)
        ▼
   [O] hold.resolve             the operator's act, confirmed where it cannot
@@ -247,7 +249,7 @@ Outcome:: what held is resolved, or the plan is ended; nothing waits without the
 Changes::
 * *Holds and their acts* (<<change-holds>>).
 Requirements:: the conditions are specified in link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], stalled plans in link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#holds[Terminal Client, What Holds a Plan]
 
 [#changes]
 == Changes to the Specification

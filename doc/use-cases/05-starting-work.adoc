@@ -349,7 +349,7 @@ Outcome:: the pull request is a source; the plan, once started, works on its bra
 Changes::
 * *Screened once stored* (<<change-screen-stored>>); *issues by number or URL*, which holds for pull requests too (<<change-issues>>).
 Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-pr`).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#pull-request[Starting Work, A Pull Request]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#pull-request[Starting Work, A Pull Request]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#pull-request[Terminal Client, A Pull Request]
 
 [#UC-STA-8]
 == UC-STA-8: Bring in a Lesson
@@ -381,7 +381,7 @@ Outcome:: the lesson is a source, claimed by the plan once it exists; it is rele
 Changes::
 * *The source directory* (<<change-source-directory>>).
 Requirements:: the lesson source and the claim are specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] and link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-lessons[Lessons].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#lesson[Starting Work, A Lesson]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#lesson[Starting Work, A Lesson]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#lesson[Terminal Client, A Lesson]
 
 [#UC-STA-9]
 == UC-STA-9: Capture Local Changes
@@ -409,7 +409,7 @@ Outcome:: the local changes are a source; the plan, once created, holds them as 
 Changes::
 * *The source directory* (<<change-source-directory>>).
 Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-local-changes`).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#local-changes[Starting Work, Local Changes]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#local-changes[Starting Work, Local Changes]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#local-changes[Terminal Client, Local Changes]
 
 [#changes]
 == Changes to the Specification

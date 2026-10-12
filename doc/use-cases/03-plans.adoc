@@ -98,7 +98,7 @@ Changes::
 * *Waiting for the operator* (<<change-operator-wait>>).
 * *Answers from the terminal client* (<<change-cli-answers>>).
 Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions], the quorum in link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view is designed by its package `web-design`.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view is designed by its package `web-design`.; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/14-transcripts-decisions.adoc#t-decisions[Terminal Client, Decisions]
 
 [#UC-PLN-3]
 == UC-PLN-3: Design a Plan's Process
@@ -153,7 +153,7 @@ Changes::
 * *The epic as a resource* (<<change-epic-resource>>).
 * *Events per scope* (<<change-event-streams>>).
 Requirements:: the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic-view[Terminal Client, An Epic's View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
 
 [#changes]
 == Changes to the Specification
@@ -268,7 +268,7 @@ Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workf
 
 Gap:: what needs the operator is spread over many sources: open decisions, waiver requests, integrity pauses, stalled plans, conditions that name an operator command, held items of an epic, a failed epic landing, workspace setup repairs. No flag combines them per plan, epic, or project.
 Fix::
-* The runtime derives for every plan, epic, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `operator_wait` (any other operator wait: a consent, a decomposition or review, an option asked when needed, a failed landing of a move), `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed`, `findings` (new findings of an epic), `paused`, `setup`); an epic's summary includes its plans', a project's its plans', epics', and workspace's.
+* The runtime derives for every plan, epic, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `operator_wait` (any other operator wait: a consent, a decomposition or review, an option asked when needed), `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed` (an epic's landing, or the removal from git of moved documents), `findings` (new findings of an epic), `paused`, `setup`); an epic's summary includes its plans', a project's its plans', epics', and workspace's.
 * The summary is derived on read and never stored, like `stalled`.
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
 
