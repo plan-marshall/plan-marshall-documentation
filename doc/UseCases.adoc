@@ -59,9 +59,13 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-PRJ`
 |link:use-cases/04-projects.adoc[04-projects.adoc]
-|Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and exploring the projects with favourites, recent and most used, from which an orchestrator or a plan is started.
+|Bringing a project in and finding it again: onboarding a project (enrolment and setup, the machine's values as the proposal), and exploring the projects with favourites, recent and most used, from which an epic or a plan is started.
 
 |`UC-STA`
 |link:use-cases/05-starting-work.adoc[05-starting-work.adoc]
-|Starting work: a plan or an orchestrator from its sources (descriptions, documents, issues of GitHub, GitLab, or Codeberg, lessons, local changes, pull requests), gathered and stored by the server in a source directory; running a recipe.
+|Starting work: a plan or an epic from its sources (descriptions, documents, issues of GitHub, GitLab, or Codeberg, lessons, local changes, pull requests), gathered and stored by the server in a source directory; running a recipe.
+
+|`UC-CTL`
+|link:use-cases/06-controlling-work.adoc[06-controlling-work.adoc]
+|Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; an epic's next plan, cancel, and archive once it is through; reviewing an epic's findings and watches item by item with its planning role.
 |===

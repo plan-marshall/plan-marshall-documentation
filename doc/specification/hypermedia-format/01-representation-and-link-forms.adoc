@@ -64,7 +64,7 @@ _Implementation watch: link:../../implementation-watch/hypermedia-format.adoc#PM
 |`plan_id` / `epic_id`
 |Required (one of), except for `scope: workspace`, a bootstrap entry, and a task entity of the workspace scope
 |String
-|The addressed plan identifier (`plan_id`) or orchestrator epic identifier (`epic_id`); a task entity carries the identifier of the scope its task belongs to. A `workspace` representation, the representation of a bootstrap entry, and a task entity of the workspace scope carry neither (not even the `NO_PLAN` sentinel that addresses them): the absence tells the caller to address the scope with `plan_id: "NO_PLAN"`. Their project is the one the session's relay names, for a worker the one of its job record.
+|The addressed plan identifier (`plan_id`) or epic identifier (`epic_id`); a task entity carries the identifier of the scope its task belongs to. A `workspace` representation, the representation of a bootstrap entry, and a task entity of the workspace scope carry neither (not even the `NO_PLAN` sentinel that addresses them): the absence tells the caller to address the scope with `plan_id: "NO_PLAN"`. Their project is the one the session's relay names, for a worker the one of its job record.
 
 |`entity`
 |Conditional
@@ -84,7 +84,7 @@ _Implementation watch: link:../../implementation-watch/hypermedia-format.adoc#PM
 |`phase`
 |Required
 |Closed enum
-|Lifecycle phase (`init`, `refine`, `outline`, `plan`, `execute`, `finalize`, `completed`, `aborted`, `orchestrate`, or `workspace`, mapped 1:1 to `phase-1-init`..`phase-6-finalize`, `completed`, `aborted`, `orchestrator`, `workspace` in `status.json`; link:../identifiers/01-general-rules-and-registry.adoc#id-phase[Identifier Registry, `phase`]). A task entity carries the phase of the state that created its task.
+|Lifecycle phase (`init`, `refine`, `outline`, `plan`, `execute`, `finalize`, `completed`, `aborted`, `epic`, or `workspace`, mapped 1:1 to `phase-1-init`..`phase-6-finalize`, `completed`, `aborted`, `epic`, `workspace` in `status.json`; link:../identifiers/01-general-rules-and-registry.adoc#id-phase[Identifier Registry, `phase`]). A task entity carries the phase of the state that created its task.
 
 |`summary`
 |Required

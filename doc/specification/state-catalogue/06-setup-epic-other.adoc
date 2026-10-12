@@ -253,14 +253,14 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 [#state-catalogue-epic]
 == Epic Workflow: `epic`
 
-Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope is created by `bootstrap-epic` (xref:09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Bootstrap of an Epic]); phase value `orchestrator` (DSL `phase orchestrate`) for every non-terminal state. The DSL excerpt is in link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Workflow (`epic.pmwf`)]. After the bootstrap the epic runs without a session: `epic.next-work` decides the epic's next work, `epic.active` is the watch state where the epic rests between epic events, every judgment is a task of a `read_only` epic role (`decompose`, `reground`, `coordinate`, `landing`), and every ledger write commits through a `git.commit_and_push` call; the epic offers no link, and its representation is a view. When an epic task closes `lost` (its re-offers spent, `role_unqualified`, or `role_unavailable`) or ends `infeasible`, the item it served is marked `held` with the reason, listed in `pm-operator status` and the web app, and skipped by `epic.next-work` until a change of the effective role set (an artifact edit, a new valid qualification record, or a cleared start-failure guard) or an operator action on the epic; the state continues at the watch `epic.active`, whose settling on one of those events re-enters the held item's state through `epic.next-work`. Nothing waits for an operator decision; the operator stops an epic with `pm-operator abort epic <epic_id> --reason`, which takes the archive path and ends in `epic.aborted`.
+Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope is created by `bootstrap-epic` (xref:09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Bootstrap of an Epic]); phase value `epic` (DSL `phase epic`) for every non-terminal state. The DSL excerpt is in link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Workflow (`epic.pmwf`)]. After the bootstrap the epic runs without a session: `epic.next-work` decides the epic's next work, `epic.active` is the watch state where the epic rests between epic events, every judgment is a task of a `read_only` epic role (`decompose`, `reground`, `coordinate`, `landing`), and every ledger write commits through a `git.commit_and_push` call; the epic offers no link, and its representation is a view. When an epic task closes `lost` (its re-offers spent, `role_unqualified`, or `role_unavailable`) or ends `infeasible`, the item it served is marked `held` with the reason, listed in `pm-operator status` and the web app, and skipped by `epic.next-work` until a change of the effective role set (an artifact edit, a new valid qualification record, or a cleared start-failure guard) or an operator action on the epic; the state continues at the watch `epic.active`, whose settling on one of those events re-enters the held item's state through `epic.next-work`. Nothing waits for an operator decision; the operator stops an epic with `pm-operator abort epic <epic_id> --reason`, which takes the archive path and ends in `epic.aborted`.
 
 [cols="2,1,1,2,3,2,2"]
 |===
 |State id |Phase value |Kind |Entered from |Offered links / outcomes |Exits to |Defined in
 
 |[[state-epic.decompose]]`epic.decompose`
-|`orchestrator`
+|`epic`
 |`job`
 |The epic's creation by `bootstrap-epic` (the `created` outcome of `start.create-scope`, run by the `create` link of `start-epic.ready`, or `start-epic.adopt` (`adopted`) for an adopted ledger without any queue row; the unit's start state; the header and the vision section of `spec.md` exist); `epic.next-work` (`decomposition_pending`).
 |`job llm decompose role decompose` over the epic's vision and source: the multi-submit entity `decompose` (xref:10-entity-units.adoc#state-entity-multi.active[`entity-multi.active`]) offers `submit workstream`, `submit spec_section` (its claim sections parsed by the submit's content validator, which refuses the payload with `invalid_link_args` and the `detail` code `claim_section_unreadable` or `section_too_large`), and `submit stage` (refusals `surface_overlap`, `surface_undeclared`), each validated and persisted on its own, and the closing `submit:decompose`, refused (`detail: decomposition_not_ready`) until at least one row is staged and every staged row's section parses. A ledger read that fails raises `precondition_unmet` (`ledger_unreadable`, xref:01-conventions-generic-conditions.adoc#condition-precondition_unmet[Condition precondition unmet]), which ends only when the ledger reads or by the operator's `abort`.
@@ -268,15 +268,15 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Workflow]
 
 |[[state-epic.commit-decomposition]]`epic.commit-decomposition`
-|`orchestrator`
+|`epic`
 |`call`
 |`epic.decompose` (`submitted`).
-|`call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)` in the shared epic worktree on the fixed epic branch, staging only `.marshall/orchestrator/**`.
+|`call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)` in the shared epic worktree on the fixed epic branch, staging only `.marshall/epics/**`.
 |`done` -> `epic.next-work`; `stepped_out` -> `epic.active` (the writes stay uncommitted and are committed with the next ledger write).
 |link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]
 
 |[[state-epic.next-work]]`epic.next-work`
-|`orchestrator`
+|`epic`
 |`auto`
 |`epic.commit-decomposition`, `epic.commit-ledger`, `epic.landing` (every outcome); `epic.active` (every outcome); `start-epic.adopt` (`adopted`, for an adopted ledger that has a queue row).
 |`auto epic.next-work`, the epic's next work: it first starts every launchable plan the epic's `parallelization_scope` admits, through the plan bootstrap without a session (xref:09-bootstrap-and-lessons.adoc#state-start.launch[`start.launch`]), and reconciles every shipped row without a landing record, then takes the first outcome that holds, skipping `held` items. While the epic archives (its archive flag `archived_at` set by `epic.archive`) it starts and serves nothing and takes only the archive's outcomes and `idle`. `facts`: the queue rows, `unlanded_shipped` (count and `plan_id` values, zero included), the pending messages, the `held` items, `primary_checkout_behind`.
@@ -284,7 +284,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Next Work]; link:../model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans]
 
 |[[state-epic.active]]`epic.active`
-|`orchestrator`
+|`epic`
 |`composite_job`
 |`epic.next-work` (`idle`); every epic task state (`infeasible`, `lost`, its item `held`); `epic.commit-decomposition`, `epic.commit-ledger` (`stepped_out`).
 |`composite_job epic.await-event`, the epic's watch, where the epic rests between events: a server-side watch without a model turn that settles on the first epic event (Rule 11b: `JOB_SETTLED`).
@@ -292,7 +292,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Next Work]
 
 |[[state-epic.reground]]`epic.reground`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`rows_ungrounded`).
 |`job llm reground role reground`: one task over every start candidate whose specification was written or last re-grounded before the current `HEAD`; the entity submits `submit:reground` with a verdict record per claim and a row verdict `current \| stale` per row, recorded as the row's `reground_verdict` with `regrounded_at_sha`.
@@ -300,7 +300,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#server-derived-landing-facts[Model Work Specification, Spec Re-Grounding]
 
 |[[state-epic.recut]]`epic.recut`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`rows_stale`).
 |`job llm decompose role decompose`: the entity of `epic.decompose`, with the `stale` rows and their verdict records in its `facts`; its closing submit is refused while a row it serves is still `stale`.
@@ -308,7 +308,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Tasks]
 
 |[[state-epic.ingest]]`epic.ingest`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`message_pending`).
 |`job llm message role coordinate each epic.pending-messages`: one task per pending inbox message, entity `message-<message_id>` (multi-submit: `submit ingest` with `kind: enum[transferred\|re-scoped\|left_alone]` and `note: text[1..2000]?`, the repeatable `submit stage`, `submit spec_section`, `submit mailbox_send`, and `submit transfer_offer`, and the closing `submit:message`, which records the message `processed`).
@@ -316,7 +316,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#cross-epic-transfer[Model Work Specification, Cross-Epic Intake & Transfer]
 
 |[[state-epic.analyze-landing]]`epic.analyze-landing`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`landing_unanalyzed`).
 |`job llm landing role landing each epic.unanalyzed-landings`: one task per landing record without analysis, entity `landing-<plan_id>`, which submits `submit_landing`: the semantic landing analysis and the downstream impact judgment, including whether staged rows must be re-ordered or re-cut after an overlap the landing notes.
@@ -324,7 +324,7 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#server-derived-landing-facts[Model Work Specification, Server-Derived Landing Facts]
 
 |[[state-epic.review-completion]]`epic.review-completion`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`settled`).
 |`job llm completion role coordinate`: entity `completion`, which may stage further rows (`submit stage`, `submit spec_section`) and closes with `submit:completion` carrying `verdict: enum[complete\|continue]` (`continue` is refused, `detail: nothing_staged`, unless the entity staged at least one row).
@@ -332,15 +332,15 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Tasks]
 
 |[[state-epic.commit-ledger]]`epic.commit-ledger`
-|`orchestrator`
+|`epic`
 |`call`
 |`epic.reground`, `epic.recut`, `epic.ingest`, `epic.analyze-landing` (`submitted`); `epic.review-completion` (`continue`); `epic.archive` (`archived`); `epic.next-work` (`archive_uncommitted`).
-|`call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)` in the shared epic worktree on the fixed epic branch, staging only `.marshall/orchestrator/**`; while the epic archives also `.marshall/archived-orchestrators/**` (link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]).
+|`call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)` in the shared epic worktree on the fixed epic branch, staging only `.marshall/epics/**`; while the epic archives also `.marshall/archived-epics/**` (link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]).
 |`done` -> `epic.next-work`; `stepped_out` -> `epic.active` (the write stays uncommitted and is committed with the next ledger write, or while the epic archives after the watch settled again).
 |link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]
 
 |[[state-epic.landing]]`epic.landing`
-|`orchestrator`
+|`epic`
 |`job`
 |`epic.next-work` (`ledger_unlanded`).
 |`epic.land-ledger`: one pull request from the epic branch for all pending ledger changes; repository-wide epics-worktree lock; ledger paths only; required CI checks only; waits for `merged`, `ejected`, `closed`, or `timed_out`; post-merge epic-branch resync. The primary checkout is never moved: the fact `primary_checkout_behind` names `git pull` for it. Its git steps are the primitives of the plan merge (`git.stage-and-commit`, `git.push`, `ci.pr-create`, `ci.merge` or `ci.enqueue` bound to the expected head SHA, `ci.pr-observe`) under the epics-worktree lock, with the stall-based queue bound of `finalize.merge-queue-wait`.
@@ -348,10 +348,10 @@ Declared in `epic.pmwf` (`scope epic`, start `epic.decompose`); the epic scope i
 |link:../model-work/08-epic-coordination.adoc#epic-landing[Model Work Specification, Epic Landing]
 
 |[[state-epic.archive]]`epic.archive`
-|`orchestrator`
+|`epic`
 |`auto`
 |`epic.review-completion` (`complete`); the operator's `pm-operator abort epic`, an engine-owned transition in the next transaction after the epic's open tasks are withdrawn and their workers ended; the epic's running child plans are left untouched and run to their own outcome (their epic linkage resolves to `detached` once the epic is terminal).
-|`auto epic.archive-ledger`: moves the ledger directory to `.marshall/archived-orchestrators/<epic_id>-<YY-MM-DD>/` in the shared epic worktree and, in the same transaction, sets the header's `lifecycle: terminal` with `terminal_reason` (`completed`, or `abandoned` for an abort, whose reason text goes to the audit log) and `archived_at`, the epic's archive flag (link:../store-schemas/04-epic-and-change-ledger.adoc#epic-header[Store Schemas Specification, Epic Header]); the move is committed and landed like every ledger write.
+|`auto epic.archive-ledger`: moves the ledger directory to `.marshall/archived-epics/<epic_id>-<YY-MM-DD>/` in the shared epic worktree and, in the same transaction, sets the header's `lifecycle: terminal` with `terminal_reason` (`completed`, or `abandoned` for an abort, whose reason text goes to the audit log) and `archived_at`, the epic's archive flag (link:../store-schemas/04-epic-and-change-ledger.adoc#epic-header[Store Schemas Specification, Epic Header]); the move is committed and landed like every ledger write.
 |`archived` -> `epic.commit-ledger`.
 |link:../filesystem-layout/03-project-store.adoc#archives[Filesystem Layout Specification, Plan & Epic Archives]
 

@@ -32,11 +32,11 @@ link:../../Specification.adoc[Specification] » link:../runtime-model.adoc[Runti
 |Scope
 |A plan (`plan_id`), an epic (`epic_id`), or the project's workspace scope (`plan_id: NO_PLAN`). Identified solely by its id and carried solely by its persisted files; the runtime drives a plan or an epic from its creation to a terminal state, whether or not a host is connected (link:04-sessions-and-workers.adoc#_server_driven_scopes[Sessions & Workers, Server-Driven Scopes]).
 
-|Epic (orchestrator)
-|A multi-plan initiative (scope `epic`) with its git-tracked ledger. The word *orchestrator* names only this tier.
+|Epic
+|A multi-plan initiative (scope `epic`) with its git-tracked ledger. The word *epic* names only this tier; the clients and the documents call it nothing else (formerly also *orchestrator*).
 
 |Entry session
-|The host session that runs an entry command (`pm-mcp enter`); its duties are specified in xref:04-sessions-and-workers.adoc#_entry_session[Entry Session], its optional tasks in link:../model-work/02-task-protocol.adoc#session-worker[Model Work Specification, The Session as Optional Worker]. No plan or epic waits on it. Never called *orchestrator*.
+|The host session that runs an entry command (`pm-mcp enter`); its duties are specified in xref:04-sessions-and-workers.adoc#_entry_session[Entry Session], its optional tasks in link:../model-work/02-task-protocol.adoc#session-worker[Model Work Specification, The Session as Optional Worker]. No plan or epic waits on it.
 
 |Worker
 |A headless harness process of a role that the runtime launches as a job of kind `llm` through the headless CLI of an enrolled harness (link:../model-work/04-worker-launch.adoc[Model Work Specification, Worker Launch]). It connects back through its own relay `pm-mcp serve --job` with a job token, receives tasks through `pm_wait` (a fresh worker its one task in its launch prompt, link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]), and is bound to its job and generation (<<job-token>>; link:../model-work/03-supervision-and-recycling.adoc[Model Work Specification, Supervision & Recycling]).

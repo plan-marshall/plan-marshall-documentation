@@ -810,6 +810,6 @@ Hazard:: A planned behaviour-preserving split would have frozen pre-fix state; l
 re-derived.
 Guard:: A refactor rebases after pending behaviour fixes to the same files; equivalence and golden tests are
 regenerated only from corrected semantics.
-Fixture:: plan-marshall PLAN-07: the `corpus verdicts` `stale` fix (#1585) had to land before the orchestrator script
+Fixture:: plan-marshall PLAN-07: the `corpus verdicts` `stale` fix (#1585) had to land before the epic script
 split; a split taken earlier would have frozen the stale behaviour as the equivalence baseline.
 Source:: plan-marshall defect orchestrator-refactor epic queue annotations (PLAN-07), PLAN-07 Dependencies.

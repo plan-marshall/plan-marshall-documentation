@@ -75,16 +75,16 @@ See the link:specification/runtime-model.adoc[Runtime & Interaction Model Specif
 Implementation watch: link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-1[PM-WATCH-STORE-1], link:implementation-watch/hypermedia-format.adoc#PM-WATCH-HYP-9[PM-WATCH-HYP-9]
 
 [#PM-ARCH-5]
-=== PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Orchestrator Location
+=== PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Epic Location
 
-Plan state must live outside the repository and plan execution must be isolated inside worktrees to protect the main checkout; git-tracked orchestrator state belongs to the repository's main branch, is edited only in the one shared epic worktree, and reaches the main branch only through a branch merge.
+Plan state must live outside the repository and plan execution must be isolated inside worktrees to protect the main checkout; git-tracked epic state belongs to the repository's main branch, is edited only in the one shared epic worktree, and reaches the main branch only through a branch merge.
 
 * The system must keep a plan's state directory in the per-project machine store `<PM_MCP_BASE>/projects/<project_id>/plans/<plan_id>/` for the plan's whole life and never move it; a plan worktree (`.marshall/local/worktrees/<plan_id>/`) is only a git checkout created for execution and finalize and removed afterwards, and the plan's `mcp/status.json` records its `worktree_path` (or `null` while none exists).
 * The system must clear `worktree_path` in the same transaction that records a worktree's removal, so that no store keeps pointing at a removed worktree.
 * The system must keep no state in the repository's git-ignored `.marshall/local/`, which holds only worktrees and temporary files, so that deleting it loses no plan data.
 * The system must ensure that the repository's main checkout working tree remains clean and unaffected by uncommitted plan execution artifacts at all times.
-* The system must isolate all mutations to git-tracked orchestrator state (epic ledgers, inbox messages, landing records, and epic specifications) within one shared, long-lived epic worktree on one fixed branch, incorporating changes into the main branch strictly through a monitored branch landing that never removes that worktree.
-* The system must resolve every read and write of git-tracked orchestrator state, including those made on behalf of child plans, to the shared epic worktree copy, and must never treat the primary checkout's copy as authoritative while the epic worktree exists.
+* The system must isolate all mutations to git-tracked epic state (epic ledgers, inbox messages, landing records, and epic specifications) within one shared, long-lived epic worktree on one fixed branch, incorporating changes into the main branch strictly through a monitored branch landing that never removes that worktree.
+* The system must resolve every read and write of git-tracked epic state, including those made on behalf of child plans, to the shared epic worktree copy, and must never treat the primary checkout's copy as authoritative while the epic worktree exists.
 * The system must resolve any plan directory and its worktree from its `plan_id` without requiring the client or model to provide filesystem paths.
 * The system must start every job in the working directory that matches the plan's worktree presence at job start (the worktree root while the plan's persisted `worktree_path` is set; the main checkout while it is `null` and for plan-less jobs; only the `zero_tool` workers, the injection screener (`PM-SEC-1`) and the qualification judge (`PM-WORK-6`), and the qualification items that carry their own corpus context (`PM-WORK-6`) run in an empty job-private directory); the system must never run a job that removes a worktree with a working directory inside that worktree, and scripts receive the plan identity only through their own arguments.
 

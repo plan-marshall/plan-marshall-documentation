@@ -200,7 +200,7 @@ Only rules whose violation is mechanically observable in the recorded tool calls
 
 ==== Trajectory Capture & Observation
 
-* The trajectory is read from the isolated runtime's `audit.jsonl` (every MCP tool call, transition, rejection, and `channel` value, link:../cli-and-security.adoc[CLI, Coordination & Security Specification]), from the plan and orchestrator stores, and from the fixture repository's final tree and commits. Host transcripts and model self-reports are never inputs of an observation.
+* The trajectory is read from the isolated runtime's `audit.jsonl` (every MCP tool call, transition, rejection, and `channel` value, link:../cli-and-security.adoc[CLI, Coordination & Security Specification]), from the plan and epic stores, and from the fixture repository's final tree and commits. Host transcripts and model self-reports are never inputs of an observation.
 * *Order-Tolerant Trajectory Predicates*: An observation predicate asserts the reached state, the set of required calls, and the absence of forbidden calls; it asserts call order only when order is itself the rule under test.
 * *Reference Artifact Trees*: A benchmark scenario is a real workflow task on a fixture repository whose expected result is a concrete reference artifact tree (files, commits, recorded lessons), never a prose rubric; recipe-sourced plans skip Phase 2 and therefore run in batch without an operator stand-in.
 * *Representation Parsing*: The baseline of every client includes a representation-parsing scenario in which the model extracts `links` and `facts` from a `pm_state` result in the TOON wire form (`PM-TOOL-5`, `PM-IMPL-2`).

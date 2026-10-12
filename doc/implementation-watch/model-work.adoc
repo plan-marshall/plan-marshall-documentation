@@ -887,7 +887,7 @@ rows) rewrites team-shared state as a side effect of entering it; an entry state
 the rows sends an epic with staged rows back to decomposition.
 Guard:: Scenario test over a cloned ledger without `epics/<epic_id>/`: `pm-mcp enter epic <epic_id>` routes to
 `start-epic.adopt`, and without an id `start-epic.define` offers `adopt_epic:<epic_id>`; after `adopted` the bytes of
-every file under `.marshall/orchestrator/<epic_id>/` are unchanged (digest before and after, and no commit on
+every file under `.marshall/epics/<epic_id>/` are unchanged (digest before and after, and no commit on
 `pm-mcp/epics`), the machine scope holds `status.json`, and the entry state is `epic.decompose`
 only for a ledger without any queue row and `epic.next-work` for every other ledger, whatever the header's `lifecycle` says.
 Matched controls: a truncated `epic.json` ends in `start-epic.adopt-failed` with `ledger_unreadable` naming the file
@@ -921,7 +921,7 @@ or unlanded in the shared epic worktree, so the default branch keeps a live ledg
 clone adopts it again.
 Guard:: Scenario test for `complete` and for `pm-operator abort epic <epic_id> --reason`: the abort first withdraws the
 epic's open tasks and ends their workers; `epic.archive` moves the ledger and sets the archive flag; the move is
-committed by `epic.commit-ledger` staging `orchestrator/**` and `archived-orchestrators/**` and landed by
+committed by `epic.commit-ledger` staging `epic/**` and `archived-epics/**` and landed by
 `epic.landing`; only then does `epic.next-work` take `archive_landed` (`epic.archived`) or `abort_landed`
 (`epic.aborted`). Fixtures: a landing that fails or a commit that steps out keeps the epic non-terminal and resumes on
 the next ledger commit or default-branch advance; no plan starts and no task is served while the archive flag is set.

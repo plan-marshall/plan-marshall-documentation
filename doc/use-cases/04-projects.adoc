@@ -5,14 +5,14 @@
 
 link:../UseCases.adoc[Use Cases] » Projects
 
-The operator brings a project into `PM-MCP` and finds it again: onboarding a project (its enrolment and its setup, with the machine's values as the proposal), and exploring the enrolled projects, from which the operator starts an orchestrator or a plan, or looks at the project's running work. The operator does this in the web app or in the terminal client; how each shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator brings a project into `PM-MCP` and finds it again: onboarding a project (its enrolment and its setup, with the machine's values as the proposal), and exploring the enrolled projects, from which the operator starts an epic or a plan, or looks at the project's running work. The operator does this in the web app or in the terminal client; how each shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#UC-PRJ-1]
 == UC-PRJ-1: Onboard a Project
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: get from a repository checkout to a project in which plans and orchestrators can run, in one guided run: enrolled, set up for the team, and configured for the operator, starting from what the machine already provides and asking only for what the project needs of its own.
+Goal:: get from a repository checkout to a project in which plans and epics can run, in one guided run: enrolled, set up for the team, and configured for the operator, starting from what the machine already provides and asking only for what the project needs of its own.
 Trigger:: the operator adds a project in the explorer (<<UC-PRJ-2>>); in the terminal also in a checkout, where the working directory is the proposal. A later run of one aspect of a project starts from the project in the explorer.
 Preconditions:: the machine is onboarded (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]).
 Flow::
@@ -77,7 +77,7 @@ Flow::
        ▼
   [O] setup.commit-changes     the team's configuration to commit, or to leave
        ▼
-  project.completed            names what comes next: an orchestrator, a plan,
+  project.completed            names what comes next: an epic, a plan,
                                or the project's running work
 ----
 Variations::
@@ -99,17 +99,17 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: find a project among many quickly, see its state at a glance, and from it start an orchestrator, start a plan, or look at its running work.
+Goal:: find a project among many quickly, see its state at a glance, and from it start an epic, start a plan, or look at its running work.
 Trigger:: the operator opens the projects of the machine.
 Flow::
 . *Favourites first*: the projects the operator marked as favourites, in the operator's order.
 . *Recent*: the projects the operator worked with last, newest first.
 . *All projects*: every enrolled project, ordered by name, with a filter; and as a second order, the most used: the projects the operator worked with most over the last weeks.
-. *A project* shows its display name, whether it is ready (set up, or what its setup still needs), whether something in it needs the operator, its active plans and orchestrators, and when it was last active.
-. *Selecting a project* offers its actions: _add an orchestrator_ (link:05-starting-work.adoc#UC-STA-2[UC-STA-2]), _add a plan_ (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]), _running work_ (the project's level of link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), and its setup (<<UC-PRJ-1>>, a later run). A project that is not ready offers its setup first.
+. *A project* shows its display name, whether it is ready (set up, or what its setup still needs), whether something in it needs the operator, its active plans and epics, and when it was last active.
+. *Selecting a project* offers its actions: _add an epic_ (link:05-starting-work.adoc#UC-STA-2[UC-STA-2]), _add a plan_ (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]), _running work_ (the project's level of link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), and its setup (<<UC-PRJ-1>>, a later run). A project that is not ready offers its setup first.
 . *Marking*: the operator marks and unmarks a favourite and orders the favourites; the marks are the operator's, the same in both clients.
-Variations:: a project that is released is listed with that mark and offers to be enrolled again; an unenrolled project is not listed. _Recent_ and _most used_ count what the operator did in a project in either client: opening it, starting an orchestrator or a plan, answering a decision, changing its configuration.
-Outcome:: the operator has found the project and is on the way to an orchestrator, a plan, or its running work.
+Variations:: a project that is released is listed with that mark and offers to be enrolled again; an unenrolled project is not listed. _Recent_ and _most used_ count what the operator did in a project in either client: opening it, starting an epic or a plan, answering a decision, changing its configuration.
+Outcome:: the operator has found the project and is on the way to an epic, a plan, or its running work.
 Changes::
 * *The projects of the machine* (<<change-project-explorer>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
@@ -149,6 +149,6 @@ Affects:: link:../specification/store-schemas/08-project-configuration-local.ado
 
 Gap:: no client can list every enrolled project: the overview lists only projects with running work; a project has no display name; nothing records which projects the operator favours, used last, or uses most.
 Fix::
-* `GET /api/v1/projects?all` lists every enrolled project with its display name, its remote, whether it is ready (its setup completed, or what it needs), its `needs_operator` summary, its counts of active plans and orchestrators, its last activity, and whether it is released.
-* The operator's favourites and their order are kept by the runtime in a machine store (`explorer.json`), written by the operator's acts in either client; the runtime also records, per project, when the operator last worked in it and how often over a rolling window, from the operator's acts in either client (opening a project, starting an orchestrator or a plan, answering a decision, changing its configuration).
+* `GET /api/v1/projects?all` lists every enrolled project with its display name, its remote, whether it is ready (its setup completed, or what it needs), its `needs_operator` summary, its counts of active plans and epics, its last activity, and whether it is released.
+* The operator's favourites and their order are kept by the runtime in a machine store (`explorer.json`), written by the operator's acts in either client; the runtime also records, per project, when the operator last worked in it and how often over a rolling window, from the operator's acts in either client (opening a project, starting an epic or a plan, answering a decision, changing its configuration).
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:03-plans.adoc#change-titles[Titles and Names] (the display name), link:03-plans.adoc#change-overview-resource[The Overview Resource and Its Events].

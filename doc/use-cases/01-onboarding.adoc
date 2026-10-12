@@ -482,7 +482,7 @@ Fix::
 * Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow of it.
 * Like the project setup it has no terminal state and rests in `onboard.completed`; `onboard.entry` records `onboard_run: first_run | reconfigure` and the aspect.
 * A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.harness-catalogue` may start one.
-* The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the plan bootstrap's setup gate (`start.resolve`) refuses to start a plan or an orchestrator and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
+* The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the plan bootstrap's setup gate (`start.resolve`) refuses to start a plan or an epic and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
 Affects:: link:../specification/workflow-dsl/01-grammar.adoc[Grammar] (`scope machine`), link:../specification/workflow-dsl/04-ast-node-model.adoc[AST Node Model] (`WorkflowScope`), link:../specification/filesystem-layout.adoc[Filesystem Layout], link:../specification/state-catalogue.adoc[State Catalogue], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-start.resolve[`start.resolve`].
 
 [#change-two-channels]
