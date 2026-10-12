@@ -447,7 +447,7 @@ finished run clears; a run started over residue above the threshold is stored `p
 observations exist; the build timings store records `observations`, `poisoned`, and `escalation_seconds`, and
 `pm-operator status` shows them, while no representation or job fact carries them.
 Fixture:: module-tests timed out at 873 s on 52,704 residue files (450 MB), green in 529 s after cleanup;
-quality-gate 968 s and module-tests 1473 s re-tiered against 360 s and 501 s earlier; 9 orchestrator yields.
+quality-gate 968 s and module-tests 1473 s re-tiered against 360 s and 501 s earlier; 9 epic yields.
 Source:: plan-marshall defect truthful-signals PLAN-TRUTH-150.
 
 [#PM-WATCH-JOB-8]

@@ -484,7 +484,7 @@ This milestone adds Phases 2 and 3 with their Q-Gate, the remediation unit contr
 === Milestone 9: Phase 4 Plan & Phase 5 Execute (Migration Stage 4b)
 _See Requirements:_
 
-* _See Requirement link:Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Orchestrator Location]_
+* _See Requirement link:Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Epic Location]_
 * _See Requirement link:Requirements.adoc#PM-WF-4[PM-WF-4: Entity-Scoped Links & Fine-Grained Concurrency]_
 * _See Requirement link:Requirements.adoc#PM-WF-5[PM-WF-5: Model Work as Role Tasks & Single-Level Leaf Constraint]_
 * _See Requirement link:Requirements.adoc#PM-WF-7[PM-WF-7: Remediation Policies, Loop-Back & Iteration Bounds]_
@@ -592,10 +592,10 @@ This milestone delivers the optional web access of the daemon and the web app, t
 * [ ] Implement the SvelteKit web app `pm-web-app` with its views (pairing, devices, status, plans, epics from Milestone 12 on, workers, waivers) and question answering on the dependable web channel (`PM-WF-12`; link:specification/cli-and-security/03-web-server.adoc#web-app[§ Web App], link:specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Model Work Specification, Question Delivery])
 * [~] *Exit*: the `*IT` tests of `pm-mcp-server` and `pm-operator` verify the web access (no listener while disabled, enable and disable, Host validation and headers, pairing limits, device revocation and expiry, runtime token refused, streams, unreachable paths), and the web app passes its Vitest tests. Present: the `*IT` tests of `pm-mcp-server` cover enable and disable at runtime, the runtime token and a job token refused, a foreign `Host` refused, `/mcp` unreachable, and HTTPS with `--lan`. Remaining: no listener while disabled, the headers, pairing limits, device revocation and expiry, the streams, the `pm-operator` layer, and the Vitest tests.
 
-=== Milestone 12: Orchestrator Epics (Migration Stage 4d)
+=== Milestone 12: Epics (Migration Stage 4d)
 _See Requirements:_
 
-* _See Requirement link:Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Orchestrator Location]_
+* _See Requirement link:Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Epic Location]_
 * _See Requirement link:Requirements.adoc#PM-WF-1[PM-WF-1: Hypermedia State Representation (HATEOAS)]_
 * _See Requirement link:Requirements.adoc#PM-WF-15[PM-WF-15: Epic Creation, Server-Started Plans & Cross-Plan Merge Mutex]_
 * _See Requirement link:Requirements.adoc#PM-TOOL-1[PM-TOOL-1: Core Workflow Verb Set (pm_state, pm_do)]_
@@ -610,7 +610,7 @@ _See link:specification/model-work.adoc[Model Work Specification], link:specific
 
 _Implementation watch (mandatory input): link:implementation-watch/model-work.adoc[Model Work], link:implementation-watch/mcp-tools.adoc[MCP Tools], link:implementation-watch/filesystem-layout.adoc[Filesystem Layout], link:implementation-watch/cli-and-security.adoc[CLI & Security], link:implementation-watch/workflow-dsl.adoc[Workflow DSL], link:implementation-watch/store-schemas.adoc[Store Schemas], link:implementation-watch/phase-workflows.adoc[Phase Workflows], link:implementation-watch/client-profiles.adoc[Client Profiles]_
 
-This milestone adds orchestrator epics: the epic bootstrap, the server-driven epic workflow with server-started plans, and the epic surface. Its release opens the lifecycle gate when the Stage 4 exit criteria are met.
+This milestone adds epics: the epic bootstrap, the server-driven epic workflow with server-started plans, and the epic surface. Its release opens the lifecycle gate when the Stage 4 exit criteria are met.
 
 * [ ] Implement the epic bootstrap `bootstrap-epic` (`pm-mcp enter epic`), including the adoption of an existing git-tracked ledger without machine scope; an abandoned entry leaves no epic
 * [ ] Implement the epic workflow `epic.pmwf`, which the server drives without a session: decomposition on the multi-submit entity unit of Milestone 9, the watch state, the next-work order with its tasks, and the ledger commits (link:specification/model-work/08-epic-coordination.adoc#epic-workflow[Model Work Specification, Epic Workflow], link:specification/state-catalogue.adoc[State Catalogue])

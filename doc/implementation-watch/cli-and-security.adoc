@@ -81,7 +81,7 @@ Source:: design review.
 Anchor:: link:../specification/cli-and-security/01-cli-and-installer.adoc#_entry_identity_recording_pm_mcp_enter[CLI & Security § Entry Identity Recording],
 link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Model Work § Server-Started Plans] (Start transaction, Single Epic Pointer)
 Hazard:: A plan whose source was a staged specification file of its epic was detected as epic-linked by one probe
-and reported `not_orchestrator_pointer` by every transition probe.
+and reported `not_epic_pointer` by every transition probe.
 Guard:: Linkage test for a plan the server started through `source-epic-row` (the staged spec section of the queue row
 as request): `origin.epic_id` is set by the start transaction alone, and every surface (`pm-operator status`, the
 web app, the epic ledger, `outbox:send`, the landing step) reports the plan as linked from that one field; a session
@@ -89,7 +89,7 @@ bootstrap whose derived `plan_id` equals a non-terminal queue row returns to `st
 `epic_pointer_mismatch`, and `pm-mcp enter plan` never starts a plan of an epic; a start whose row is unknown or not
 launchable creates no plan and marks the row `held`.
 Fixture:: ledger-decomposition `source_id` = `.plan/orchestrator/orchestrator-refactor/plans/PLAN-02-…md`: detection
-true, transition probe `not_orchestrator_pointer` ×3.
+true, transition probe `not_epic_pointer` ×3.
 Source:: plan-marshall lesson 2026-09-23-15-001.
 
 == Token-Lane Credential Architecture & OS Keyring Integration

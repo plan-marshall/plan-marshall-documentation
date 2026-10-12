@@ -23,7 +23,7 @@ link:../ImplementationWatch.adoc[Implementation Watch].
 Anchor:: link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#no-dead-end-states[Workflow DSL § No Dead-End Non-Terminal States],
 link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Workflow DSL § Static AST Verification Rules],
 link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]
-Hazard:: Three prose rules (scripts-only store access, an orchestrator read carve-out, the plan write boundary)
+Hazard:: Three prose rules (scripts-only store access, an epic read carve-out, the plan write boundary)
 jointly forbade every available action; six independent runs violated one of them.
 Guard:: Property test: every persisted sub-state of every non-terminal state, including entity sub-states, every
 condition overlay, and a bound job, has at least one exit (a link, a bounded wait, or a transition) whose guard can

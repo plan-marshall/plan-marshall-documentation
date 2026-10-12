@@ -60,10 +60,10 @@ Source:: plan-marshall defect post-run-quality PLAN-PRQ-05 (Gate 2 bullet).
 
 Anchor:: link:../specification/filesystem-layout/01-repository-workspace.adoc#shared-epic-worktree[Filesystem Layout § Shared Epic Worktree],
 link:../Requirements.adoc#PM-ARCH-5[PM-ARCH-5]
-Hazard:: The orchestrator store moved without a redirect, and some writers kept the old location.
+Hazard:: The epic store moved without a redirect, and some writers kept the old location.
 Guard:: The switch of the epic ledger into the shared worktree goes through the stranded-change guard; a test writes
 through every consumer after the switch and asserts that no write lands in the primary checkout's
-`.marshall/orchestrator/`.
+`.marshall/epics/`.
 Source:: plan-marshall defect orchestrator-refactor epic queue annotations (PLAN-01).
 
 == Worktree Lifecycle

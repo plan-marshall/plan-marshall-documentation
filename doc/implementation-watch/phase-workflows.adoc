@@ -1019,7 +1019,7 @@ control: an unresolvable epic (linkage `indeterminate`) still composes the envel
 `landing_delivery: pending` and `landing_undelivered: indeterminate_linkage` for the epic's shipped-without-landing
 reconciliation, and never refuses after the merge; neither a silent drop nor a blocked finalize occurs.
 Fixture:: decision `7f9799` verbatim: `terminal_emission_orchestration_gate — dropped emit-landing from
-phase_6.steps: plan is not orchestrated (detection=not_orchestrator_pointer); no epic inbox to write a landing
+phase_6.steps: plan is not orchestrated (detection=not_epic_pointer); no epic inbox to write a landing
 to`; request `source: description`, `source_id` → `section_not_found`; retrospective `orchestrated: true, epic:
 orchestrator-refactor`; `queue_count 7, landing_count 0, queue_without_landing_count 7` including PLAN-04 shipped
 as #1543. API-Sheriff epic: 3 landings delivered, 5 skipped at runtime, 1 absent from the manifest, all with
@@ -1102,7 +1102,7 @@ Guard:: Archived plans without a plan instance (no instance version) are reporte
 as a separately sized `indeterminate` population on presence; a corpus test mixes both kinds and asserts the two
 populations.
 Fixture:: 39 archived plans, 28 with `candidate_steps`, 11 without
-(`.plan/archived-orchestrators/truthful-signals-26-09-21/plans/PLAN-TRUTH-123-the-quality-chain-has-no-score-and-a-disabled-gate-is-indistinguishable-from-a-clean-one.md:343`).
+(`.plan/archived-epics/truthful-signals-26-09-21/plans/PLAN-TRUTH-123-the-quality-chain-has-no-score-and-a-disabled-gate-is-indistinguishable-from-a-clean-one.md:343`).
 Source:: plan-marshall defect post-run-quality PLAN-PRQ-01 (TRUTH-152) D0.
 
 [#PM-WATCH-PHASE-48]
@@ -1114,7 +1114,7 @@ Guard:: A presence test over the fixture below asserts one entry per step, the t
 `self-review` counted once as `fired`.
 Fixture:: 26 admitted steps, 29 log rows; `security-audit`, `analysis-roundtrip`, `adr-propose` admitted but never ran;
 `self-review` twice (`error` 16:47:34, then `executed` 16:57:29). The retrospective ran at 08:04:59, the landing
-at 08:32:36: the orchestrator verdict falls outside the window and is `after_window`, never `not_admitted`.
+at 08:32:36: the epic verdict falls outside the window and is `after_window`, never `not_admitted`.
 Source:: plan-marshall defect post-run-quality PLAN-PRQ-01 D2 and D4 (carrying PLAN-TRUTH-123 § Claim Labels).
 
 [#PM-WATCH-PHASE-49]

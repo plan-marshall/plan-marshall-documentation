@@ -5,7 +5,7 @@
 
 xref:../Requirements.adoc[Requirements] » xref:README.adoc[Discussions] » Specification Changes for the Clients
 
-What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
+What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work], link:../use-cases/06-controlling-work.adoc#changes[Controlling Work]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
 
 [#decided]
 == Decided
@@ -14,6 +14,7 @@ What the specifications must gain so that the runtime gives the two clients of t
 * *A decision is the question set*, named by its first question's id; across plans and epics it is addressed as `<scope_id>/<question_id>` (`fix-relay/Q-007`); no new identifier kind, and the name _decision record_ (`D-NNNN`) keeps its meaning, the record of a decision taken.
 * *The operator acts only in the two clients* (link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]): a harness is a worker, never a channel of the operator. The session-driven units, the entry session, the channel `session` of answers, and `pm-mcp enter` as the operator's way to start work go; every place that relays the user's choice through a model is rewritten as an operator wait.
 * *Sources are gathered by the server and kept in a source directory* (link:../use-cases/05-starting-work.adoc#change-source-directory[The Source Directory]); the only model step of bringing in a source is the screening of external content, over the stored copy; what is on this machine is trusted (link:../use-cases/05-starting-work.adoc#change-local-trusted[What Is on This Machine Is Trusted]).
+* *One name for the multi-plan tier: epic.* The clients and the documents no longer call it _orchestrator_; the ledger lives in `.marshall/epics/` and `.marshall/archived-epics/`, its phase value is `epic`. The names of `plan-marshall`'s own tools (`plan-orchestrator`) and the linkage values `orchestrated` and `not_orchestrated` stay.
 * *The console's preferences* (`console.notify`, `console.full_screen`) are keys of the runtime's machine configuration.
 
 [#foundations]
@@ -75,7 +76,7 @@ Beyond the sections each change names in its _Affects_:
 |the named schemas of a decision, an answer, an interpretation, and a vote on a part with several options or a value; who sets what a decision blocks and how reversible it is, also for server-raised questions; who may revise a decision; the support per option derived by the runtime (counts, models, band, dissent), within the quorum's at most three votes; the asking role and phase on the record; the device and channel of an answer; how the runtime tells the channel `cli` apart; a new outcome for _none fits_; access to a decision's evidence over the local API; the list of open decisions across scopes, with since when each waits (`delivered_at`); what follows from an answer, composed by the runtime for `decision.confirm`; the progress of the interpreting role while the operator waits; the refusal of an answer to an older revision and of an answer to a part whose dependency is unanswered.
 
 |link:../use-cases/03-plans.adoc#change-running-work[Running Work], link:../use-cases/03-plans.adoc#change-titles[Titles], link:../use-cases/03-plans.adoc#change-phase-start[Phase Start], link:../use-cases/03-plans.adoc#change-needs-operator[Needs the Operator], link:../use-cases/03-plans.adoc#change-overview-resource[Overview Resource]
-|`last_activity_at`; a closed activity state of a plan (working, waiting for the operator, stalled, paused); an orchestrator's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
+|`last_activity_at`; a closed activity state of a plan (working, waiting for the operator, stalled, paused); an epic's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
 
 |link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]
 |every specification that names the entry session or the model relaying the user (Session-Driven Units, the bootstraps, `PM-WF-12`, the setup's links, Operator Channel Isolation, the client profiles' entry); what of `pm-mcp enter` stays for a host (none, or the recording of a worker's identity); the static verification rule that allows links-only states in session-driven units.
@@ -88,6 +89,12 @@ Beyond the sections each change names in its _Affects_:
 
 |link:../use-cases/05-starting-work.adoc#change-recipe-workflow[A Recipe Is a Workflow], link:../use-cases/05-starting-work.adoc#change-options-when-needed[Asked When Needed]
 |the recipe descriptor's workflow and parameters; what goes of the recipe states in Phases 1 and 3; the operator wait of each option and where it sits; the operator wait for `parallelization_scope`.
+
+|link:../use-cases/06-controlling-work.adoc#change-plan-pause[Pausing and Starting], link:../use-cases/06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning], link:../use-cases/06-controlling-work.adoc#change-epic-informed[The Epic Is Told]
+|the plan's activity `idle` beside the terminal states; what a pause does to a job in its retry loop and to a held lock; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of an aborted plan and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
+
+|link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
+|the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, rewrite, and talk; the `needs_operator` kind of new findings.
 
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
@@ -189,10 +196,25 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |A Recipe Is a Workflow
 |`phase-sub-workflows`; UC-STA-5 agreed
 
+|`plan-and-epic-control`
+|`pm-mcp-core`
+|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions
+|`operator-wait-and-machine-scope`; UC-CTL-1 and UC-CTL-2 agreed
+
+|`epic-findings-review`
+|`pm-mcp-core`
+|An Epic's Findings and Watches, The Review
+|`plan-and-epic-control`; UC-CTL-3 agreed
+
+|`control-contract`
+|`pm-mcp-clients`
+|the client side of Controlling Work: the actions of a plan and an epic, the archive check, the review's states
+|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; UC-CTL agreed
+
 |`start-contract`
 |`pm-mcp-clients`
 |the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files
 |`operator-interaction-contract`; `start-from-clients`; UC-STA agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`.

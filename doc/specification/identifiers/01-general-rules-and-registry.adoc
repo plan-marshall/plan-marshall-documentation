@@ -164,7 +164,7 @@ The following rules apply to every identifier in the registry; a table row state
 |link:../hypermedia-format/02-link-grammar.adoc#named-parameter-schemas[Hypermedia Format, Named Parameter Schemas]; `schema_ref` link:../workflow-dsl/01-grammar.adoc#_formal_ebnf_grammar_for_the_workflow_dsl[Workflow DSL, EBNF]
 
 |[[id-phase]]`phase`
-|Closed enum. Persisted (canonical) value: `phase-1-init`, `phase-2-refine`, `phase-3-outline`, `phase-4-plan`, `phase-5-execute`, `phase-6-finalize`, `completed`, `aborted`, `orchestrator`, `workspace`. Representation projection (1:1): `init`, `refine`, `outline`, `plan`, `execute`, `finalize`, `completed`, `aborted`, `orchestrate`, `workspace`. Every persisted `phase` field (status, findings, metrics, amendments) uses the canonical value.
+|Closed enum. Persisted (canonical) value: `phase-1-init`, `phase-2-refine`, `phase-3-outline`, `phase-4-plan`, `phase-5-execute`, `phase-6-finalize`, `completed`, `aborted`, `epic`, `workspace`. Representation projection (1:1): `init`, `refine`, `outline`, `plan`, `execute`, `finalize`, `completed`, `aborted`, `epic`, `workspace`. Every persisted `phase` field (status, findings, metrics, amendments) uses the canonical value.
 |build
 |—
 |Closed; extended only with a schema version

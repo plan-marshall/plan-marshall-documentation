@@ -128,7 +128,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://epic/{epic_id}/state`
 |`text/toon`
 |Epic
-|Current TOON hypermedia representation of orchestrator epic `{epic_id}`.
+|Current TOON hypermedia representation of epic `{epic_id}`.
 
 |`pm://epic/{epic_id}/spec` +
 `pm://epic/{epic_id}/spec/{section}`

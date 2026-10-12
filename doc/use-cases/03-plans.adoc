@@ -20,7 +20,7 @@ Flow::
 . *A sub-workflow.* Selecting a sub-workflow shows its workflow the same way, and so on through every level of nesting, down to the leaves: the states that call nothing.
 . *A leaf.* A leaf shows what runs or ran in it: its job or its tasks (role, worker, attempt, outcome), its times, and its outcome; a state waiting for the operator leads into <<UC-PLN-2>>.
 . *Where it is.* At every level the path from the plan down to the level shown is visible, and the way back up; the level the plan is at is marked, and the operator can jump to it.
-Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an orchestrator has a view of its own.
+Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an epic has a view of its own.
 Outcome:: the operator knows, at every level of the plan's process, what is done, what runs, and what is still to come, and has found the part that needs attention.
 Changes::
 * *Phases as sub-workflows* (<<change-phase-sub-workflows>>).
@@ -114,16 +114,16 @@ Requirements:: none yet: no requirement lets the operator change the process of 
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: see at a glance, across every project, where plans and orchestrators (epics) are running and which of them need the operator, and get from there to the one that needs attention, without wading through projects that have nothing running or plans that have ended.
+Goal:: see at a glance, across every project, where plans and epics are running and which of them need the operator, and get from there to the one that needs attention, without wading through projects that have nothing running or plans that have ended.
 Trigger:: the operator opens the overview of running work; the client opens it where the operator left it.
 Flow::
-. *Projects.* The overview lists the projects that have running work: an active plan or orchestrator, or something of the project that needs the operator without one (a question of its setup). A project without either is not listed, nor is an ended or archived plan. Each project shows whether something in it needs the operator, and how many plans and orchestrators are active in it. Projects that need the operator come first, then the most recently active.
-. *A project, by plan.* The project's active plans, each with: whether it needs the operator and for what (a decision, a waiver request, a pause, stalled); its title; its current phase and its state in it (working, waiting for the operator, stalled, paused); since when it runs and since when it is in the current phase; its progress (tasks done of all); and the orchestrator it belongs to, if any, from which the operator moves to that orchestrator.
-. *A project, by orchestrator.* The project's active orchestrators, each with whether it or one of its plans needs the operator, its title, since when it runs, how many of its plans run and how many are staged, and its plans below it as in the view by plan; the plans that belong to no orchestrator follow as a group of their own, so that the two views show the same plans.
-. *Into a plan or an orchestrator*: selecting one leads into <<UC-PLN-1>>; a decision that waits leads into <<UC-PLN-2>>.
-. *Where the operator left it*: the overview remembers the project, the view, and the selected plan or orchestrator, and opens there the next time, per web browser and per terminal user; a selection that has ended falls back to its project.
-Variations:: the overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an orchestrator are told apart by their icon, their colour, and a word, never by colour alone.
-Outcome:: the operator knows where work runs and what needs the operator, and has reached the plan or orchestrator to act on.
+. *Projects.* The overview lists the projects that have running work: an active plan or epic, or something of the project that needs the operator without one (a question of its setup). A project without either is not listed, nor is an ended or archived plan. Each project shows whether something in it needs the operator, and how many plans and epics are active in it. Projects that need the operator come first, then the most recently active.
+. *A project, by plan.* The project's active plans, each with: whether it needs the operator and for what (a decision, a waiver request, a pause, stalled); its title; its current phase and its state in it (working, waiting for the operator, stalled, paused); since when it runs and since when it is in the current phase; its progress (tasks done of all); and the epic it belongs to, if any, from which the operator moves to that epic.
+. *A project, by epic.* The project's active epics, each with whether it or one of its plans needs the operator, its title, since when it runs, how many of its plans run and how many are staged, and its plans below it as in the view by plan; the plans that belong to no epic follow as a group of their own, so that the two views show the same plans.
+. *Into a plan or an epic*: selecting one leads into <<UC-PLN-1>>; a decision that waits leads into <<UC-PLN-2>>.
+. *Where the operator left it*: the overview remembers the project, the view, and the selected plan or epic, and opens there the next time, per web browser and per terminal user; a selection that has ended falls back to its project.
+Variations:: the overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an epic are told apart by their icon, their colour, and a word, never by colour alone.
+Outcome:: the operator knows where work runs and what needs the operator, and has reached the plan or epic to act on.
 Changes::
 * *Running work* (<<change-running-work>>).
 * *Titles and names* (<<change-titles>>).
@@ -208,7 +208,7 @@ Gap:: the specification holds that no state of any unit waits for an operator de
 Fix::
 * *One mechanism.* Waiting for the operator is a normal behaviour of a state in every unit and every scope, defined once in the workflow language: a state may be an *operator wait*. It offers the operator's links over the local API to both clients, the only places of the operator (link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]), holds no worker and no model slot, has no time limit, and ends only by an act of the operator through a link, or by an override (`abort`). Questions and decisions, waiver requests, consents, and the choices of the project setup and of the onboarding are operator waits; every specification that has one refers to this definition and keeps only what is its own (the links, the facts), never a wait, a deadline, a mode, or a fallback of its own.
 * *Who decides.* A decision is taken either by a quorum confident by the threshold its declaration sets, or by the operator in an operator wait; nothing is decided by the passing of time, and nothing by a rule that asks no one. The question modes `auto` and `none`, `questions.wait_seconds`, the deadline `expires_at`, the class fallbacks on expiry, the closure `assumed`, and the expiry of a waiver request go with the per-place definitions that carry them.
-* *What halts.* An operator wait halts its own scope and nothing else: a plan or an orchestrator waits, and every other plan, orchestrator, and project keeps running; the status shows it as waiting for the operator, never as stalled. The one wait that halts the system is the machine scope's: while the onboarding is not complete, the machine is not configured, so no plan and no orchestrator starts, while the onboarding itself and the operator's verbs work (link:01-onboarding.adoc#change-machine-scope[Machine Scope]).
+* *What halts.* An operator wait halts its own scope and nothing else: a plan or an epic waits, and every other plan, epic, and project keeps running; the status shows it as waiting for the operator, never as stalled. The one wait that halts the system is the machine scope's: while the onboarding is not complete, the machine is not configured, so no plan and no epic starts, while the onboarding itself and the operator's verbs work (link:01-onboarding.adoc#change-machine-scope[Machine Scope]).
 * *A waiver request* is an operator wait like a question; it ends by `waive` or by a new `decline`, which records the outcome `declined` and lets the remediation unit take its next transition.
 Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#waivers-and-integrity[Waivers & Integrity] (the principle), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States], link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Static Verification] (rule 10), link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue Conventions], link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Question Delivery], link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Question Wait] and the waiver wait, link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Question Record] and the waiver request, link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`questions.*`), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-waive[Waivers] (`decline`), link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../requirements/02-workflow.adoc[PM-WF-12]; the other places that define a wait of their own are reduced to a reference to it. This is an *intent change*: it replaces a founding principle of the workflow language.
 
@@ -217,24 +217,24 @@ Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#waiver
 
 Gap:: nothing defines which plans and projects have running work. An aborted plan stays in the project's `plans/` with phase `aborted` (it is never archived), so a listing of live plans includes it, and the predicate closest to "active" is the `scope_active` refusal of `unenrol`.
 Fix::
-* A plan or an orchestrator is *active* while it is not in a terminal state (`completed`, `handed_back`, `returned`, `plan.aborted`; `epic.archived`, `epic.aborted`); an aborted plan is not active, wherever its directory lies.
-* A project has *running work* while it has an active plan or orchestrator, or an open decision of its workspace scope (a `setup` question); a released or unenrolled project has none.
+* A plan or an epic is *active* while it is not in a terminal state (`completed`, `handed_back`, `returned`, `plan.aborted`; `epic.archived`, `epic.aborted`); an aborted plan is not active, wherever its directory lies.
+* A project has *running work* while it has an active plan or epic, or an open decision of its workspace scope (a `setup` question); a released or unenrolled project has none.
 Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
 [#change-titles]
 === Titles and Names
 
-Gap:: a plan has no title (the pull request's title is authored in refine or the light outline, so it is absent before), and a project has no display name; only its `project_id` and checkout path identify it. An orchestrator's title lives only in its ledger header.
+Gap:: a plan has no title (the pull request's title is authored in refine or the light outline, so it is absent before), and a project has no display name; only its `project_id` and checkout path identify it. An epic's title lives only in its ledger header.
 Fix::
 * A plan gets a `title` at its creation, one line drawn from its request, which the refine or outline phase may replace with a better one; the pull request's title stays its own field.
 * A project gets a `display_name` at enrolment, derived from its remote (owner and name) and changeable by the operator; the `project_id` stays the identifier.
-* The runtime status carries the orchestrator's title and creation time from its header, so that a client needs no ledger read.
+* The runtime status carries the epic's title and creation time from its header, so that a client needs no ledger read.
 Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store] (`status.json`), link:../specification/store-schemas/11-enrolment-store.adoc#enrolment-store[Enrolment Store], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
 
 [#change-phase-start]
 === The Start of the Current Phase
 
-Gap:: neither a plan nor an orchestrator stores when its current phase began; the metrics record a phase only once it closed, and the creation time of a plan is only its `origin.stamped_at`.
+Gap:: neither a plan nor an epic stores when its current phase began; the metrics record a phase only once it closed, and the creation time of a plan is only its `origin.stamped_at`.
 Fix::
 * `status.json` records `created_at` and `phase_entered_at` (set on every phase change, also on a re-entry), so that a client shows since when a plan runs and since when it is in its phase.
 Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workflow State Store], link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store].
@@ -242,19 +242,19 @@ Affects:: link:../specification/store-schemas/02-workflow-state-store.adoc[Workf
 [#change-needs-operator]
 === What Needs the Operator, at a Glance
 
-Gap:: what needs the operator is spread over many sources: open decisions, waiver requests, integrity pauses, stalled plans, conditions that name an operator command, held items of an orchestrator, a failed orchestrator landing, workspace setup repairs. No flag combines them per plan, orchestrator, or project.
+Gap:: what needs the operator is spread over many sources: open decisions, waiver requests, integrity pauses, stalled plans, conditions that name an operator command, held items of an epic, a failed epic landing, workspace setup repairs. No flag combines them per plan, epic, or project.
 Fix::
-* The runtime derives for every plan, orchestrator, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed`, `setup`); an orchestrator's summary includes its plans', a project's its plans', orchestrators', and workspace's.
+* The runtime derives for every plan, epic, and project a `needs_operator` summary: whether anything needs the operator, how many items, and their kinds from a closed list (`decision`, `waiver_request`, `integrity_pause`, `stalled`, `condition`, `held`, `landing_failed`, `setup`); an epic's summary includes its plans', a project's its plans', epics', and workspace's.
 * The summary is derived on read and never stored, like `stalled`.
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
 
 [#change-overview-resource]
 === The Overview Resource and Its Events
 
-Gap:: the runtime status is specified only as a list of contents; there is no resource per project, no count of active plans and orchestrators, and no event for a condition raised or cleared, a phase change, an orchestrator's plan moving from staged to running, or an item held for the operator.
+Gap:: the runtime status is specified only as a list of contents; there is no resource per project, no count of active plans and epics, and no event for a condition raised or cleared, a phase change, an epic's plan moving from staged to running, or an item held for the operator.
 Fix::
-* `GET /api/v1/projects` lists the projects with running work, each with its `display_name`, its `needs_operator` summary, and its counts of active plans and orchestrators; `GET /api/v1/projects/{project_id}` adds its active plans (title, phase, state, `created_at`, `phase_entered_at`, task progress, `needs_operator`, the orchestrator it belongs to) and orchestrators (title, `created_at`, counts of running and staged plans, `needs_operator`).
-* The runtime-wide event stream announces a project gaining or losing running work, a plan or orchestrator starting or ending, a phase change, a condition raised or cleared, an orchestrator's plan changing its status, and an item held for the operator, each with the ids a client needs to update its overview without reading everything again.
+* `GET /api/v1/projects` lists the projects with running work, each with its `display_name`, its `needs_operator` summary, and its counts of active plans and epics; `GET /api/v1/projects/{project_id}` adds its active plans (title, phase, state, `created_at`, `phase_entered_at`, task progress, `needs_operator`, the epic it belongs to) and epics (title, `created_at`, counts of running and staged plans, `needs_operator`).
+* The runtime-wide event stream announces a project gaining or losing running work, a plan or epic starting or ending, a phase change, a condition raised or cleared, an epic's plan changing its status, and an item held for the operator, each with the ids a client needs to update its overview without reading everything again.
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (resources and events), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Epic Queue Row].
 
 [#change-cli-answers]

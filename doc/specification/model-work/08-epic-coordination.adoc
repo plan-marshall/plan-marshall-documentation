@@ -11,15 +11,15 @@ link:../../Specification.adoc[Specification] » link:../model-work.adoc[Model Wo
 == Epic Coordination & Server-Started Plans
 _See Requirements link:../../Requirements.adoc#PM-WF-5[PM-WF-5: Model Work as Role Tasks & Single-Level Leaf Constraint], link:../../Requirements.adoc#PM-WF-15[PM-WF-15: Epic Creation, Server-Started Plans & Cross-Plan Merge Mutex]_
 
-An orchestrator epic (`scope = "epic"`) decomposes a multi-plan initiative into workstreams and staged plan specifications, starts its plans itself when they are launchable, tracks cross-plan dependencies, keeps the declared surfaces of its own unordered plans disjoint, reconciles landing outcomes, and coordinates shared repository locks. The server drives the epic like a plan: every step that needs judgment is a task of a role, every other step is server logic, and the epic's representation is a view without links. The states of the epic workflow are catalogued in the link:../state-catalogue/06-setup-epic-other.adoc#state-catalogue-epic[State Catalogue, Epic Workflow: `epic`].
+An epic (`scope = "epic"`) decomposes a multi-plan initiative into workstreams and staged plan specifications, starts its plans itself when they are launchable, tracks cross-plan dependencies, keeps the declared surfaces of its own unordered plans disjoint, reconciles landing outcomes, and coordinates shared repository locks. The server drives the epic like a plan: every step that needs judgment is a task of a role, every other step is server logic, and the epic's representation is a view without links. The states of the epic workflow are catalogued in the link:../state-catalogue/06-setup-epic-other.adoc#state-catalogue-epic[State Catalogue, Epic Workflow: `epic`].
 
 [#epic-workflow]
 === Epic Workflow (`epic.pmwf`)
 _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-38[PM-WATCH-DISP-38], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-39[PM-WATCH-DISP-39], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-50[PM-WATCH-DISP-50], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-54[PM-WATCH-DISP-54]_
 
-The epic workflow is the DSL unit `epic.pmwf` (`scope epic`); its states carry the prefix `epic.` and the phase value `orchestrator` (short form `orchestrate`), and its terminal states are `epic.archived` (phase value `completed`) and `epic.aborted` (phase value `aborted`). An epic comes into existence only through its bootstrap, which the entry session drives: the `bootstrap-epic` unit of the workspace scope gathers the title, the vision, and `parallelization_scope` (compiled default `1`) from the user's words or a fetched issue, and its `create` link runs the transaction `start.create-scope`, which creates the epic scope (the machine store `epics/<epic_id>/`, `status.json`, the ledger directory in the shared epic worktree), writes `epic.json` and the vision section of `spec.md`, places the epic at its start state `epic.decompose`, and enters the bootstrap terminal `start-epic.committed`; an abandoned bootstrap leaves no epic (link:../state-catalogue/06-setup-epic-other.adoc#state-catalogue-epic[State Catalogue]). An existing git-tracked ledger without machine scope (`epics/<epic_id>/` absent, for example after a clone) is adopted, never re-created: the bootstrap offers `adopt_epic:<epic_id>` (or routes a requested id that names it directly), and the adoption's `start.create-scope` transaction (outcome `adopted`, entering `start-epic.committed`) creates only the machine scope (`status.json`) from the ledger, the durable truth, which it never rewrites, at `epic.decompose` when the ledger has no queue row, otherwise `epic.next-work`; an unreadable or invalid ledger ends in a failure state with the reason (link:../state-catalogue/09-bootstrap-and-lessons.adoc#state-start-epic.adopt[State Catalogue, `start-epic.adopt`]).
+The epic workflow is the DSL unit `epic.pmwf` (`scope epic`); its states carry the prefix `epic.` and the phase value `epic`, and its terminal states are `epic.archived` (phase value `completed`) and `epic.aborted` (phase value `aborted`). An epic comes into existence only through its bootstrap, which the entry session drives: the `bootstrap-epic` unit of the workspace scope gathers the title, the vision, and `parallelization_scope` (compiled default `1`) from the user's words or a fetched issue, and its `create` link runs the transaction `start.create-scope`, which creates the epic scope (the machine store `epics/<epic_id>/`, `status.json`, the ledger directory in the shared epic worktree), writes `epic.json` and the vision section of `spec.md`, places the epic at its start state `epic.decompose`, and enters the bootstrap terminal `start-epic.committed`; an abandoned bootstrap leaves no epic (link:../state-catalogue/06-setup-epic-other.adoc#state-catalogue-epic[State Catalogue]). An existing git-tracked ledger without machine scope (`epics/<epic_id>/` absent, for example after a clone) is adopted, never re-created: the bootstrap offers `adopt_epic:<epic_id>` (or routes a requested id that names it directly), and the adoption's `start.create-scope` transaction (outcome `adopted`, entering `start-epic.committed`) creates only the machine scope (`status.json`) from the ledger, the durable truth, which it never rewrites, at `epic.decompose` when the ledger has no queue row, otherwise `epic.next-work`; an unreadable or invalid ledger ends in a failure state with the reason (link:../state-catalogue/09-bootstrap-and-lessons.adoc#state-start-epic.adopt[State Catalogue, `start-epic.adopt`]).
 
-After the bootstrap the epic runs without a session. `epic.decompose` serves one task of the role `decompose`, which drafts the workstreams and the staged plan sections; `epic.next-work` starts launchable plans (<<server-started-plans>>) and routes to the epic's other tasks when their trigger holds; `epic.active` is the watch where the epic rests between epic events, a `composite_job` without a model turn; every ledger write commits through `epic.commit-ledger` (from `epic.decompose` through `epic.commit-decomposition`); the server lands the ledger itself (<<epic-landing>>). No task ends the epic. `epic.review-completion` with `complete` enters `epic.archive`, which moves the ledger to the archive and sets the epic's archive flag; the move is committed through `epic.commit-ledger`, which while the flag is set stages `.marshall/archived-orchestrators/**` beside `.marshall/orchestrator/**`, and landed through `epic.landing` like every ledger write, and only the landed archive ends the epic in `epic.archived`; a landing failure takes the landing's own routes, and the next ledger commit or default-branch advance resumes it. The operator verb `pm-operator abort epic <epic_id> --reason …` takes the same path: in its next transaction, after the epic's open tasks are withdrawn and their workers ended, an engine-owned scope-wide transition under the on-entry rule (link:../cli-and-security.adoc[CLI, Coordination & Security Specification]) enters `epic.archive` with the abort reason, and the landed archive ends the epic in `epic.aborted`; an unreadable ledger keeps its condition with a server retry at the condition retry delay (link:../timeouts/01-job-budgets-and-waits.adoc#server-retry-backoff[Timeouts & Budgets Specification, Server retry backoff]), without a budget, and ends the same way. Excerpt (the landing's git internals are abbreviated):
+After the bootstrap the epic runs without a session. `epic.decompose` serves one task of the role `decompose`, which drafts the workstreams and the staged plan sections; `epic.next-work` starts launchable plans (<<server-started-plans>>) and routes to the epic's other tasks when their trigger holds; `epic.active` is the watch where the epic rests between epic events, a `composite_job` without a model turn; every ledger write commits through `epic.commit-ledger` (from `epic.decompose` through `epic.commit-decomposition`); the server lands the ledger itself (<<epic-landing>>). No task ends the epic. `epic.review-completion` with `complete` enters `epic.archive`, which moves the ledger to the archive and sets the epic's archive flag; the move is committed through `epic.commit-ledger`, which while the flag is set stages `.marshall/archived-epics/**` beside `.marshall/epics/**`, and landed through `epic.landing` like every ledger write, and only the landed archive ends the epic in `epic.archived`; a landing failure takes the landing's own routes, and the next ledger commit or default-branch advance resumes it. The operator verb `pm-operator abort epic <epic_id> --reason …` takes the same path: in its next transaction, after the epic's open tasks are withdrawn and their workers ended, an engine-owned scope-wide transition under the on-entry rule (link:../cli-and-security.adoc[CLI, Coordination & Security Specification]) enters `epic.archive` with the abort reason, and the landed archive ends the epic in `epic.aborted`; an unreadable ledger keeps its condition with a server retry at the condition retry delay (link:../timeouts/01-job-budgets-and-waits.adoc#server-retry-backoff[Timeouts & Budgets Specification, Server retry backoff]), without a budget, and ends the same way. Excerpt (the landing's git internals are abbreviated):
 
 [source,text]
 ----
@@ -28,20 +28,20 @@ scope epic
 start epic.decompose
 
 state epic.decompose
-  phase orchestrate
+  phase epic
   job llm decompose role decompose
     submitted           -> epic.commit-decomposition
     infeasible          -> epic.active    # held like lost
     lost                -> epic.active    # the decomposition held until the next epic event re-enters it
 
 state epic.commit-decomposition
-  phase orchestrate
+  phase epic
   call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)
     done                 -> epic.next-work
     stepped_out          -> epic.active
 
 state epic.next-work
-  phase orchestrate
+  phase epic
   auto epic.next-work            # starts launchable plans first; while archiving only the archive's outcomes and idle
     decomposition_pending -> epic.decompose
     rows_ungrounded     -> epic.reground
@@ -56,7 +56,7 @@ state epic.next-work
     idle                -> epic.active
 
 state epic.active
-  phase orchestrate
+  phase epic
   composite_job epic.await-event   # the watch: settles on the first epic event, no model turn
     inbox_appended      -> epic.next-work
     plan_outcome        -> epic.next-work
@@ -67,35 +67,35 @@ state epic.active
     cancelled           -> epic.next-work
 
 state epic.reground
-  phase orchestrate
+  phase epic
   job llm reground role reground
     submitted           -> epic.commit-ledger
     infeasible          -> epic.active    # the item held
     lost                -> epic.active    # the item held
 
 state epic.recut
-  phase orchestrate
+  phase epic
   job llm decompose role decompose
     submitted           -> epic.commit-ledger
     infeasible          -> epic.active    # the item held
     lost                -> epic.active    # the item held
 
 state epic.ingest
-  phase orchestrate
+  phase epic
   job llm message role coordinate each epic.pending-messages
     submitted           -> epic.commit-ledger
     infeasible          -> epic.active    # the item held
     lost                -> epic.active    # the item held
 
 state epic.analyze-landing
-  phase orchestrate
+  phase epic
   job llm landing role landing each epic.unanalyzed-landings
     submitted           -> epic.commit-ledger
     infeasible          -> epic.active    # the item held
     lost                -> epic.active    # the item held
 
 state epic.review-completion
-  phase orchestrate
+  phase epic
   job llm completion role coordinate
     continue            -> epic.commit-ledger
     complete            -> epic.archive
@@ -103,13 +103,13 @@ state epic.review-completion
     lost                -> epic.active    # the completion review held
 
 state epic.commit-ledger
-  phase orchestrate
-  call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)   # while archiving also archived-orchestrators/**
+  phase epic
+  call git.commit_and_push (message_mode=step_or_fallback, push_mode=never)   # while archiving also archived-epics/**
     done                 -> epic.next-work   # result {commit?, pushed, clean, landed}
     stepped_out          -> epic.active      # the ledger write stays uncommitted
 
 state epic.landing
-  phase orchestrate
+  phase epic
   job epic.land-ledger       # git steps: Epic Landing items 2, 6, 7
     succeeded           -> epic.next-work
     failed              -> epic.next-work
@@ -120,7 +120,7 @@ state epic.landing
     indeterminate       -> epic.next-work
 
 state epic.archive
-  phase orchestrate
+  phase epic
   auto epic.archive-ledger   # moves the ledger, sets lifecycle terminal and archived_at
     archived            -> epic.commit-ledger
 
@@ -154,7 +154,7 @@ A plan is a top-level workflow, never a task: under the single-level leaf constr
 * *Admission*: `epic.next-work` starts launchable rows in staging order (`ordinal`) while fewer than `parallelization_scope` rows of the epic are `running` (`epic.json`, compiled default `1`, answered per epic in its bootstrap and never a configuration default; *deliberate change vs. `plan-marshall`*: its `orchestrator.auto_emit` setting does not exist). Starting a plan takes no model slot; the plan's tasks are bounded by the model slots like every task (xref:04-worker-launch.adoc#model-slots[Model Slots & One Writer per Plan]).
 * *Start transaction*: The server creates the plan through the plan bootstrap's `epic_row` source without a session and without a link state: it writes a pending entry record of kind `plan` with the row's `plan_id` and `from_epic`, and runs the bootstrap's `epic_row` path, every state of which is server logic. The source unit `source-epic-row` reads the queue row under the epic lock: it must exist in that epic and be launchable, else the start fails (`row_unknown`, `row_not_launchable`, `spec_unreadable`) and the row is marked `held` with the reason. The plan's `request.md` is the row's staged spec section (its claim sections parsed as in <<server-derived-landing-facts>> item 2), its `plan_id` is the row's (no slug), and `origin.epic_id` and `origin.source: epic_row` are set. The bootstrap's `start.create-scope` commit writes the new plan first, the authoritative store, and then sets the row `running` (with `started_at`) under the epic lock; a plan with `origin.epic_id` whose row is not `running` after a crash between the two writes is reconciled by the project's startup recovery, which sets the row (link:../mcp-tools/01-core-workflow-tools.adoc[MCP Tools Specification, Core Workflow Tools, Commit in the `start.create-scope` transaction]). The plan then runs like every plan; its content questions are question records delivered on the web app (xref:06-envelopes-questions-deadlines.adoc#question-records[Question Records]).
 * *Single Epic Pointer, Fail Loud*: Epic membership of a plan has one carrier, `origin.epic_id`, set only by the start transaction (link:../store-schemas/02-workflow-state-store.adoc[Store Schemas Specification, Workflow State Store]); no tool parameter carries it. Every consumer reads membership only from there. A plan bootstrap of another source whose new `plan_id` equals a non-terminal queue row of some epic returns to `start.ready` with the reason `epic_pointer_mismatch`: that row's plan is started only by its epic. A plan with `origin.epic_id` set never skips `default:emit-landing`; an unresolvable epic yields `landing_delivery: pending`, never a dropped step and never a refusal after the merge.
-* *Children of a Terminal Epic*: The epic linkage is derived by one resolver, which reads the active and the archived orchestrator root (link:../store-schemas/02-workflow-state-store.adoc#epic-linkage[Store Schemas Specification, Origin and Epic Linkage]). A plan whose `origin.epic_id` names a terminal epic (archived or aborted) resolves to `detached`, which every consumer treats like `not_orchestrated`: its landing is emitted to no inbox, its late findings are seeded as lessons, and its task entities offer no outbox link. The plan runs to its own outcome: `pm-operator abort epic` leaves its running child plans untouched (link:../cli-and-security/02-credentials-and-operator.adoc#operator-abort[CLI, Coordination & Security Specification, Abort]).
+* *Children of a Terminal Epic*: The epic linkage is derived by one resolver, which reads the active and the archived epic root (link:../store-schemas/02-workflow-state-store.adoc#epic-linkage[Store Schemas Specification, Origin and Epic Linkage]). A plan whose `origin.epic_id` names a terminal epic (archived or aborted) resolves to `detached`, which every consumer treats like `not_orchestrated`: its landing is emitted to no inbox, its late findings are seeded as lessons, and its task entities offer no outbox link. The plan runs to its own outcome: `pm-operator abort epic` leaves its running child plans untouched (link:../cli-and-security/02-credentials-and-operator.adoc#operator-abort[CLI, Coordination & Security Specification, Abort]).
 * *Staleness in the view*: The epic's view (`pm-operator status`, the web app, `pm://epic/{epic_id}/ledger`) shows per staged row `regrounded_at_sha` (the commit the row's specification was last re-grounded against, <<server-derived-landing-facts>> item 2) and `main_commits_since` (commits on the default branch since then, with the count of those touching the row's expected surface).
 
 [#epic-surface-disjointness]
@@ -173,7 +173,7 @@ Disjointness of plan surfaces is an invariant the epic establishes when it cuts 
 === Git-Distributed Epic Ledger & Per-File Store Layout
 _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-13[PM-WATCH-DISP-13], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-14[PM-WATCH-DISP-14], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-15[PM-WATCH-DISP-15], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-16[PM-WATCH-DISP-16], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-30[PM-WATCH-STORE-30], link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-37[PM-WATCH-DISP-37], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-54[PM-WATCH-STORE-54]_
 
-To allow epic state to merge cleanly across worktrees and machines via Git without monolithic file conflicts, the daemon persists epic state under `.marshall/orchestrator/<epic_id>/` using a strict per-concern file split:
+To allow epic state to merge cleanly across worktrees and machines via Git without monolithic file conflicts, the daemon persists epic state under `.marshall/epics/<epic_id>/` using a strict per-concern file split:
 
 [cols="2,2,3"]
 |===
@@ -181,7 +181,7 @@ To allow epic state to merge cleanly across worktrees and machines via Git witho
 
 |`epic.json`
 |Daemon only (atomic write-and-rename under epic lock).
-|Epic header (link:../store-schemas/04-epic-and-change-ledger.adoc#epic-header[Store Schemas Specification, Epic Header]): `epic_id` (the epic's identity, kept unchanged when the epic is archived to `.marshall/archived-orchestrators/<epic_id>-<YY-MM-DD>/`, link:../filesystem-layout/03-project-store.adoc#archives[Filesystem Layout Specification, Plan & Epic Archives]; the dated suffix and the title are never identities), title, workstream definitions, the per-epic `parallelization_scope`, the coarse `lifecycle`, and `format_version`. It carries no FSM state: the workflow state (`epic.*`) lives only in the epic's `status.json` in the per-project machine store, so the two files never share a name.
+|Epic header (link:../store-schemas/04-epic-and-change-ledger.adoc#epic-header[Store Schemas Specification, Epic Header]): `epic_id` (the epic's identity, kept unchanged when the epic is archived to `.marshall/archived-epics/<epic_id>-<YY-MM-DD>/`, link:../filesystem-layout/03-project-store.adoc#archives[Filesystem Layout Specification, Plan & Epic Archives]; the dated suffix and the title are never identities), title, workstream definitions, the per-epic `parallelization_scope`, the coarse `lifecycle`, and `format_version`. It carries no FSM state: the workflow state (`epic.*`) lives only in the epic's `status.json` in the per-project machine store, so the two files never share a name.
 
 |`queue/<plan_id>.json`
 |Daemon only (exclusive create `CREATE_NEW` on addition; row-local read-modify-write on update).
@@ -241,8 +241,8 @@ _See Requirement link:../../Requirements.adoc#PM-WF-15[PM-WF-15: Epic Creation, 
 Ledger changes are edited in the shared epic worktree (link:../filesystem-layout/01-repository-workspace.adoc#shared-epic-worktree[Filesystem Layout Specification]) and reach the default branch only through the landing, which `epic.next-work` enters as the state `epic.landing` when the epic branch holds unlanded commits (<<epic-workflow>>):
 
 1. *One Landing for All Epics*: A landing covers every pending change in the shared epic worktree, whatever epic made it, in one pull request from the epic branch. There are never concurrent per-epic landing pull requests.
-2. *Repository-Wide Serialization*: The landing holds the repository-wide epics-worktree lock for its git steps; a concurrent landing of another epic waits for the lock or is answered with the open pull request. The landing never joins the per-repository plan merge FIFO or takes the plan merge lease (link:../phase-workflows.adoc[Phase Workflows Specification], Cross-Plan Merge Mutex): its diff is confined to `.marshall/orchestrator/**` and `.marshall/archived-orchestrators/**`, disjoint from every plan surface by construction, so plan merges and epic landings never block each other.
-3. *Ledger Paths Only*: The landing stages and commits only `.marshall/orchestrator/**` and `.marshall/archived-orchestrators/**`, even though the worktree holds nothing else; a diff touching any other path refuses the landing.
+2. *Repository-Wide Serialization*: The landing holds the repository-wide epics-worktree lock for its git steps; a concurrent landing of another epic waits for the lock or is answered with the open pull request. The landing never joins the per-repository plan merge FIFO or takes the plan merge lease (link:../phase-workflows.adoc[Phase Workflows Specification], Cross-Plan Merge Mutex): its diff is confined to `.marshall/epics/**` and `.marshall/archived-epics/**`, disjoint from every plan surface by construction, so plan merges and epic landings never block each other.
+3. *Ledger Paths Only*: The landing stages and commits only `.marshall/epics/**` and `.marshall/archived-epics/**`, even though the worktree holds nothing else; a diff touching any other path refuses the landing.
 4. *Pull-Request Reuse & Composition*: A repeated landing reuses the open pull request of the epic branch and never opens a duplicate; title and body are composed from the landing snapshot (epics touched, queue rows changed, landings and inbox records added), never from plan artifacts.
 5. *Gate*: Required CI checks only. The plan pre-merge review barrier (link:../phase-workflows.adoc[Two Fail-Closed Barrier Predicates]) does not apply: a ledger-only diff draws no review-bot participation (`.marshall/**` is excluded from review bots), so Predicate 2 could never be satisfied.
 6. *Merge Confirmation*: The landing's git steps are the primitives of the plan merge: `git.stage-and-commit` and `git.push` in the epic worktree, `ci.pr-create` (or the reused pull request), and `ci.merge` or, when the derived fact `merge_queue_enforced` holds, `ci.enqueue`, both bound to the expected head SHA (the landing snapshot's commit; a moved head refuses the merge and the landing stops as in item 8). The landing waits for a terminal outcome (`merged`, `ejected`, `closed`, or `timed_out`) and is stamped `landed` only from the provider's observed pull-request state (`ci.pr-observe` or `ci.queue-membership`: `merged`, with the merge commit on the base branch), never from a merge command's return value or exit code. A queue wait is bounded by stall as `finalize.merge-queue-wait` is (link:../phase-workflows/06-finalize-re-entry-and-merge.adoc#_cross_plan_merge_mutex_fifo_admission_queue[Phase Workflows Specification, Cross-Plan Merge Mutex item 5]): observed progress restarts the clock, `timed_out` follows only after no progress for twice the queue's check-response timeout (or the compiled fallback, link:../timeouts/01-job-budgets-and-waits.adoc#merge-queue-wait[Timeouts & Budgets Specification, Merge-Queue Landing Wait]) and is a no-verdict outcome, never a landing verdict.

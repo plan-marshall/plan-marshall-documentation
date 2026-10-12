@@ -266,12 +266,12 @@ Source:: plan-marshall process-compliance PLAN-10 § Claim Labels (second same-s
 
 Anchor:: link:../specification/model-work/08-epic-coordination.adoc#git-distributed-epic-ledger[Model Work § Git-Distributed Epic Ledger],
 link:../specification/filesystem-layout/01-repository-workspace.adoc#shared-epic-worktree[Filesystem Layout § Shared Epic Worktree] (Epic Ledger Resolution Seam)
-Hazard:: The orchestrator store moved without a redirect; plans whose request had captured the old path lost their
+Hazard:: The epic store moved without a redirect; plans whose request had captured the old path lost their
 epic attribution.
 Guard:: A test archives, and one aborts, an epic (its ledger moves to
-`.marshall/archived-orchestrators/<epic_id>-<YY-MM-DD>/`) while a plan whose `origin.epic_id` names it is in flight:
+`.marshall/archived-epics/<epic_id>-<YY-MM-DD>/`) while a plan whose `origin.epic_id` names it is in flight:
 the plan keeps `origin.epic_id`, its `epic_linkage` resolves through the one epic-ledger resolver, which finds the
-header by `epic_id` in the active and the archived orchestrator root (never by a path in the request or the dated
+header by `epic_id` in the active and the archived epic root (never by a path in the request or the dated
 suffix), and reads `detached` (the epic terminal), or `indeterminate` when the header is absent or unreadable, never
 `not_orchestrated`.
 Source:: plan-marshall orchestrator-refactor PLAN-03 D6.

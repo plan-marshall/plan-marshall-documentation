@@ -15,7 +15,7 @@ This document specifies the technical design, process management, security contr
 == Traceability
 _See Requirements:_
 
-* _See Requirement link:../Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Orchestrator Location]_
+* _See Requirement link:../Requirements.adoc#PM-ARCH-5[PM-ARCH-5: Worktree-Bound Plan Execution & Main-Bound Epic Location]_
 * _See Requirement link:../Requirements.adoc#PM-WF-8[PM-WF-8: Asynchronous Job Links & Wait Transitions]_
 * _See Requirement link:../Requirements.adoc#PM-TOOL-2[PM-TOOL-2: Orthogonal Service Capability Tools (pm_build, pm_lsp)]_
 * _See Requirement link:../Requirements.adoc#PM-SVC-1[PM-SVC-1: Integrated Build Server & Working-Tree Hash Freshness]_

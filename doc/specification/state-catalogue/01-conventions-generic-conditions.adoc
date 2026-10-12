@@ -89,9 +89,9 @@ The *phase value* is the `phase` member of the scope's `mcp/status.json` (link:.
 |`workspace`
 
 |`epic.*` (except `epic.archived`, `epic.aborted`)
-|`orchestrate`
-|`orchestrator`
-|`orchestrate`
+|`epic`
+|`epic`
+|`epic`
 |===
 
 The plan outcome of a terminal plan (`merged`, `handed_back`, `returned`, `no_change`, `aborted`) is recorded as `outcome` beside the phase value and carried by the landing record (link:../phase-workflows/01-planning-phases-1-2.adoc#plan-outcomes[Phase Workflows Specification, Plan Outcomes]).
