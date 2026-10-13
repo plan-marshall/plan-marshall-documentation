@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Controlling Work
 
-The operator steers work that exists: pauses, starts, cancels, or abandons a plan; has an epic start its next plan, cancels or archives it; and reviews what an epic has found and keeps under watch. The operator does this in the web app or in the terminal client, from the plan or the epic wherever it is shown (Running Work, the plan view, the project); how each client offers the actions is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator steers work that exists: pauses, starts, cancels, or abandons a plan; has an epic start its next plan, cancels or archives it; reviews what an epic has found and keeps under watch; and chats with the planning role of a plan or an epic. The operator does this in the web app or in the terminal client, from the plan or the epic wherever it is shown (Running Work, the plan view, the project); how each client offers the actions is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#principles]
 == Principles
@@ -22,7 +22,7 @@ Ending archives:: A plan that the operator cancels or abandons is archived, with
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: stop a plan for a while, let it go on, or end it, and know what that does to its work and to its epic.
+Goal:: stop a plan for a while, let it go on, end it, or chat with its planning role about it, and know what that does to its work and to its epic.
 Trigger:: the operator selects a plan in Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), in its plan view (link:03-plans.adoc#UC-PLN-1[UC-PLN-1]), or names it.
 Flow::
 +
@@ -34,8 +34,36 @@ Flow::
        │                       running: pause, cancel
        │                       pausing: start (the pause is withdrawn), cancel
        │                       paused: start, abandon
-       │                       and in every one of them: settings (the plan's
-       │                       overrides, link:01-onboarding.adoc#change-plan-overrides[Plan Overrides])
+       │                       and in every state not ended (also while it
+       │                       waits for the operator or something holds
+       │                       it): settings (the plan's overrides,
+       │                       link:01-onboarding.adoc#change-plan-overrides[Plan Overrides]), chat
+       ├── chat ─────────────► ↳ chat               with the plan's planning
+       │                             │              role replan, over the
+       │                             │              whole plan
+       │                             ▼
+       │                        [S] chat.open       the plan's facts, as data:
+       │                             │              the outline, the tasks with
+       │                             │              their status, the done
+       │                             │              deliverables, the footprint
+       │                             ▼
+       │                        [O]⇄[M] chat.turn   the operator's message; the
+       │                             │              role answers and may propose
+       │                             │              a change; again, until the
+       │                             │              operator ends the chat
+       │                             ├── a change ──► [O] chat.read-back   the
+       │                             │                change in one sentence
+       │                             │                beside the operator's
+       │                             │                words: accept, or reject
+       │                             │                ─► chat.turn
+       │                             │                     │
+       │                             │                     ▼ accept
+       │                             │                [S] chat.apply   a revision
+       │                             │                through the guards of a
+       │                             │                first plan ─► chat.turn
+       │                             ▼ end
+       │                        [S] chat.end        the transcript kept with
+       │                                            the plan
        ├── pause ────────────► [O] plan.pause-when   when it holds:
        │                             │             • now: running tasks are
        │                             │               withdrawn, running jobs
@@ -65,7 +93,8 @@ Flow::
        │                        plan.archived
        ▼ every action, where an epic started the plan
   [S] plan.inform-epic         the act reaches the epic's inbox: paused,
-                               started, cancelled, abandoned, with the reason
+                               started, cancelled, abandoned, revised in a
+                               chat, with the reason
 ----
 Variations::
 * *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan. A pause after the current task or phase holds at an operator wait, too, since nothing runs there.
@@ -74,12 +103,16 @@ Variations::
 * *Cancel* and *abandon* are the same end, named by the state the plan was in: a running or pausing plan is cancelled, a paused one abandoned.
 * *Its epic reacts* in its own workflow: it may stage the plan's row again, hold the rows that depend on it, or ask the operator (<<UC-CTL-2>>); a plan the epic started is never ended by the epic itself.
 * *A plan that runs no longer* (it has ended) offers no action but its view.
-Outcome:: the plan is paused, running, or archived as the operator chose, and its epic knows.
+* *A chat on a running plan*: a question never touches the plan; an accepted revision takes effect at the next task boundary: what runs finishes, the revision is applied, the plan runs on. The revision is the operator's own act and does not spend the plan's re-planning budget; the server never starts a chat.
+* *Chat is offered disabled*, with its reason, while no configuration of the role `replan` qualifies.
+* *The operator's words* in a chat are the operator's own, interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); the role reads the plan as data, and nothing changes without _accept_.
+Outcome:: the plan is paused, running, revised, or archived as the operator chose, and its epic knows.
 Changes::
 * *Pausing and starting a plan* (<<change-plan-pause>>).
 * *Cancelling and abandoning archive* (<<change-plan-end>>).
 * *The epic is told* (<<change-epic-informed>>).
-Requirements:: the operator abort is specified in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), the terminal states in link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States].
+* *Chatting with the planning role* (<<change-chat>>).
+Requirements:: the operator abort is specified in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), the terminal states in link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], the revision of a running plan in link:../specification/phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Dynamic Re-Planning].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]
 
 [#UC-CTL-2]
@@ -87,14 +120,20 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: have an epic start its next plan now, end it, or archive it once it is through, and review what it found and watches.
+Goal:: have an epic start its next plan now, end it, or archive it once it is through, review what it found and watches, and chat with its planning role about it.
 Trigger:: the operator selects an epic in Running Work, or names it.
 Flow::
 +
 [source,text]
 ----
   [S] epic.actions             next plan, decompose again, findings review,
-       │                       watches review, archive, cancel
+       │                       watches review, archive, cancel; and in every
+       │                       state not ended: chat
+       ├── chat ─────────────► ↳ chat (<<UC-CTL-1>>), with the epic's planning
+       │                         role decompose, over the whole epic; an
+       │                         accepted change staged through the epic's
+       │                         checks (surfaces disjoint, dependencies
+       │                         without a cycle)
        ├── decompose again ──► ↳ decomposition (link:05-starting-work.adoc#UC-STA-6[UC-STA-6]), with the
        │                         operator's instruction
        ├── next plan ────────► [S] epic.next-work   the next launchable row in
@@ -136,11 +175,13 @@ Variations::
 * *The epic starts plans itself* as specified, as many as its `parallelization_scope` admits (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans]); _next plan_ is the operator starting the next one now. With the scope full, _next plan_ says so and offers to raise the scope by one.
 * *Watches still open* when the epic is through are listed by the archive check; archiving keeps them in the archived ledger, so nothing the epic watched is lost.
 * *An epic task waiting for the operator* (a held item, a decision) is shown with the actions and reached from them (link:03-plans.adoc#UC-PLN-2[UC-PLN-2]).
-Outcome:: the epic has started its next plan, is archived because it is through, or is cancelled with its plans as the operator chose.
+* *Chat is offered disabled*, with its reason, while no configuration of the role `decompose` qualifies; a chat changes only staged rows, never a plan that runs.
+Outcome:: the epic has started its next plan, has its staged rows changed in a chat, is archived because it is through, or is cancelled with its plans as the operator chose.
 Changes::
 * *An epic's actions* (<<change-epic-actions>>).
 * *An epic's findings and watches* (<<change-findings-watches>>).
 * *The decomposition is reviewed* (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]).
+* *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its states in link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]
 
@@ -162,7 +203,7 @@ Flow::
        │                       observation), since when, and the planning
        │                       role's proposal for it
        ▼
-  [O] review.item              per item: keep, drop, promote, edit, talk; or
+  [O] review.item              per item: keep, drop, promote, edit, chat; or
        │                       accept the remaining proposals, or finish
        ├── keep ─────────────► [S] review.keep   kept, as a watch or as a
        │                            defect (the kind may change)
@@ -190,12 +231,10 @@ Flow::
        │                        [O] review.read-back   the change, old against
        │                                               new: accept, instruct
        │                                               again, or discard
-       ├── talk ─────────────► [O]⇄[M] review.talk   free text with the
-       │                                             planning role about the
-       │                                             item or the whole list;
-       │                                             it answers and proposes
-       │                                             adjustments, each applied
-       │                                             only through read-back
+       ├── chat ─────────────► ↳ chat (<<UC-CTL-1>>), with the planning role
+       │                         decompose, over the item or the whole
+       │                         register; an accepted change applied as the
+       │                         item's disposition or rewrite ─► review.item
        ▼ finish
   [S] review.commit            the dispositions written to the epic's ledger
                                and landed; a promoted item is a staged row
@@ -203,11 +242,12 @@ Flow::
 Variations::
 * *Usually interactive*: the operator decides item by item; _accept the remaining proposals_ takes the planning role's proposal for every item not decided yet, after one confirmation that lists them.
 * *Leaving* keeps the decisions made so far; the review continues where it stopped, in either client.
-* *The operator's words* in _edit_ and _talk_ are the operator's own, interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); the planning role reads the items as data, and a finding that came from outside the machine stays marked untrusted.
+* *The operator's words* in _edit_ and _chat_ are the operator's own, interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); the planning role reads the items as data, and a finding that came from outside the machine stays marked untrusted.
 Outcome:: every reviewed item is kept, dropped, or staged as a plan, its statement and rules as the operator shaped them, recorded in the epic's ledger.
 Changes::
 * *An epic's findings and watches* (<<change-findings-watches>>).
 * *The review* (<<change-epic-review>>).
+* *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic's coordination is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]
 
@@ -282,7 +322,7 @@ Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#s
 
 Gap:: an epic learns a plan's outcome from the plan's events (`plan_outcome`) only once the plan ends in a terminal state; an operator's pause or start of its plan does not reach it, and nothing says what an epic does with a plan the operator ended.
 Fix::
-* Every operator act on a plan whose `origin.epic_id` names a live epic appends a record to the epic's inbox (`paused`, `started`, `cancelled`, `abandoned`, with the reason and the operator's channel), and the queue row follows the plan's state.
+* Every operator act on a plan whose `origin.epic_id` names a live epic appends a record to the epic's inbox (`paused`, `started`, `cancelled`, `abandoned`, `revised` by a chat, with the reason and the operator's channel), and the queue row follows the plan's state.
 * The epic's `coordinate` task decides on it as on every inbox message: re-stage the row, hold the rows that depend on it, leave it, or raise a decision for the operator; the epic never ends a plan itself.
 * The queue row's status gains `paused`, `cancelled`, and `abandoned`, following its plan.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox Record], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Queue Row].
@@ -315,9 +355,23 @@ Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordi
 
 Gap:: nothing lets the operator decide an epic's items: an epic task decides alone, and the operator only reads the ledger.
 Fix::
-* A sub-workflow `review` over one register, of operator waits and tasks of the epic's planning role (the role `decompose`, which drafts the epic's plans): its proposal per item, the draft of a staged plan for _promote_, the rewrite of an item for _edit_, the answers and proposals of _talk_; every change a model proposes reaches the register only through the operator's read-back.
+* A sub-workflow `review` over one register, of operator waits and tasks of the epic's planning role (the role `decompose`, which drafts the epic's plans): its proposal per item, the draft of a staged plan for _promote_, the rewrite of an item for _edit_; _chat_ calls the sub-workflow `chat` with the item or the register as its scope (<<change-chat>>); every change a model proposes reaches the register only through the operator's read-back.
 * Its dispositions are written to the ledger in one write and landed like every ledger write; a promoted item stages a row under the same surface checks as `epic.decompose`.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the planning role's tasks), link:03-plans.adoc#change-own-words[Own Words] (the read-back).
+
+[#change-chat]
+=== Chatting with the Planning Role
+
+Gap:: the operator chats with a planning role only inside the decomposition's review and the review of an epic's items, each with an exchange of its own; nothing lets the operator ask a plan or an epic about itself, or steer a running plan in words: a plan is re-planned only when the server's checkpoints raise a trigger, and re-planning never asks the operator (`PM-WF-17`).
+Fix::
+* *One sub-workflow `chat`*, a compiled unit like the source and epic units, its states `chat.<state>`; a plan calls it with `phase inherit`, an epic, `decomposition.review`, and `review` call it too, each with its subject (a plan or an epic) and a scope: the whole plan, the whole epic, the decomposition's draft, one item of a register, or the whole register.
+* *It routes to the subject's planning role*: for a plan the role `replan`, whose facts are those of a re-planning task without a trigger (the outline's deliverables with their state, the plan tasks with their status, the declared and the realized footprint); for an epic, its decomposition, and its review the role `decompose`. A plan and an epic offer _chat_ in every state not ended, disabled with its reason while no configuration of the routed role qualifies.
+* *Its states*: `chat.open` (server) assembles the facts of the scope as data, an untrusted item still marked untrusted; `chat.turn`, an operator wait for the operator's message, then one task of the routed role that answers and may propose changes, again until the operator ends the chat; `chat.read-back`, an operator wait that shows each proposed change as a read-back (link:03-plans.adoc#change-own-words[Own Words]) to accept or reject; `chat.apply` (server); `chat.end`, which keeps the transcript with the subject for the audit and sends it nowhere else. Nothing changes without _accept_.
+* *An accepted change goes through the caller's own path and its checks*: for the decomposition into the draft and the server's checks; for a review as the item's disposition or rewrite; for an epic as staged rows through the epic's checks (surfaces disjoint, dependencies without a cycle); for a plan as a revision through the guards of a first plan (the outline validation, the derivation dry-run, the task graph, the Q-Gate's mechanical checks), applied as `replan.apply` applies one and composing a plan instance version of the event `replan`, its re-planning record naming the operator's chat as who decided.
+* *A running plan*: a question never touches it; an accepted revision takes effect at the next task boundary (what runs finishes, the revision is applied, the plan runs on). The revision is the operator's own act and does not spend `replan_budget`; `PM-WF-17` stays true, since the operator starts a chat and the server never does.
+* *The epic is told* of a revision of a plan it started (<<change-epic-informed>>).
+* `decomposition.review` and `review` lose their own exchanges and call `chat`.
+Affects:: link:../specification/state-catalogue.adoc[State Catalogue] (a unit section for `chat`), link:../specification/workflow-dsl/04-ast-node-model.adoc#project-owned-units[Project-Owned Workflow Units] (`chat` compiled only), link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows], link:../specification/phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Dynamic Re-Planning] (a revision the operator starts, outside the triggers and the budget), link:../specification/phase-workflows/08-dynamic-re-planning.adoc#replan-apply[Apply, Re-Entry & Instance Version], link:../specification/store-schemas/17-re-planning.adoc#replan-record[Re-Planning Record] (who decided), link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox Record] (`revised`), link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the chat tasks of `replan` and `decompose`), link:../requirements/02-workflow.adoc[PM-WF] (`PM-WF-17`), link:03-plans.adoc#change-own-words[Own Words] (the read-back).
 
 [#change-holds]
 === Holds and Their Acts
