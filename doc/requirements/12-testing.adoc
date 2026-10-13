@@ -66,6 +66,18 @@ Complete plan lifecycles must be verified through automated end-to-end scenarios
 
 See the link:specification/module-structure.adoc[Module Structure Specification], link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification], and link:specification/mcp-tools.adoc[MCP Tools & Resources Specification] for implementation details.
 
+Implementation (the in-process scenario harness of the first bullet in the test scope of `pm-workflow`, without a live model and without starting a process: the scenario script read from text with the directives `start`, `complete_job`, `answer_question`, `expire_question`, `assert_state`, `assert_outcome` and `assert_task_outcome`, every other directive refused by name; the runner that replays a script against the real engine and status store over a fixture unit, with the stores in a temporary directory; and the scripted fixture worker that settles the queued task of its role with the task outcome the script declares; a worker that follows the offered links, the plan bootstrap through `finalize`, the hermetic fixture repositories, and the fault, recovery and benchmark scenarios of the further bullets are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioReplayRunner.java[ScenarioReplayRunner],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioScript.java[ScenarioScript],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioDirective.java[ScenarioDirective],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScriptedFixtureWorker.java[ScriptedFixtureWorker],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioFixtures.java[ScenarioFixtures]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioScriptTest.java[ScenarioScriptTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioReplayRunnerTest.java[ScenarioReplayRunnerTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/scenario/ScenarioDeterminismTest.java[ScenarioDeterminismTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-scenario.adoc[Scenario Replay Harness Developer Guide]
+
 Implementation watch: link:implementation-watch/model-work.adoc#PM-WATCH-DISP-19[PM-WATCH-DISP-19], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-27[PM-WATCH-GEN-27], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-29[PM-WATCH-GEN-29], link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-31[PM-WATCH-GEN-31], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-35[PM-WATCH-PHASE-35], link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-3[PM-WATCH-RUN-3]
 
 [#PM-TEST-5]
