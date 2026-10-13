@@ -79,6 +79,10 @@ Design:: the design documents that show it, per client (link:https://github.com/
 |`UC-CTL`
 |link:use-cases/06-controlling-work.adoc[06-controlling-work.adoc]
 |Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; changing a plan's settings (link:use-cases/06-controlling-work.adoc#UC-CTL-5[UC-CTL-5]); an epic that starts its plans by itself or waits for the operator's next plan, its cancel, and its archive once it is through; reviewing an epic's findings and watches item by item with its planning role; chatting with the planning role of a plan or an epic, also inside a decision, while starting, and about ended work; resolving what holds a plan.
+
+|`UC-SYS`
+|link:use-cases/07-system.adoc[07-system.adoc]
+|The runtime itself: stopping it by its drain or at once, starting, restarting, and upgrading it to a newer version from the organisation's registry (link:use-cases/07-system.adoc#UC-SYS-1[UC-SYS-1]); seeing what it is doing: its version, uptime, and use of the machine, the work it carries, and what the models cost, live, from the metrics the runtime keeps (link:use-cases/07-system.adoc#UC-SYS-2[UC-SYS-2]).
 |===
 
 [#open-points]
@@ -86,8 +90,7 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 What the use cases do not cover yet, each to be decided before a use case is written for it:
 
-* *The runtime's lifecycle*: stopping, restarting, and upgrading the runtime are not yet a use case of the clients.
-* *Cost and budget visibility*: what of the cost of the work and of its budgets the operator sees, and where, needs a decision of what is shown.
+* *Cost and budget visibility*: what of the cost of a plan or an epic and of its budgets the operator sees, and where, needs a decision of what is shown; the cost of the models across the machine is shown in link:use-cases/07-system.adoc#UC-SYS-2[UC-SYS-2].
 * *Deleting archived work*: whether and how the operator deletes or purges archived plans and epics, and the reports the operator has read (link:use-cases/03-plans.adoc#UC-PLN-6[UC-PLN-6]).
 * *Designing a plan's process*: link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3] is a stub; where a design lives, whether a plan can be designed before it starts, which building blocks are offered, and whether the terminal client offers it need the operator's decisions before it is written out.
 
