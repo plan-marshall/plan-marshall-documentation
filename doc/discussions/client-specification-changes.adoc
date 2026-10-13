@@ -124,7 +124,7 @@ Beyond the sections each change names in its _Affects_:
 |the new requirement in `PM-ARCH`, the next free id (the ninth); the closed metric catalogue with names, units, labels, and one writer each; the endpoints `GET /api/v1/system` and `GET /api/v1/system/metrics` and the event `system.metrics` in the event catalogue; the models' hourly figures filled from the metrics stores at the start; the disk use in the periodic sweep; `unavailable` as a value of every figure; the library of the registry, a dependency decision of the operator (open); the OpenMetrics text as an option on the socket only.
 
 |link:../use-cases/03-plans.adoc#change-process-designer[Designing a Process]
-|the new requirement in `PM-WF`; the machine level `<PM_MCP_BASE>/workflows/` in the machine layout and the resolution by level (project, machine, default) in the loader, the composition, and the effective configuration's `units[]`; the missing unit resolving to the next level, and the setup's first run copying no unit; the variants of the plan axes as owned units with their invariants; the machine units in the header digests and in `config_drift`; the endpoints of the units, the catalogue, the validation with its dry run, and placing and removing, with their refusal codes (a compiled-only unit, a changed unit, a failing project); the short landing of a project unit; the audit record of a placing and a removal.
+|the new requirement in `PM-WF`; the machine level `<PM_MCP_BASE>/workflows/` in the machine layout and the resolution by level (project, machine, default) in the loader, the composition, and the effective configuration's `units[]`; the missing unit resolving to the next level, and the setup's first run copying no unit; the variants of the plan axes as owned units with their invariants; the machine units in the header digests and in `config_drift`; the endpoints of the units and of the catalogue in the machine scope and a project's, the catalogue complete and generated from the registries of the parser, the static verification, and the composition, with the runtime's version and a digest, the validation with its dry run, and placing and removing, with their refusal codes; none of the designer endpoints `cli_only`, all reached on the web listener (a compiled-only unit, a changed unit, a failing project); the short landing of a project unit; the audit record of a placing and a removal.
 
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
@@ -293,7 +293,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`designer-contract`
 |`pm-mcp-clients`
-|the client side of Designing a Process: the units with their levels, the catalogue, the validation's findings and composed process, placing and removing, the landing of a project unit in the project's running work
+|the client side of Designing a Process: the units with their levels, the catalogue in the machine scope and a project's with its digest, the validation's findings and composed process, placing and removing, the landing of a project unit in the project's running work
 |`operator-interaction-contract`; `process-contract`; `process-designer`; UC-PLN-3 agreed
 
 |`runtime-control`
