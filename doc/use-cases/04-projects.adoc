@@ -95,7 +95,7 @@ Flow::
        │                       merge queue and could have one:
        │                       [O] setup.merge-queue (recheck | skip)
        ▼
-  [O] setup.qualify-consent    the qualification's expected cost (consent
+  [O] setup.qualify-consent    the qualification's expected tokens (consent
        │                       kind model_cost); asked only where roles
        │                       need grading
        ├── no ──► setup.enrich-consent, the qualification skipped with
@@ -103,7 +103,7 @@ Flow::
        ▼ yes
   [S] setup.qualify-roles      role qualification
        ▼
-  [O] setup.enrich-consent     the enrichment's expected cost (model_cost);
+  [O] setup.enrich-consent     the enrichment's expected tokens (model_cost);
        │                       asked only where modules need a description
        ├── no ──► setup.commit-changes, the description skipped with its
        │          reason, to be run later; the project is ready without

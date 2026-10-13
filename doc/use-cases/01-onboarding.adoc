@@ -35,14 +35,14 @@ The closed list of the consent kinds, for every use case that asks one (<<change
 |`probe_harness_login` |run the login probe of each chosen harness: its command, or one minimal headless call with its token cost |`harness.probe-consent` (<<UC-ONB-4>>) |yes, for the machine |stays
 |`verify_harness_profile` |run a harness the binary does not know, to verify its draft profile, with the token cost of its stages |`harness.add-consent` (<<UC-ONB-4>>) |never |stays
 |`probe_harness_models` |run the model probe of each enrolled harness |`catalogue.consent` (<<UC-ONB-5>>) |yes, for the machine |stays
-|`model_advice` |a task of the steward, with its expected cost |`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>) |yes, for the machine |goes on without the advice
+|`model_advice` |a task of the steward, with the tokens it is expected to use |`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>) |yes, for the machine |goes on without the advice
 |`check_credential_store` |write, read, and delete one test entry in the chosen OS credential store (the keychain) |`store.consent` (<<UC-ONB-7>>) |yes, for the machine |stays
 |`scan_providers` |look for the CLI tools of the providers and the credentials already stored |`providers.consent` (<<UC-ONB-8>>) |yes, for the machine |stays
 |`verify_providers` |call each chosen provider with its credential, and run its CLI tool |`providers.verify-consent` (<<UC-ONB-8>>, <<UC-ONB-10>>) |yes, for the machine |stays
 |the automatic run |every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only |`auto.consent` (<<UC-ONB-2>>) |never |back to `onboard.mode`
 |`inspect_checkout` |read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the host tools' version probes from the absolute directories of the login `PATH`; changes nothing |`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |stays
 |`run_checkout_scripts` |run the named scripts of a project's checkout, each with its arguments, confined like a job |`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project and the digest of each script, in `consents.json` (never in the enrolment) |goes on, what needs the scripts unknown
-|`model_cost` |a role task whose expected cost is shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
+|`model_cost` |a role task whose expected tokens are shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
 |`check_updates` |ask the organisation's registry, over the network, for a release newer than the installed one |`runtime.update-consent` (link:07-system.adoc#UC-SYS-1[UC-SYS-1]) |yes, for the machine |goes on: no newer version is known
 |===
 
@@ -205,7 +205,8 @@ Flow::
        │                       fetch leaves the monogram
        ▼
   [O] harness.choose           every found harness, each with version,
-       │                       supported or not, worker-eligible or not;
+       │                       supported or not, worker-eligible or not,
+       │                       what it reports of its token usage;
        │                       every supported one preselected, the first of
        │                       them as the default
        ├── add another (under "Advanced") ──► harness.add
@@ -257,6 +258,7 @@ Flow::
   harness.choose               the added harness among the found ones
 ----
 Variations::
+* *What a harness reports of its usage*: each harness is shown with what this harness and version reports of its token usage, complete, partial (naming what is missing, "no cache figure"), or not reported, from its profile and, for a verified profile, from its verification; a harness that reports less is still enrolled, and the figures of its tasks say what was not measured (link:03-plans.adoc#change-token-usage[Tokens, Not Money]).
 * A known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
 * The step cannot finish without one usable harness: the last chosen harness cannot be left out, and when every chosen harness fails its probe the step goes to `harness.none`, where the operator rechecks, adds one, or leaves the onboarding to continue later.
 * A later run scans again: a harness found that is not enrolled is offered, an enrolled one no longer found is shown as missing and offered for removal; the default can change, and a harness that roles use cannot be removed before they are reassigned (<<UC-ONB-6>>).
@@ -267,6 +269,7 @@ Changes::
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
 * *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon, fetched on consent.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
+* *Tokens, not money* (link:03-plans.adoc#change-token-usage[Tokens, Not Money]): what a harness reports of its usage, checked by the profile verification.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
 
@@ -285,7 +288,7 @@ Flow::
   [O] catalogue.consent        may the server run the model probes of the
        │                       enrolled harnesses, and ask a model for
        │                       advice? (two consents, each shown with its
-       │                       cost: probe_harness_models, model_advice)
+       │                       tokens: probe_harness_models, model_advice)
        ├── no to the probes ──► stays at catalogue.consent
        ▼ yes | yes, don't ask again
   [S] catalogue.models         the models each enrolled harness offers, from
@@ -295,7 +298,7 @@ Flow::
        ▼
   [M] catalogue.advise         a role task of the steward on the default
        │                       harness: which models suit which kind of work,
-       │                       with cost, limits, and a recommendation
+       │                       with their limits and a recommendation
        ▼
   [O] catalogue.select         the models to allow per harness; the
        │                       recommendation preselected; model ids typed
@@ -340,7 +343,7 @@ Flow::
        │                       accept as it is, or change single roles or
        │                       groups, each with its advisory beside it
        ├── ask the steward ──► [O] roles.consent  may a model refine the
-       │                            │              defaults? (cost shown)
+       │                            │              defaults? (tokens shown)
        │                            ├── no ──► roles.review, unchanged
        │                            ▼ yes
        │                       [M] roles.propose   departures from the
