@@ -23,7 +23,7 @@ The workflow language lives in the module `pm-workflow` of https://github.com/pl
 |The text side: the package-private lexer (`WorkflowLexer`, `Token`), the parser `WorkflowParser` with its result `ParseResult`, the refusal `Diagnostic` and its `RefusalRule`, the package-private reader of the instance header (`InstanceHeaderReader`), and the printer `WorkflowPrinter`.
 |===
 
-The static verification of a unit, the merge of the multi-file plan workflow, the loader of project-owned units, the interpreter and the diagram generator build on these packages; they are not implemented yet, and what they will check is stated in the link:../specification/workflow-dsl.adoc[Workflow DSL & Engine Specification].
+The static verification of a unit, the merge of the multi-file plan workflow and the loader of project-owned units build on these packages; they are not implemented yet, and what they will check is stated in the link:../specification/workflow-dsl.adoc[Workflow DSL & Engine Specification]. The interpreter and the diagram generator build on them too and are described in the developer guides of their packages: the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide] and the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-diagram.adoc[Workflow Diagrams Developer Guide].
 
 [#tree]
 == The Tree

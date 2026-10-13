@@ -41,77 +41,20 @@ When a remediation needs cross-task work (a CI failure, a failing quality gate, 
 == Automated Mermaid, AsciiDoc Table, and ASCII Diagram Generation
 _See Requirement link:../../Requirements.adoc#PM-IMPL-5[PM-IMPL-5: Declarative Workflow DSL & Automated Diagram Generation]_
 
-Because workflow definitions are parsed into a typed `WorkflowDefinition` AST in `pm-workflow`, all visual documentation and runtime state inspection diagrams are generated deterministically from the AST by `WorkflowDiagramGenerator`.
+`WorkflowDiagramGenerator` of `pm-workflow` renders a unit in three forms: a Mermaid state diagram, AsciiDoc state, link and outcome tables per phase group, and a table for terminal output. Its forms, their label rules and their examples are documented in the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-diagram.adoc[Workflow Diagrams Developer Guide] and pinned by the golden files of its tests. This section states what is built on the generator:
 
-=== Supported Render Targets
-
-1. *Mermaid State Diagram (`renderMermaid(WorkflowDefinition, Optional<String> activeState)`)*: Emits `stateDiagram-v2` blocks grouping `StateNode` entries by `phase` into composite states, labeling transitions as the example below renders them: `rel link_id [form] [guard] / outcome` for a link transition of a session-driven unit (for example `alt skip_recipe [noop] / skipped`) and `<kind> / outcome` for an `auto`, `call`, `question`, `composite_job`, or task transition (for example `call / stepped_out`, `task triage-ci / lost`, with `[result.pushed]` for a result-guarded one), and marking `activeState` with a `classDef active` style when rendering for a live plan. The blocks of the default units are embedded into AsciiDoc documentation under `doc/`. For a plan, `pm://plan/{plan_id}/diagram` renders the plan instance version in force (xref:09-plan-instance.adoc#plan-instance[Plan Instance]), not the template: the active state and the call-path breadcrumb, the pruned elements as a note with their prune reason, and every waived gate with its waiver id; `pm://plan/{plan_id}/instance[/{version}]` serves the DSL text with its header.
-2. *AsciiDoc State/Link/Outcome Tables (`renderAsciiDocTables(WorkflowDefinition)`)*: Emits one AsciiDoc table per phase group listing every state with its links (`rel`, identifier, `form`, free parameters, guard), its implicit links, and outcome transitions, committed under `doc/` next to the Mermaid diagrams. Its per-state summary table has exactly the columns of the link:../state-catalogue.adoc[State Catalogue]: State id | Phase value | Kind | Entered from | Offered links / outcomes | Exits to | Defined in (the *Defined in* column is emitted empty and maintained by hand in the catalogue). The *Kind* column is derived from `StateBehavior`: `auto`, `job` (also for a `ModelJob` state, whose role the *Offered links / outcomes* column names), `composite_job`, `call`, `link`, `terminal`, and `awaiting_user` for a `QuestionWait` state.
-3. *Deterministic ASCII Box-and-Transition Table (`renderAscii(WorkflowDefinition, Optional<String> activeState)`)*: Emits a right-border-aligned ASCII state box diagram and transition matrix for terminal output (`pm-operator status`, which also names the instance version and its last composition event).
-
-=== Example Generated Mermaid & ASCII Output
-
-The Mermaid example renders an excerpt of the plan workflow's `finalize` phase group from the reference excerpt (xref:03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Reference Workflow Excerpt]) with `finalize.remediate-ci` as the active state; the ASCII example renders the decision task state `remediation-ci.choose` of `remediation.ci-failure` (xref:08-remediation-units.adoc#remediation-units[Remediation Policy Units]) as the active state inside that call, with the remedy links of its task entity:
-
-[source,mermaid]
-----
-stateDiagram-v2
-    state "finalize.settle-commit" as finalize_settle_commit
-    state "finalize.review-cap-check" as finalize_review_cap_check
-    state "finalize.concurrent-wait" as finalize_concurrent_wait
-    state "finalize.remediate-ci" as finalize_remediate_ci
-    state "finalize.restart-watch" as finalize_restart_watch
-    state "finalize.allocate-remediation" as finalize_allocate_remediation
-    state "finalize.replan" as finalize_replan
-    state "finalize.hand-back" as finalize_hand_back
-    state "finalize.next-step" as finalize_next_step
-    state "execute.envelope-ready" as execute_envelope_ready
-    finalize_settle_commit : call git.commit_and_push
-    finalize_review_cap_check : auto review.check-structural-caps
-    finalize_concurrent_wait : composite_job finalize.watch-ci-and-bots
-    finalize_remediate_ci : call remediation.ci-failure
-    finalize_restart_watch : auto finalize.restart-watch
-    finalize_allocate_remediation : auto plan.allocate-remediation-tasks
-    finalize_replan : call replan
-    finalize_hand_back : auto finalize.hand-back
-    finalize_settle_commit --> finalize_review_cap_check : call [result.pushed] / done
-    finalize_settle_commit --> finalize_next_step : call [not result.pushed] / done
-    finalize_settle_commit --> finalize_hand_back : call / stepped_out
-    finalize_review_cap_check --> finalize_concurrent_wait : auto / within_caps
-    finalize_concurrent_wait --> finalize_remediate_ci : composite_job / ci_failed
-    finalize_concurrent_wait --> finalize_restart_watch : composite_job / watch_interrupted
-    finalize_restart_watch --> finalize_concurrent_wait : auto / concurrent_restarted
-    finalize_restart_watch --> finalize_hand_back : auto / exhausted
-    finalize_remediate_ci --> finalize_next_step : call / resolved
-    finalize_remediate_ci --> finalize_next_step : call / waived
-    finalize_remediate_ci --> finalize_allocate_remediation : call / fix_requested
-    finalize_remediate_ci --> finalize_replan : call / exhausted
-    finalize_remediate_ci --> finalize_hand_back : call / stepped_out
-    finalize_allocate_remediation --> execute_envelope_ready : auto / allocated
-    finalize_hand_back --> finalize_next_step : auto / handed_back
-    classDef active fill:#90ee90
-    class finalize_remediate_ci active
-----
-
-[source,text]
-----
-┌────────────────────────┬───────────────────────────┬────────────────────┬──────────────────────────────────────────────┐
-│ State                  │ Task link (rel)           │ Offered when       │ Outcome -> Next State                        │
-├────────────────────────┼───────────────────────────┼────────────────────┼──────────────────────────────────────────────┤
-│ *remediation-ci.choose │ retry (retry)             │ retry-budget-left  │ retry -> remediation-ci.rerun                │
-│  (ACTIVE)              │ fix (fix)                 │ fix-budget-left    │ fix -> remediation-ci.apply-fix              │
-│  task triage-ci        │ loop_back (loop_back)     │ in_worktree, ...   │ loop_back -> remediation-ci.fix-requested    │
-│                        │ request_waiver (escalate) │ waiver-requestable │ request_waiver -> remediation-ci.waiver-wait │
-│                        │ -                         │ -                  │ lost -> remediation-ci.conservative          │
-└────────────────────────┴───────────────────────────┴────────────────────┴──────────────────────────────────────────────┘
-----
+* *Committed documentation*: The Mermaid diagrams of the default units are embedded into the AsciiDoc documentation under `doc/`, their AsciiDoc tables committed next to them.
+* *Plan instance*: For a plan, `pm://plan/{plan_id}/diagram` renders the plan instance version in force (xref:09-plan-instance.adoc#plan-instance[Plan Instance]), not the template: the active state and the call-path breadcrumb, the pruned elements as a note with their prune reason, and every waived gate with its waiver id; `pm://plan/{plan_id}/instance[/{version}]` serves the DSL text with its header.
+* *Terminal output*: `pm-operator status` shows the terminal table and also names the instance version and its last composition event.
 
 === Build-Time Drift Gate
 _Implementation watch: link:../../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-15[PM-WATCH-GEN-15], link:../../implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-19[PM-WATCH-DSL-19]_
 
-A mandatory JUnit test (`WorkflowDiagramDriftTest`) in `pm-workflow` parses all `classpath:/workflows/*.pmwf` files, invokes `WorkflowDiagramGenerator`, and compares the output byte-for-byte against the committed diagram files in `doc/`. Any divergence fails the build, guaranteeing that workflow documentation can never drift from the executable state machine.
+The drift tests run in `pm-mcp-server` of `plan-marshall-mcp`, where the default units are (link:../module-structure.adoc#model-facing-content[Module Structure § Model-Facing Content]); `pm-workflow` carries no unit of the product and tests the generator on fixture units only.
 
-A second mandatory JUnit test (`StateCatalogueDriftTest`) in `pm-workflow` compares the state table rendered by `renderAsciiDocTables` for all `*.pmwf` units with the link:../state-catalogue.adoc[State Catalogue]. It fails the build when a state defined in any `.pmwf` unit is missing from the catalogue or a catalogued state is defined in no unit, or when a row's phase value, kind, or exits differ; it also verifies that every link in the catalogue's *Defined in* column resolves (`PM-IMPL-5`). The engine-made question states `<state>.asked` the loader adds for the states that declare `ask` are compared with the catalogue's single pattern row, never one row each. The catalogue's Conditions table is not compared with the `.pmwf` units (conditions are engine-owned, xref:04-ast-node-model.adoc#condition-overlays[Condition Overlays (Engine-Owned)]); the test fails when its condition kinds differ from the constants of `ConditionKind`.
+A mandatory JUnit test (`WorkflowDiagramDriftTest`) parses all `classpath:/workflows/*.pmwf` files, invokes `WorkflowDiagramGenerator`, and compares the output byte-for-byte against the committed diagram files in `doc/`. Any divergence fails the build, guaranteeing that workflow documentation can never drift from the executable state machine.
+
+A second mandatory JUnit test (`StateCatalogueDriftTest`) compares the state table rendered by `renderAsciiDocTables` for all `*.pmwf` units with the link:../state-catalogue.adoc[State Catalogue]. It fails the build when a state defined in any `.pmwf` unit is missing from the catalogue or a catalogued state is defined in no unit, or when a row's phase value, kind, or exits differ; it also verifies that every link in the catalogue's *Defined in* column resolves (`PM-IMPL-5`). The engine-made question states `<state>.asked` the loader adds for the states that declare `ask` are compared with the catalogue's single pattern row, never one row each. The catalogue's Conditions table is not compared with the `.pmwf` units (conditions are engine-owned, xref:04-ast-node-model.adoc#condition-overlays[Condition Overlays (Engine-Owned)]); the test fails when its condition kinds differ from the constants of `ConditionKind`.
 
 == State-Machine Property Verification, Scenario Replay & State Migration
 _See Requirement link:../../Requirements.adoc#PM-TEST-3[PM-TEST-3: State-Machine Invariant, Property & McpAssured Protocol Verification]_
