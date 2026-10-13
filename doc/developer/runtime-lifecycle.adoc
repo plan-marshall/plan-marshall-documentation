@@ -59,19 +59,19 @@ The lifecycle of the runtime is plain Java in the package `de.planmarshall.runti
 |The periodic sweep: `start(executor)` schedules a run every `INTERVAL` (3600 seconds), `runOnce(now)` runs every `SweepStep` for every enrolled project that `recovered` accepts with `olderThan = now − PENDING_ENTRY_MAX_AGE` (86400 seconds) and answers a `Summary` (swept, skipped, failed), and `stop()` cancels the schedule for the drain.
 
 |https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/SweepStep.java[`SweepStep`]
-|The seam of one sweep step: `PENDING_ENTRY_RECORDS` and `FENCED_SESSION_GENERATIONS`, `run(projectId, olderThan)` answering a `RecoveryStep.Outcome`; `notImplemented(name)` is the no-op step.
+|The contract of one sweep step: `PENDING_ENTRY_RECORDS` and `FENCED_SESSION_GENERATIONS`, `run(projectId, olderThan)` answering a `RecoveryStep.Outcome`. Both steps are implemented, `PendingEntryRecordsSweep` and `FencedSessionGenerationsSweep`; the caller registers them, and there is no seam factory (https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/doc/developer/runtime-start.adoc[Sweep Steps Developer Guide]).
 
 |https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/RelayVersionCheck.java[`RelayVersionCheck`]
 |The relay version check: `observe(relayVersion)` with the value of the `PM-MCP-Relay-Version` header (`HEADER`) of every relayed request, and `mismatch()` with the latest `Mismatch` (relay version, runtime version, `pm-operator drain`) for `pm-operator status` alone (link:../user/operator.adoc#relay-version-mismatch[User Guide § Relay Version Mismatch]).
 |===
 
-Every log message of the package is a `LogRecord` of `PmMcpLogMessages`, `PM_MCP-53` to `PM_MCP-57`, `PM_MCP-152` to `PM_MCP-159`, `PM_MCP-167` and `PM_MCP-252` (link:../LogMessages.adoc[Log Messages]).
+Every log message of the package is a `LogRecord` of `PmMcpLogMessages`, `PM_MCP-53` to `PM_MCP-57`, `PM_MCP-65`, `PM_MCP-66`, `PM_MCP-152` to `PM_MCP-159`, `PM_MCP-167` and `PM_MCP-252` (link:../LogMessages.adoc[Log Messages]).
 
 [#seams]
 == The Seams
 _Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
 
-Most of what the lifecycle drives does not exist yet: the audit trail, the enrolment store, jobs, workers, the pending store, the task queue. Each is a seam with a default that does nothing harmful, so the lifecycle runs today and a later package fills its part without touching the orchestration:
+Much of what the lifecycle drives does not exist yet: the audit trail, jobs, workers. Each is a seam with a default that does nothing harmful, so the lifecycle runs today and a later package fills its part without touching the orchestration:
 
 [cols="1,2,2", options="header"]
 |===
@@ -105,10 +105,9 @@ Most of what the lifecycle drives does not exist yet: the audit trail, the enrol
 |`NONE`: no reconciler
 |each store that writes across scopes registers its reconciler
 
-|`SweepStep`
-|`notImplemented(name)` for both steps
-|the pending store (one audit record per removed record) and the task queue (under the queue lock)
 |===
+
+The two `SweepStep` names are no seams any more: `PendingEntryRecordsSweep` removes the old pending entry records in one workspace transaction with one audit record per record, and `FencedSessionGenerationsSweep` the old fenced session generations under the queue lock; the caller passes both to `PeriodicSweep`.
 
 `ProjectRecovery` takes one step per `Name` and refuses two steps with the same name, and a missing name other than the two enrolment steps, which it fills with a seam so that a step list written before the enrolment store keeps working; it sorts them by `Name`, so the order in which they are passed does not matter. A new step is therefore a new `Name` constant at its place in the order of the specification, not a new list position. A step reports a failure as `Failed`, never as an exception; one that throws anyway is recorded as the failed step of its project, so a broken step cannot leave callers waiting.
 
@@ -116,7 +115,7 @@ Most of what the lifecycle drives does not exist yet: the audit trail, the enrol
 == Tests
 _Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7], link:../Requirements.adoc#PM-TECH-3[PM-TECH-3]_
 
-The unit tests run on the JVM with fakes and a test clock: `StartupSequenceTest`, `RuntimeDrainTest`, `DrainTimeoutTest`, `ProjectRecoveryTest` (the eleven names in order, a step list without the enrolment steps, the background task, and end to end over a real enrolment store), `EnrolmentIntegrityStepTest`, `OwedEnrolmentAuditStepTest`, `EnrolledProjectsTest`, `LeaseRecoveryStepTest`, `JournalRollForwardStepTest`, `CrossScopeReconciliationStepTest`, `PeriodicSweepTest` and `RelayVersionCheckTest`. The fixtures `ProviderLeaseStores` (a merge-queue and a review-bot lease store, each with a lease, and the assertion that both are byte-identical) and `RecoveryStepFixtures` are shared by them.
+The unit tests run on the JVM with fakes and a test clock: `StartupSequenceTest`, `RuntimeDrainTest`, `DrainTimeoutTest`, `ProjectRecoveryTest` (the eleven names in order, a step list without the enrolment steps, the background task, and end to end over a real enrolment store), `EnrolmentIntegrityStepTest`, `OwedEnrolmentAuditStepTest`, `EnrolledProjectsTest`, `LeaseRecoveryStepTest`, `JournalRollForwardStepTest`, `CrossScopeReconciliationStepTest`, `PeriodicSweepTest`, `PendingEntryRecordsSweepTest`, `FencedSessionGenerationsSweepTest` and `RelayVersionCheckTest`. The fixtures `ProviderLeaseStores` (a merge-queue and a review-bot lease store, each with a lease, and the assertion that both are byte-identical) and `RecoveryStepFixtures` are shared by them.
 
 *The killed-runtime fixture.* A crash cannot be simulated in the test JVM, because a killed process must really lose its locks and its memory. `KilledRuntimeFixture` starts `RuntimeChildProcess` in a JVM of its own with the `java` and the class path of the test JVM, waits for a named marker line on its standard output, and kills it with `SIGKILL` (`Process.destroyForcibly()`) in the middle of a lifecycle step; the next instance then runs in the test JVM against the same base. Every wait is bounded (`PROCESS_BOUND`, 30 seconds), and the fixture is closed after every test, also a failed one, which kills a child still alive. The child has one mode per step (`startup`, `drain`, `recovery`, `leases`, `rollforward`, `ordered-write`, `sweep`, `version`); a new lifecycle step adds its mode there. The killed-runtime tests run under `-Pintegration-tests`: `BoundedVerificationKilledRuntimeIT`, `RuntimeDrainKilledRuntimeIT`, `ProjectRecoveryKilledRuntimeIT`, `RecoveryStepsKilledRuntimeIT`, `PeriodicSweepKilledRuntimeIT` and `RelayVersionCheckKilledRuntimeIT`. Each test uses its own base from `TestBases`.
 
