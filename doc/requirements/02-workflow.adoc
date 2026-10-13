@@ -22,7 +22,13 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/WorkflowEngineTest.java[WorkflowEngineTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/SubWorkflowExecutionTest.java[SubWorkflowExecutionTest]
 
-Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide]
+Implementation (the addressing of a pending plan or epic bootstrap by its `entry_id` in bullet 1, as far as the library module `pm-workflow` carries it: the entity of the workspace scope resolves to the entity kind `bootstrap-plan` or `bootstrap-epic` only while its pending entry record is live, and a task entity of a scope to the entity kind of the task state that hosts it. Not implemented yet: the representations of scope `entity`): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/EntityAddressResolver.java[EntityAddressResolver],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/AddressResolution.java[AddressResolution]
+
+Verified by (the addressing of a bootstrap): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EntityAddressingTest.java[EntityAddressingTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc#_entity_addressing[Workflow Engine Developer Guide § Entity Addressing]
 
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-14[PM-WATCH-DSL-14], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-90[PM-WATCH-PHASE-90]
 

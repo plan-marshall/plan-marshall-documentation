@@ -106,6 +106,29 @@ not in its set) and its `pm_lsp` `rename` is refused `invalid_arguments`, while 
 positive control: a `writer` worker's `pm_build` and `pm_lsp` `rename` on its leased task's scope are served.
 Source:: design review.
 
+[#PM-WATCH-TOOL-22]
+=== PM-WATCH-TOOL-22: Open: what `pm_state` and `pm_do` answer for an unreadable pending entry record
+
+Anchor:: link:../specification/mcp-tools/01-core-workflow-tools.adoc#bootstrap-entries[MCP Tools § Bootstrap Entries],
+link:../specification/mcp-tools/04-errors-and-testing.adoc#protocol-errors-vs-domain-workflow-failure-states[§ Protocol Errors & Domain Workflow Failure States]
+Hazard:: Undecided: the engine refuses an `entry_id` whose pending entry record exists but cannot be read, or names
+neither `plan` nor `epic`, with its own reason `entry_unreadable`: never a live bootstrap, and never `scope_not_found`,
+which it keeps for a record that is gone (a consumer fails closed on `unreadable`,
+link:../specification/store-schemas/01-format-and-session-log.adoc#format-versioning[Store Schemas § Format Versioning],
+rule 4). The closed `error_code` set of the tools names no code for this case. A binding that answers it
+`scope_not_found` tells the entry session that the entry ended while its record still exists, so the session opens a
+second entry; one that answers `internal_fault` hides a damaged store behind a generic fault. Options: (1) a new
+`error_code` `entry_unreadable` of class `server_fault` with `audit_id`, like `file_unreadable`; (2) `internal_fault`
+with `audit_id`. Recommendation: 1, so that the entry session can relay the damaged entry to the operator by its id.
+Guard:: The plan binding `pm_state` and `pm_do` decides the point (with the operator, because it extends the closed
+error codes), records the result in this specification and in the `entry_id` row of the Identifier Registry, and
+deletes this item. Its test drives an unreadable record through both tools and asserts the decided code; matched
+control: a deleted record answers `scope_not_found`.
+Source:: `pm-mcp-core` work package `entity-addressing`:
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/AddressResolution.java[AddressResolution]
+(reason `ENTRY_UNREADABLE`),
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/adr/workflow-engine/007-refused-address-is-a-value.adoc[workflow-engine ADR 007].
+
 == Orthogonal Service Capability Tool Schemas (`pm_build`, `pm_lsp`)
 
 [#PM-WATCH-TOOL-3]

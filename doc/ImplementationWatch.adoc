@@ -107,7 +107,7 @@ item.
 
 |link:implementation-watch/mcp-tools.adoc[MCP Tools]
 |`TOOL`
-|21
+|22
 |link:specification/mcp-tools.adoc[MCP Tool & Resource Surface Specification]
 
 |link:implementation-watch/hypermedia-format.adoc[Hypermedia Format]
