@@ -14,7 +14,7 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 
 * *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `== UC-<AREA>-<N>: <title>`. A number is never reused.
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
-* *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys. The one exception is link:use-cases/02-entry.adoc#UC-ENT-1[UC-ENT-1]: the first command after installing is typed in a terminal, so the entry is bound to the terminal client by its nature and names its steps.
+* *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys. The two exceptions are bound to one client by their nature: link:use-cases/02-entry.adoc#UC-ENT-1[UC-ENT-1], whose first command after installing is typed in a terminal, so it is bound to the terminal client and names its steps; and link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3], designing a process, which needs a unit's text beside its structure and is offered by the web app only.
 * *Status*: each use case states one of `DRAFT` (not yet agreed by the operator; its open points named where there are any), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
 * *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit; the arrows carry the outcomes. The diagram shows the process, never a screen. One legend holds for every diagram, and no diagram repeats it:
 ** `[S]` the server acts.
@@ -66,7 +66,7 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-PLN`
 |link:use-cases/03-plans.adoc[03-plans.adoc]
-|Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, designing a plan's process, and following an epic; the work that ended; catching up on what happened through the reports to the operator (link:use-cases/03-plans.adoc#UC-PLN-6[UC-PLN-6]).
+|Working with running plans and epics: seeing what runs across projects, following a plan down to its parts, deciding what a plan asks, designing a plan's process in the web app (link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3]), and following an epic; the work that ended; catching up on what happened through the reports to the operator (link:use-cases/03-plans.adoc#UC-PLN-6[UC-PLN-6]).
 
 |`UC-PRJ`
 |link:use-cases/04-projects.adoc[04-projects.adoc]
@@ -91,6 +91,5 @@ Design:: the design documents that show it, per client (link:https://github.com/
 What the use cases do not cover yet, each to be decided before a use case is written for it:
 
 * *Deleting archived work*: whether and how the operator deletes or purges archived plans and epics, and the reports the operator has read (link:use-cases/03-plans.adoc#UC-PLN-6[UC-PLN-6]).
-* *Designing a plan's process*: link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3] is a stub; where a design lives, whether a plan can be designed before it starts, which building blocks are offered, and whether the terminal client offers it need the operator's decisions before it is written out.
 
 Not offered, by the operator's decision: pausing an epic as a whole. Its plans are paused one by one (link:use-cases/06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]).

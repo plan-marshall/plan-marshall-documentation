@@ -123,6 +123,9 @@ Beyond the sections each change names in its _Affects_:
 |link:../use-cases/07-system.adoc#change-runtime-metrics[The Runtime's Metrics]
 |the new requirement in `PM-ARCH`, the next free id (the ninth); the closed metric catalogue with names, units, labels, and one writer each; the endpoints `GET /api/v1/system` and `GET /api/v1/system/metrics` and the event `system.metrics` in the event catalogue; the models' hourly figures filled from the metrics stores at the start; the disk use in the periodic sweep; `unavailable` as a value of every figure; the library of the registry, a dependency decision of the operator (open); the OpenMetrics text as an option on the socket only.
 
+|link:../use-cases/03-plans.adoc#change-process-designer[Designing a Process]
+|the new requirement in `PM-WF`; the machine level `<PM_MCP_BASE>/workflows/` in the machine layout and the resolution by level (project, machine, default) in the loader, the composition, and the effective configuration's `units[]`; the missing unit resolving to the next level, and the setup's first run copying no unit; the variants of the plan axes as owned units with their invariants; the machine units in the header digests and in `config_drift`; the endpoints of the units, the catalogue, the validation with its dry run, and placing and removing, with their refusal codes (a compiled-only unit, a changed unit, a failing project); the short landing of a project unit; the audit record of a placing and a removal.
+
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
 
@@ -130,7 +133,7 @@ Beyond the sections each change names in its _Affects_:
 |if the package `cli-test-infra` chooses a seam the operator checks accept only in tests, a statement of it in Operator Channel Isolation, item 2.
 |===
 
-UC-PLN-3 (designing a plan's process) proposes no change yet: its building blocks are open points of the use case, to be worked out there before any specification. link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1 stands on its own (showing, replacing, and extending a phase); UC-PLN-3 is a later user of it.
+UC-PLN-3 (designing a plan's process, in the web app only) builds on link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1, which stands on its own (showing, replacing, and extending a phase); its own change is link:../use-cases/03-plans.adoc#change-process-designer[Designing a Process].
 
 [#conflicts]
 == Conflicts Between the Changes
@@ -283,6 +286,16 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files, a chat about the entry
 |`operator-interaction-contract`; `start-from-clients`; `chat`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
 
+|`process-designer`
+|`pm-mcp-core`
+|Designing a Process: the new requirement, the machine level of workflow units and their resolution by level, the validation with its composition dry run, placing and removing with their audit and the project's short landing, the catalogue of building blocks
+|`workflow-engine`; `static-verifier-and-fuzzer`; `project-units-and-invariants`; `plan-instance`; `phase-sub-workflows`; `recipe-workflows`; `machine-onboarding-unit`; `start-from-clients`; `audit-trail`; UC-PLN-3 agreed
+
+|`designer-contract`
+|`pm-mcp-clients`
+|the client side of Designing a Process: the units with their levels, the catalogue, the validation's findings and composed process, placing and removing, the landing of a project unit in the project's running work
+|`operator-interaction-contract`; `process-contract`; `process-designer`; UC-PLN-3 agreed
+
 |`runtime-control`
 |`pm-mcp-core`
 |The Runtime's Lifecycle: the stop by drain or now and its withdrawal, the restart with its successor's start, the update check under `check_updates`, the upgrade with its way back, the lifecycle state and events; builds on the done packages `runtime-lifecycle` and `service-unit`
@@ -299,4 +312,4 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`operator-interaction-contract`; `runtime-control`; `runtime-metrics`; `token-usage`; UC-SYS agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`, `cli-system` and `web-system` on `system-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`, `cli-system` and `web-system` on `system-contract`, `web-designer` on `designer-contract` (the terminal client has no designer).
