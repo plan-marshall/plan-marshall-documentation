@@ -40,7 +40,7 @@ Beyond the sections each change names in its _Affects_:
 |a consent store in the machine layout; the closed list of consent kinds, with one for running an unknown program to verify its profile, and `check_credential_store` and `verify_providers`; a remembered `run_checkout_scripts` in `consents.json`, keyed by the project and the scripts' digests, never in the enrolment; which consents can never be remembered; one state with several consents answered separately; endpoints to list and withdraw remembered consents, also from the machine's settings (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]).
 
 |link:../use-cases/01-onboarding.adoc#change-machine-scope[Machine Scope]
-|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for cost estimates; how a sub-workflow writes a project or plan level.
+|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for the expected tokens of a task; how a sub-workflow writes a project or plan level.
 
 |link:../use-cases/01-onboarding.adoc#change-two-channels[Operator Choices]
 |the configuration over the local API: every value with its origin (`default`, `machine`, `project`, `team`, `plan`) and what it overrides, `set` and `unset` per key and level, and a later run of an aspect for the machine (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]), a project, or a plan; the runtime refuses an aspect-owned key in `config set` with an error code; a verb that needs a step of the onboarding not done yet is refused with an error code that names the terminal client; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
@@ -104,6 +104,9 @@ Beyond the sections each change names in its _Affects_:
 
 |link:../use-cases/03-plans.adoc#change-reports[Reports to the Operator]
 |the new requirement in `PM-WF`; the report record, its identifier kind (`rep-NNNN`) in the identifier registry, and the journal `state/reports.jsonl` with its leaf lock in the machine layout; the catalogue's subjects and bodies in both languages; the source transition of each kind and how a report a transition owed at a stop is written at the next start; the endpoints, the stream `reports`, and the representation with its `detail` link; a plan's completion report as a resource of an ended plan; `epic.launchable` written by `epic.next-work` only with the mode off.
+
+|link:../use-cases/03-plans.adoc#change-token-usage[Tokens, Not Money]
+|the pointer `reasoning` and the value `"not_applicable"` of `headless.usage` in every shipped profile, with the per-figure declaration of each harness (Claude Code, OpenCode, Antigravity, Codex); the columns `reasoning_tokens` and `harness_version` and the value `not_applicable` in both row schemas; `total_tokens` over five components; the derived `tokens_in` and `tokens_out` with their coverage in every view that shows usage; `cost_usd` kept as recorded data that no view and no rule reads; `usage_report` in the harness enrolment and in the harness list's resource; the usage check of the profile verification's worker stage; recorded harness outputs per harness and version as parsing fixtures; the removal of every spend limit the change lists (anchors, projection, `split_advice`, `spend_exceeded`, the pre-merge spend check, `remediation.spend`, the gate `spend`, `finalize_spend_ratio`) with their rules, states, invariants, and the requirements `PM-WF-7`, `PM-WF-12`, and `PM-WF-17`; the texts of the coverage ("3 of 41 tasks unmeasured", "at least") in both languages.
 
 |link:../use-cases/03-plans.adoc#change-epic-resource[The Epic as a Resource], link:../use-cases/03-plans.adoc#change-event-streams[Events per Scope], link:../use-cases/03-plans.adoc#change-ended-work[Ended Work]
 |the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
@@ -187,8 +190,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`process-contract`
 |`pm-mcp-clients`
-|The Plan's Process as a Structure, Events of the Process: the process resource with the state of every node, and its events
-|`operator-interaction-contract`; `phase-sub-workflows`; UC-PLN-1 agreed
+|The Plan's Process as a Structure, Events of the Process: the process resource with the state of every node, the tokens a running plan used so far, and its events
+|`operator-interaction-contract`; `phase-sub-workflows`; `token-usage`; UC-PLN-1 agreed
 
 |`project-onboarding-unit`
 |`pm-mcp-core`
@@ -207,8 +210,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`onboarding-contract`
 |`pm-mcp-clients`
-|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`); the machine's settings (UC-ONB-10)
-|`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; UC-ONB agreed
+|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`); the machine's settings (UC-ONB-10); what each harness reports of its usage (`usage_report`) in the harness list
+|`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; `token-usage`; UC-ONB agreed
 
 |`entry-contract`
 |`pm-mcp-clients`
@@ -255,20 +258,25 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |An Epic Runs by Itself: the epic's automatic mode and its switch, the overlap wait at admission and the overlap found while running, the epic's reactions on an ended plan (a re-cut applied or waiting for the operator, the next start), the completion review when the epic is through
 |`plan-and-epic-control`; `epic-decomposition`; UC-CTL-2 agreed
 
+|`token-usage`
+|`pm-mcp-core`
+|Tokens, Not Money: the usage recorded as the harness reports it (the pointer `reasoning`, `"not_applicable"`, `reasoning_tokens`, `harness_version`, `cost_usd` recorded only), the one figure `total_tokens` with its split `tokens_in` and `tokens_out` and its coverage, `priced_units` internal only, the profile verification's usage check and `usage_report`, the parsing fixtures, and the removal of the spend limits
+|UC-PLN-1, UC-PLN-5, UC-PLN-6, UC-SYS-2, and UC-ONB-4 agreed
+
 |`operator-reports`
 |`pm-mcp-core`
 |Reports to the Operator: the new requirement, the report record, its catalogue and its journal in the machine scope, read per machine, the endpoints and the stream `reports`, the representation with its `detail` link, the source transition of each kind, a plan's completion report
-|`operator-wait-and-machine-scope`; `entity-addressing`; `plan-and-epic-control`; `epic-auto`; `decision-engine`; `start-from-clients`; UC-PLN-6 agreed
+|`operator-wait-and-machine-scope`; `entity-addressing`; `plan-and-epic-control`; `epic-auto`; `decision-engine`; `start-from-clients`; `token-usage`; UC-PLN-6 agreed
 
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, a plan's settings, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource; the epic's automatic mode and its switch, and the wait `overlap`
-|`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; `epic-auto`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, a plan's settings, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource with the tokens the epic used; the epic's automatic mode and its switch, and the wait `overlap`
+|`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; `epic-auto`; `token-usage`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
 
 |`report-contract`
 |`pm-mcp-clients`
-|the client side of Reports to the Operator: the report and its list, the unread count on entering a client, the notice, reading one or all shown, the `detail` link, and a plan's completion report
-|`operator-interaction-contract`; `overview-contract`; `operator-reports`; UC-PLN-6 agreed
+|the client side of Reports to the Operator: the report and its list, the unread count on entering a client, the notice, reading one or all shown, the `detail` link, and a plan's completion report with its section _tokens_
+|`operator-interaction-contract`; `overview-contract`; `operator-reports`; `token-usage`; UC-PLN-6 agreed
 
 |`start-contract`
 |`pm-mcp-clients`
@@ -282,13 +290,13 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`runtime-metrics`
 |`pm-mcp-core`
-|The Runtime's Metrics: the new requirement, the registry and its catalogue, the figures kept where things happen and filled at the start, the snapshot, the metrics endpoint, and the event `system.metrics`
-|UC-SYS-2 agreed; the operator's decision on the registry's library
+|The Runtime's Metrics: the new requirement, the registry and its catalogue (the models' figures in tokens, no money), the figures kept where things happen and filled at the start, the snapshot, the metrics endpoint, and the event `system.metrics`
+|`token-usage`; UC-SYS-2 agreed; the operator's decision on the registry's library
 
 |`system-contract`
 |`pm-mcp-clients`
-|the client side of the System area: the runtime's lifecycle acts and their states, the version and the newer one, the system view and its live figures, the events of the runtime's lifecycle and of its metrics
-|`operator-interaction-contract`; `runtime-control`; `runtime-metrics`; UC-SYS agreed
+|the client side of the System area: the runtime's lifecycle acts and their states, the version and the newer one, the system view and its live figures in tokens with their split, the events of the runtime's lifecycle and of its metrics
+|`operator-interaction-contract`; `runtime-control`; `runtime-metrics`; `token-usage`; UC-SYS agreed
 |===
 
 The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`, `cli-system` and `web-system` on `system-contract`.

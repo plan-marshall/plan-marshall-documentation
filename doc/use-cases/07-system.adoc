@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » System
 
-The operator looks after the runtime itself: stops it, starts it, restarts it, and upgrades it to a newer version, and sees what it is doing: its version, how long it runs, what it uses of the machine, the work it carries, and what the models cost. The operator does this in the web app or in the terminal client; how each client offers it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator looks after the runtime itself: stops it, starts it, restarts it, and upgrades it to a newer version, and sees what it is doing: its version, how long it runs, what it uses of the machine, the work it carries, and the tokens the models use. The operator does this in the web app or in the terminal client; how each client offers it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#principles]
 == Principles
@@ -131,7 +131,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: see at a glance how the runtime is, what work it carries, and what the models cost, and get from a figure to what it counts.
+Goal:: see at a glance how the runtime is, what work it carries, and the tokens the models use, and get from a figure to what it counts.
 Trigger:: the operator opens the system view of a client, or comes to it from managing the runtime (<<UC-SYS-1>>).
 Preconditions:: the runtime runs.
 Flow::
@@ -151,7 +151,8 @@ Flow::
        │                         jobs (builds, tests) running and queued,
        │                         with their slots; locks held
        │                       • the models, per model and per role: calls,
-       │                         tokens, cost, errors and retries, over the
+       │                         tokens in and out and their total, errors
+       │                         and retries, over the
        │                         last hour ←, today, or the last 7 days
        ▼
   [O] system.view              read; choose the window or the project, or
@@ -169,14 +170,15 @@ A figure leads to what it counts, the running plans to Running Work (link:03-pla
 Variations::
 * *Live*: the view follows the runtime's stream and shows each figure as it changes; a client that loses the stream says so and reads the snapshot again when it is back.
 * *Under load*: the view is a read of kept figures and costs the runtime nothing that grows with the work; it never waits for a project's recovery, and a project still recovering is shown as such.
-* *A figure unavailable* on this machine (CPU on a platform that does not report it, a model's cost its harness does not report) is shown as unavailable, never as `0`; tokens and cost count only what was measured and say how many calls were not (link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store], "unmeasured is never `0`").
+* *A figure unavailable* on this machine (CPU on a platform that does not report it, a token figure its harness does not report) is shown as unavailable, never as `0`; the tokens count only what was measured, say how many calls were not, and a total over them is shown as at least its value. No figure is money, and none is a limit (link:03-plans.adoc#change-token-usage[Tokens, Not Money]; link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store], "unmeasured is never `0`").
 * *Over a restart*: uptime starts again; the work and the models over a window do not, since they are taken from the stores at the start.
 * *A paired device* sees the same view as the terminal client.
 * *The runtime is stopped*: the terminal client shows that it is not running and offers to start it (<<UC-SYS-1>>); the web app cannot reach it and says so.
 * *The draining runtime* shows its state, and what still runs counts down.
-Outcome:: the operator knows how the runtime is, what it does, and what the models cost, and has reached what a figure counts.
+Outcome:: the operator knows how the runtime is, what it does, and the tokens the models use, and has reached what a figure counts.
 Changes::
 * *The runtime's metrics* (<<change-runtime-metrics>>).
+* *Tokens, not money* (link:03-plans.adoc#change-token-usage[Tokens, Not Money]): the one token figure with its split, and no cost.
 Requirements:: none yet: the metrics are a new requirement (<<change-runtime-metrics>>); the usage of a task is specified in link:../specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], the runtime status in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
 
@@ -208,7 +210,7 @@ Gap:: the runtime keeps no figures of its own: the runtime status lists the runt
 Fix::
 * *Requirement (new)*, in link:../requirements/01-architecture.adoc[Core Architecture (PM-ARCH)], the next free id, the ninth of the area: "The system must keep the figures of the runtime as metrics, counters, gauges, and timers from a closed catalogue, each maintained where the event it counts happens and never computed by reading the stores on a request; must serve them to both clients of the operator as a snapshot and as live updates; must show a figure it cannot measure as unavailable, never as zero; and must keep them on the machine, never sending them anywhere." It is written by the implementing package, like every requirement of a change.
 * *The registry*: one registry in the runtime of named counters, gauges, and timers, each name with one writer, its unit, and its labels (project, role, harness, model) from a closed catalogue in the specification; a metric's name is distinct from the names of the metrics store, whose rule of one writer per name it follows.
-* *The catalogue*, first version: the runtime (`runtime.version` and build, `runtime.started_at`, `runtime.uptime`, `runtime.memory.heap`, `runtime.memory.resident`, `runtime.cpu`, `runtime.disk.machine_store`, the listeners and their state); the work (plans and epics by activity and project, tasks queued and running, workers by role, harness, model, and busy or idle, jobs running and queued by kind, build and model slots in use and their caps, locks and leases held); the models (calls, the four token components and their total, `cost_usd`, errors and retries by cause class, per model and role).
+* *The catalogue*, first version: the runtime (`runtime.version` and build, `runtime.started_at`, `runtime.uptime`, `runtime.memory.heap`, `runtime.memory.resident`, `runtime.cpu`, `runtime.disk.machine_store`, the listeners and their state); the work (plans and epics by activity and project, tasks queued and running, workers by role, harness, model, and busy or idle, jobs running and queued by kind, build and model slots in use and their caps, locks and leases held); the models (calls, `tokens_in`, `tokens_out`, and their total `total_tokens` with their coverage, errors and retries by cause class, per model and role; no money figure, link:03-plans.adoc#change-token-usage[Tokens, Not Money]).
 * *Where they come from*: the work's gauges are kept by the transitions, the queue, the supervisor, and the slots, where things happen, and set from the recovered state at the start; the models' figures are counted per hour where a task row is written, and filled at the start from the task rows of the metrics stores, which stay the truth (link:../requirements/01-architecture.adoc#PM-ARCH-6[PM-ARCH-6]: process memory is a cache); the disk use is measured by the periodic sweep, with when; memory and CPU are read from the process (`/proc` on Linux, the task information on macOS), and a value the platform does not give is `unavailable`. Unmeasured usage is counted as such, never as `0`.
 * *Local API*: `GET /api/v1/system` answers the snapshot of the system view, the windows (`hour`, `today`, `7d`) and the project as parameters; `GET /api/v1/system/metrics` answers every metric of the catalogue with its labels; the runtime-wide stream `GET /api/v1/events` carries `system.metrics` with the figures that changed, at most once a second. Both read endpoints never wait for a project's recovery and mark a recovering project. A paired device reads them like every resource.
 * *Exposition*: an option, not required: `GET /api/v1/system/metrics` answered in the OpenMetrics text format for a tool of the operator that holds the runtime token. It is served on the runtime's socket only; a TCP listener of its own on loopback is excluded by link:../requirements/08-security.adoc#PM-SEC-4[PM-SEC-4].
