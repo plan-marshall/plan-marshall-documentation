@@ -94,13 +94,16 @@ Beyond the sections each change names in its _Affects_:
 |the plan's activity `pausing` and `paused` beside the terminal states, and the point of a pause (now, after the task, after the phase); what a pause now does to a job in its retry loop and to a held lock; where a pause after the phase holds when the phase ends in a loop-back; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of an aborted plan and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
 
 |link:../use-cases/05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]
-|the draft as a record apart from the ledger until agreed; the server's checks over a draft; the submits of `decompose` for a rewrite and for talk; how a later run marks a change against a staged row; what `epic.next-work` does while the first decomposition waits.
+|the draft as a record apart from the ledger until agreed; the server's checks over a draft; the submits of `decompose` for a rewrite; how a later run marks a change against a staged row; what `epic.next-work` does while the first decomposition waits.
 
 |link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
-|the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, rewrite, and talk; the `needs_operator` kind of new findings.
+|the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, and rewrite; the `needs_operator` kind of new findings.
 
 |link:../use-cases/03-plans.adoc#change-epic-resource[The Epic as a Resource], link:../use-cases/03-plans.adoc#change-event-streams[Events per Scope], link:../use-cases/03-plans.adoc#change-ended-work[Ended Work]
 |the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
+
+|link:../use-cases/06-controlling-work.adoc#change-chat[Chatting with the Planning Role]
+|the unit section of `chat` and its states; the submit schemas of `replan` and `decompose` in a chat (an answer, a proposed change); the facts of a scope; where the transcript lives and how long; how a revision waits for the next task boundary of a running plan; the re-planning record of an operator's revision outside `replan_budget`; the inbox record `revised`; the representation of a chat for the clients.
 
 |link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
 |the device's label; the closing of a revoked device's streams; the release's confirmation against the engine-owned abort; the closed list of holds, their acts and their arguments, and the end of `facts.operator_command`.
@@ -215,25 +218,30 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |A Recipe Is a Workflow
 |`phase-sub-workflows`; UC-STA-5 agreed
 
+|`chat`
+|`pm-mcp-core`
+|Chatting with the Planning Role: the sub-workflow `chat` and its states, its routing to `replan` for a plan and to `decompose` for an epic, the revision of a plan through the guards of a first plan at the next task boundary, the transcript kept with its subject
+|`operator-wait-and-machine-scope`; UC-CTL-1 to UC-CTL-3 agreed
+
 |`plan-and-epic-control`
 |`pm-mcp-core`
-|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts
-|`operator-wait-and-machine-scope`; UC-CTL-1, UC-CTL-2, UC-CTL-4, and UC-PLN-5 agreed
+|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts; _chat_ among the actions of a plan and an epic
+|`operator-wait-and-machine-scope`; `chat`; UC-CTL-1, UC-CTL-2, UC-CTL-4, and UC-PLN-5 agreed
 
 |`epic-findings-review`
 |`pm-mcp-core`
-|An Epic's Findings and Watches, The Review
-|`plan-and-epic-control`; UC-CTL-3 agreed
+|An Epic's Findings and Watches, The Review, its _chat_ through `chat`
+|`plan-and-epic-control`; `chat`; UC-CTL-3 agreed
 
 |`epic-decomposition`
 |`pm-mcp-core`
-|The Decomposition Is Reviewed
-|`operator-wait-and-machine-scope`; UC-STA-6 agreed
+|The Decomposition Is Reviewed, its _chat_ through `chat`
+|`operator-wait-and-machine-scope`; `chat`; UC-STA-6 agreed
 
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews and of the decomposition, the epic resource
-|`operator-interaction-contract`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, the epic resource
+|`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
 
 |`start-contract`
 |`pm-mcp-clients`
