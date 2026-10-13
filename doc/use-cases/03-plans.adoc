@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Plans
 
-The operator works with running plans and epics: follows them down to the part that needs attention, decides what a plan asks, and shapes the process a plan runs. The operator does this in the web app or in the terminal client; each use case says what the operator achieves, and how each client shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator works with running plans and epics: follows them down to the part that needs attention, decides what a plan asks, shapes the process a plan runs, and catches up on what happened while away. The operator does this in the web app or in the terminal client; each use case says what the operator achieves, and how each client shows it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#UC-PLN-1]
 == UC-PLN-1: Follow a Plan Down to Its Parts
@@ -160,8 +160,8 @@ Actor:: the operator, in the web app or in the terminal client.
 Goal:: see an epic as a whole: what it starts from, how it is cut into workstreams and plans, where each plan is, what landed, what it found and watches, and what it waits for.
 Trigger:: the operator selects an epic in Running Work (<<UC-PLN-4>>), or names it.
 Flow::
-. *The epic.* Its title, since when it runs, its state (running, waiting for the operator, held, landing), how many plans run at once of how many it allows, and its actions (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
-. *Its workstreams.* Each workstream with its plans in the queue's order, each plan with its status (staged, running, pausing, paused, shipped, cancelled, abandoned, held), what it waits for (a dependency, a lock, the scope), and since when; a running plan leads into its plan view (<<UC-PLN-1>>).
+. *The epic.* Its title, since when it runs, its state (running, waiting for the operator, held, landing), whether it starts its plans by itself (automatic on or off), how many plans run at once of how many it allows, and its actions (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
+. *Its workstreams.* Each workstream with its plans in the queue's order, each plan with its status (staged, running, pausing, paused, shipped, cancelled, abandoned, held), what it waits for (a dependency, a lock, the scope, an overlap with a running plan), and since when; a running plan leads into its plan view (<<UC-PLN-1>>).
 . *Its sources.* What the epic starts from, as stored (link:05-starting-work.adoc#change-source-directory[The Source Directory]).
 . *Its landings.* Each landed plan with its pull request and the epic's analysis of the landing.
 . *Its findings and watches.* The open items with their counts, leading into the reviews (link:06-controlling-work.adoc#UC-CTL-3[UC-CTL-3]).
@@ -175,6 +175,58 @@ Changes::
 * *An epic's findings and watches* (link:06-controlling-work.adoc#change-findings-watches[An Epic's Findings and Watches]).
 Requirements:: the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic-view[Terminal Client, An Epic's View]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
+
+[#UC-PLN-6]
+== UC-PLN-6: Catch Up on What Happened
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: learn what happened in the projects, epics, and plans since the operator last looked (a plan started or ended, an epic started its next plan or found an overlap, a project onboarded), in a structured way, without having to act on any of it, and get from each to its details.
+Trigger:: the operator enters a client (logs in, opens the web app, starts the terminal client), which shows how many reports are unread and leads to them in one step; or a new report's notice while a client is open.
+Flow::
++
+[source,text]
+----
+  [S] reports.list             the unread reports, newest first, grouped by
+       │                       project, then epic and plan; each with where
+       │                       it comes from (the project, the epic, the
+       │                       plan, each one step away), its subject, when
+       │                       it happened and when it was sent, and whether
+       │                       it leads to a detail
+       ▼
+  [O] reports.choose           open a report's detail, mark it read, mark
+       │                       all shown read, or leave
+       ├── detail ───────────► [S] reports.detail   the report read; its
+       │                             │              detail shown: a plan's
+       │                             │              completion report, an
+       │                             │              epic's landing or its
+       │                             │              completion review, the
+       │                             │              plan at its re-planning,
+       │                             │              the project
+       │                             ▼ back
+       │                        reports.list
+       ├── mark read ────────► [S] reports.read     the report read, on every
+       │                             │              device ─► reports.list
+       ├── mark all read ────► [S] reports.read     every report shown read;
+       │                                            one that arrived since
+       │                                            stays unread ─► reports.list
+       ▼ leave
+  done                         the unread reports stay unread
+----
+Variations::
+* *A report never asks*: it tells what happened. What needs the operator stays where it is asked, a decision (<<UC-PLN-2>>), another operator wait, or a hold, shown in Running Work (<<UC-PLN-4>>); a report may point at it, never answer it.
+* *Several devices*: a report is read once for the machine; read on one device or client, it is read on every other, and a list open elsewhere drops it.
+* *While a client is open*, a new report appears with a quiet notice, like a decision's announcement but never blocking and never taking the operator's focus; the list, if shown, gains it at its place.
+* *The subject has gone*: a report of a plan or an epic that has ended and is archived leads to its view as it ended (<<change-ended-work>>); one of a released project to what is kept of it.
+* *None unread*: entering a client says so, and the list is empty; read reports are not shown again.
+* *Kept*: an unread report never expires; a read one is kept, and whether and how the operator removes it is the open point _Deleting archived work_ (link:../UseCases.adoc#open-points[Open Points]).
+Outcome:: the operator knows what happened while away, has reached the details that matter, and has no unread report left that the operator does not want to keep unread.
+Changes::
+* *Reports to the operator* (<<change-reports>>).
+* *Ended work* (<<change-ended-work>>), for the details of ended plans and epics.
+* *Events per scope* (<<change-event-streams>>).
+Requirements:: none yet: the requirement is drafted in <<change-reports>>; the web app as the dependable view is link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/reports.adoc[Reports] (what both clients show), link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/completion-report.adoc[Completion Report]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/24-reports.adoc[Terminal Client, Reports]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-reports.adoc[`web-reports`]
 
 [#changes]
 == Changes to the Specification
@@ -345,3 +397,18 @@ Fix::
 * *A chat about ended work*: each ended plan or epic offers a read-only chat over its archived record (outcome, reason, history, decisions, re-planning records, events) with its planning role, `replan` for a plan and `decompose` for an epic, which never changes the archive; its one proposal is a follow-up plan, a description that opens the start of a new plan naming the ended one (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States] (a start opened with a description).
 
+
+[#change-reports]
+=== Reports to the Operator
+
+Gap:: the runtime tells the operator only what needs an act (`needs_operator`, decisions, holds, <<change-needs-operator>>), and its event streams reach a client only while it is open: a client that reconnects gets the events the runtime still holds, or a `reset` (link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], Event streams). Nothing keeps for the operator what happened while no client was open: a plan started or ended, an epic started its next plan, a re-cut applied, a project onboarded. The audit log records transitions, but it is a security record, not a view of the clients (link:../specification/store-schemas/12-machine-stores.adoc#audit-log[Audit Log]). An ended plan has no completion report: its outcome, reason, pull request, deliverables, re-planning records, decisions, spend, and duration are spread over its archive and its records. The word _message_ is taken: plans and epics exchange messages through the outbox, the inbox, and the mailbox (link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox & Plan Mailbox Records]).
+Fix::
+* *Requirement (new)*, in link:../requirements/02-workflow.adoc[Hypermedia Workflow Engine (PM-WF)], the next free id: "The system must write a report for the operator whenever something happens in a plan, an epic, or a project that the operator should know without having to act, from a closed catalogue of kinds; keep every report in the machine scope, an unread one without expiry; serve the unread reports to both clients with where each comes from, its subject, when it happened and when it was sent, and a link to its detail where there is one; mark a report read, for every device of the machine, when the operator marks it read or opens its detail; and never ask anything through a report, so that what needs the operator stays a decision, an operator wait, or a hold." It is written by the implementing package, like every requirement of a change.
+* *A report* is a record of the machine scope: `report_id` (store-assigned, `rep-NNNN`, never reused); `from`, the project (`project_id`) and, where there are, the epic (`epic_id`) and the plan (`plan_id`), each resolved to its resource; `kind`, from the catalogue; `subject`, one line, a text of the catalogue with its arguments, rendered in the client's language; `body`, a short text of the catalogue; `created_at`, when it happened; `sent_at`, when the runtime made it available to the clients (later than `created_at` where it was written after a restart); `read_at` with the channel and device that read it; `detail`, a link to its detail, where there is one. A reason the operator wrote, a provider's text, or a title is an argument, carried verbatim.
+* *The catalogue*, closed, first version, each kind with the transition that writes it: `plan.started` (the start transaction of a plan, `start.create-scope`, naming who started it: the operator, an epic, or a recipe; a plan an epic starts gives this one report, whose `from` names the epic); `plan.ended` (a plan's terminal state, with its outcome `merged`, `no_change`, `handed_back`, `returned`, `cancelled`, `abandoned`, `released`, or `aborted`; detail: its completion report); `plan.revised` (a re-planning applied, `replan.apply`, or a chat's revision, `chat.apply`; detail: the plan at the re-planning); `plan.hold_released` (a hold ended, by an act or by itself, link:06-controlling-work.adoc#change-holds[Holds and Their Acts]); `epic.launchable` (with the epic's automatic mode off, a row became launchable; detail: the epic's view with its _next plan_), `epic.waits_overlap` and `epic.overlap_found` (link:06-controlling-work.adoc#change-epic-auto[An Epic Runs by Itself]); `epic.recut_applied` (a re-cut applied without the operator); `epic.through` (every row shipped or ended; detail: the completion review, or, with automatic off, the epic's view with its _archive_, which runs the review first); `epic.ended` (`epic.archived` or `epic.aborted`, with its `terminal_reason`); `project.onboarded` (the project's onboarding complete); `project.released` (the release of the project); `source.flagged` (the screening flagged a stored source); `decision.closed_elsewhere` (a decision answered in another channel or withdrawn). The detail of a plan's landing in an epic is its completion report, which leads on to the epic's landing record.
+* *Never blocking*: a report has no operator link but _read_; it changes no state, and it adds nothing to `needs_operator`.
+* *Store*: one append-only journal of the machine scope, `<PM_MCP_BASE>/state/reports.jsonl`, with the events `report` and `read`; a report's state (unread, read) is the fold of its events, like an inbox message's (link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox Record]), and the journal has its own leaf lock, taken on the file like the audit log's. A report is appended after the transition it reports has committed; one a transition owed when the runtime stopped is written at its next start, with that `sent_at`. Unread reports never expire; read ones are kept, and removing them is the open point _Deleting archived work_ (link:../UseCases.adoc#open-points[Open Points]).
+* *Local API*: `GET /api/v1/reports?state=unread` answers the unread reports, newest first, with their count, grouped by project, then epic and plan; `POST /api/v1/reports/{report_id}/read` marks one read, and `POST /api/v1/reports/read` marks the reports whose ids the client shows, so that one that arrived since stays unread; a client that opens a report's detail marks it read the same way. Each read records its channel and device and is idempotent. The event stream `GET /api/v1/reports/events` announces a report sent and a report read, with its id.
+* *Representation*: a report links its project, its epic, and its plan, and its detail with the relation `detail`, as an operator resource of the local API (the client representation of link:../discussions/client-specification-changes.adoc#foundations[Foundational Findings], item 2), never model-facing; `subject` and `body` are message keys with arguments (item 4).
+* *The completion report of a plan*, new: `GET /api/v1/plans/{plan_id}/completion`, a view of an ended plan built on its archive and its records: the outcome and its reason, its pull request, the deliverables done, the re-planning records, the decisions taken, the spend, and the duration, from the archived stores; resolved like the ended plan's process (<<change-ended-work>>). An epic's details are its landing record and its completion review.
+Affects:: link:../requirements/02-workflow.adoc[PM-WF] (the new requirement), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (resources, endpoints, the stream), link:../specification/filesystem-layout/02-machine-runtime.adoc#machine-layout[Machine-Wide Runtime Layout] (`state/reports.jsonl`), link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores] (the report record), link:../specification/hypermedia-format/01-representation-and-link-forms.adoc#link-forms[Link Forms] (the `detail` link), the event catalogue and the texts of link:../discussions/client-specification-changes.adoc#foundations[Foundational Findings] (items 3 and 4), link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store], link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#_landing_envelope_emit_landing[Landing Envelope], link:../specification/store-schemas/17-re-planning.adoc#replan-record[Re-Planning Record], link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record], link:../specification/model-work/09-completion-usage-and-spend.adoc#spend-accounting-budget-anchors[Spend Accounting] (the completion report), and the transitions that write a report: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/phase-workflows/08-dynamic-re-planning.adoc#replan-apply[Apply, Re-Entry & Instance Version], link:../specification/model-work/07-untrusted-text-screening.adoc#screener[Screener], link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Release].
