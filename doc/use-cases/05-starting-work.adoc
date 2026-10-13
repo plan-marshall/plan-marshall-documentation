@@ -136,7 +136,7 @@ Variations::
 * *How many plans run at once* is the project's `epic.parallelization_scope`, its machine default 1, and is never asked at the start. The operator raises it through the epic's _Next plan_, which offers to raise it by one when the scope is full (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]), or in the project's settings (<<change-options-when-needed>>).
 * *Whether the epic starts its plans by itself* is the project's `epic.auto_start`, its machine default on, and is never asked at the start: the ready step shows the value in force, and the operator switches it on the epic at any time (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
 * A source that fails, a chat about the entry (with the role `decompose`), leaving, and abandoning are as in <<UC-STA-1>>.
-Outcome:: the epic exists with its sources stored and listed in its ledger, its workstreams and plans drafted from them and agreed by the operator, and starts its plans as they become launchable.
+Outcome:: the epic exists with its sources stored and listed in its ledger, its workstreams and plans drafted from them and agreed by the operator; with automatic on it starts its plans as they become launchable, up to how many may run at once, and with it off it reports them as launchable and waits for the operator's _next plan_.
 Changes::
 * *All interaction in the operator's clients* (<<change-clients-only>>).
 * *Starting from the clients* (<<change-start-from-clients>>), with a chat about the entry (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
@@ -348,7 +348,11 @@ Flow::
   [S] decomposition.commit     the workstreams and the staged plans written
        │                       to the ledger and landed
        ▼
-  epic.next-work               the epic starts the plans that can start
+  epic.next-work               automatic on: the epic starts the plans
+                               that can start, up to the scope; off: it
+                               leaves them staged, reports them launchable
+                               (epic.launchable), and waits for next plan
+                               (UC-CTL-2)
 ----
 +
 The chat is the sub-workflow of link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1].
@@ -357,7 +361,7 @@ Variations::
 * *A failing check* blocks _agree_ and names the plans concerned; the operator edits, drops, or has the plan drafted again.
 * *Leaving* keeps the draft and the decisions made on it; the review continues where it stopped, in either client. The epic starts no plan before the first decomposition is agreed.
 * *The operator's words* are interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); a chat is the one of a plan or an epic (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
-Outcome:: the epic's workstreams and staged plans are in its ledger as the operator agreed them, and the epic starts its plans from them.
+Outcome:: the epic's workstreams and staged plans are in its ledger as the operator agreed them; the epic starts its plans from them by itself with automatic on, and with it off on the operator's _next plan_ (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
 Changes::
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
 Requirements:: the decomposition is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`, `epic.recut`) and link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness].
