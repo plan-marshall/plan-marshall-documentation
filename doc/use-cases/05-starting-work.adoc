@@ -109,7 +109,9 @@ Flow::
        ├── issue ────────────► ↳ source-issue (UC-STA-4)
        ▼ start, every source stored and none unscreened
   [O] start-epic.ready         the epic's title and id, proposed
-       │                       from the sources, both changeable
+       │                       from the sources, both changeable; its
+       │                       mode (automatic or not) shown as the value
+       │                       in force, never asked
        ▼ create
   [S] start-epic.create        the ledger, into which the source directory
        │                       moves, committed and landed; the epic's
@@ -120,9 +122,10 @@ Flow::
        │                       the operator reviews and shapes them before
        │                       anything is committed (UC-STA-6)
        ▼
-  epic.*                       the epic runs and starts its plans; how many
-                               run at once is the project's setting (machine
-                               default 1), never asked
+  epic.*                       the epic runs and, with automatic on, starts
+                               its plans; how many run at once is the
+                               project's setting (machine default 1), never
+                               asked
 ----
 +
 The sub-workflows are the chat (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]), the sources (<<UC-STA-3>>, <<UC-STA-4>>), and the decomposition (<<UC-STA-6>>).
@@ -131,6 +134,7 @@ Variations::
 * *Adopting* an epic that exists in the ledger but not on this machine (another machine started it) is offered instead of a new one, as today (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Epic Bootstrap]).
 * *Its plans and the epic communicate through the server*: a plan sends to its epic's inbox, and the epic to a plan's mailbox (link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/model-work/08-epic-coordination.adoc#plan-mailbox[Plan Mailbox]); no text passes from one to the other through the operator.
 * *How many plans run at once* is the project's `epic.parallelization_scope`, its machine default 1, and is never asked at the start. The operator raises it through the epic's _Next plan_, which offers to raise it by one when the scope is full (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]), or in the project's settings (<<change-options-when-needed>>).
+* *Whether the epic starts its plans by itself* is the project's `epic.auto_start`, its machine default on, and is never asked at the start: the ready step shows the value in force, and the operator switches it on the epic at any time (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
 * A source that fails, a chat about the entry (with the role `decompose`), leaving, and abandoning are as in <<UC-STA-1>>.
 Outcome:: the epic exists with its sources stored and listed in its ledger, its workstreams and plans drafted from them and agreed by the operator, and starts its plans as they become launchable.
 Changes::
@@ -139,6 +143,7 @@ Changes::
 * *The source directory* (<<change-source-directory>>), including the epic's sources.
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
 * *Asked when needed* (<<change-options-when-needed>>).
+* *An epic runs by itself* (link:06-controlling-work.adoc#change-epic-auto[An Epic Runs by Itself]), for the mode shown at the ready step.
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc[Starting Work]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc[Terminal Client, Starting Work]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
