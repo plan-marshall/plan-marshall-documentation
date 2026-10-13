@@ -141,11 +141,10 @@ Hazard:: A unit whose `decide` is entered with every budget spent offers no reme
 without its budget check loops without bound; a unit that skips part of the template or takes a remedy past
 `decide` decides by its wiring instead of by the bound remedies; a land call site forced to route `fix_requested`
 it can never reach invites a fake route.
-Guard:: `DefaultUnitInvariantTest` refuses a weakened fixture for each of `INV-REM-1` to `INV-REM-7`: a `decide`
-entered without `budget-check`, a remedy offered without its bound action and its budget left, a `lost` of `choose`
-or `apply-fix` routed anywhere but `conservative`, a waived terminal entered from a link, a nested commit routing
-`stepped_out` anywhere but `budget-check`, a call site binding a budget above the hard cap, a unit missing a
-template state its action enum needs, and a state, guard, or call argument that takes a remedy past `decide`; a
+Guard:: The refusal of a weakened unit for each of `INV-REM-1` to `INV-REM-7` over units written for the test is
+implemented (`CompiledInvariantsTest` of `pm-workflow`,
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-verify.adoc#_compiled_invariants[Workflow Verification Developer Guide § Compiled Invariants]).
+Remaining: `DefaultUnitInvariantTest` in `pm-mcp-server` runs the same checks over the shipped default units; a
 runtime test asserts that a decision task is created only when `remediation.offer-actions` computes more than one
 remedy and that a single remedy is taken without a task; Rule 6 demands a route for every outcome of the exit
 contract at every call site, `fix_requested` included, and a `land` plan's instance (calls bound `actions=[retry]`)

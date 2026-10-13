@@ -246,67 +246,18 @@ The server verifies that every third-party dependency the plan adds was approved
 
 == Java `FinalizeStepDescriptor` Record Schema & Static Checks
 
-Every built-in, bundle, or project-local finalize step is represented in `pm-workflow` by an immutable `FinalizeStepDescriptor` record capturing all step descriptor facts:
-
-[source,java]
-----
-package de.planmarshall.workflow.finalize;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-public record FinalizeStepDescriptor(
-    String name,
-    int order,
-    boolean defaultOn,
-    Set<String> presets,
-    String description,
-    boolean mutatesSource,
-    boolean headDependent,
-    Optional<InputScope> inputScope,   // required iff headDependent; never defaulted (validator rule 6)
-    List<String> verdictInputs,        // non-empty iff inputScope == DECLARED
-    boolean advancesMainViaRebase,
-    boolean postRunReview,
-    List<String> reads,
-    List<String> destroys,
-    List<String> recordsFacts,
-    Optional<Lane> lane,
-    List<String> requires,
-    List<ConfigurableKey> configurable,
-    Optional<String> persona,
-    List<String> requiresPromptFields,
-    Optional<String> cannotReach,
-    List<String> filesFindings  // finding sources the step may file; empty = files none
-) {
-    /** Lane data as declared by plan-marshall ({@code lane:} frontmatter block). Absent lane = not lane-participating, always kept. */
-    public record Lane(LaneClass laneClass, Optional<String> tier, Optional<String> prunableWhen, String costSize) {}
-    public enum LaneClass { CORE, DERIVED_STATE, PRUNABLE, ADVERSARIAL }
-    /** Closed verdict input scope ({@code input_scope:} frontmatter), see Verdict Input Scope. */
-    public enum InputScope { REMOTE_STATE, OPEN_ENDED, PLAN_FOOTPRINT, DECLARED }
-    /** Operator-configurable step setting ({@code configurable:} frontmatter). */
-    public record ConfigurableKey(String key, String defaultValue, String description) {}
-
-    public static final int PUSH_ORDER = 11;
-    public static final int PRE_PUSH_QUALITY_GATE_ORDER = 10;
-    public static final int MERGE_GATE_ORDER = 70;
-    public static final int POST_RUN_MIN_ORDER = 900;
-    public static final int TERMINUS_ARCHIVE_ORDER = 1100;
-}
-----
+*Status: IN PROGRESS.* Every built-in, bundle, or project-local finalize step is represented in `pm-workflow` by the immutable record https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/finalize/FinalizeStepDescriptor.java[`FinalizeStepDescriptor`] with its nested types `Lane`, `LaneClass`, `InputScope`, and `ConfigurableKey` and its order constants (https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-finalize.adoc[Finalize Pipeline Developer Guide]); `pm-workflow` holds no table of the default steps, whose roster is part of the assembly.
 
 *Assurance Verdict*: Every finalize step record carries `assurance_verdict` (`checked`, `degraded`, `not_reached`, `never_performed`, or `attempted_over_empty_scope`); a record without it reads `unadjudicated`, never a pass. A gate step declares in `cannotReach` the defect class it cannot detect (for example `ci-verify`: unreviewed semantics and untested paths), which is rendered with its verdict. An empty examined scope renders "NONE — this pass analysed no dimension; it certifies nothing".
 
 === Build-Time & Startup Static Invariant Verification (`FinalizePipelineValidator`)
 _Implementation watch: link:../../implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-3[PM-WATCH-DSL-3], link:../../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-20[PM-WATCH-GEN-20], link:../../implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-39[PM-WATCH-PHASE-39], link:../../implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-55[PM-WATCH-PHASE-55]_
 
-`FinalizePipelineValidator` validates the complete registered `List<FinalizeStepDescriptor>` at build time (via JUnit tests, over the default roster) and on every load of a project's finalize unit (over the project's roster: the default descriptors of the steps its `finalize.pmwf` contains plus its project step descriptors), failing closed on any violation; a violation in a project roster refuses the project's plan lifecycle with the file and line (link:../workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL Specification, Project-Owned Workflow Units & Compiled Invariants]):
+`FinalizePipelineValidator` validates the complete registered `List<FinalizeStepDescriptor>` at build time (via JUnit tests, over the default roster) and on every load of a project's finalize unit (over the project's roster: the default descriptors of the steps its `finalize.pmwf` contains plus its project step descriptors), failing closed on any violation; a violation in a project roster refuses the project's plan lifecycle with the file and line (link:../workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL Specification, Project-Owned Workflow Units & Compiled Invariants]).
 
-1. *Order Uniqueness (No Collisions)*: For all distinct descriptors $A \neq B$, $A.\text{order}() \neq B.\text{order}()$. Tie-breaking by list insertion order is strictly forbidden.
-2. *Pre-Push Quality Gate Placement*: `default:pre-push-quality-gate` must have $\text{order} == 10$, `default:push` must have $\text{order} == 11$, and no step may occupy an order between them.
-3. *Source-Mutation Before Merge Gate (`mutatesSource`)*: Every descriptor with `mutatesSource == true` must satisfy $\text{order} < \text{branchCleanup.order}()$ (`70`). Every step with $\text{order} \ge 70$ must have `mutatesSource == false` (supported at runtime by the post-run source guard, which checks `git status --porcelain` after every post-merge step to detect stray tracked writes).
-4. *Post-Run Review & Source-Mutation Mutual Exclusion (`P1 \land P2`)*: No descriptor may declare both `postRunReview == true` and `mutatesSource == true`. Every descriptor with `postRunReview == true` must satisfy $900 \le \text{order} \le 1000$ (`emit-landing` at `1000` is a post-run review step).
-5. *`reads` / `destroys` Data-Dependency Ordering*: For every artifact token $X \in A.\text{reads}()$ and any step $D$ with $X \in D.\text{destroys}()$, $A.\text{order}() < D.\text{order}()$ (no read-after-destroy: e.g., all `reads: [worktree]` steps precede `branch-cleanup` at `70`; all steps precede `archive-plan` at `1100` which `destroys: [plan-directory]`). For `X == "metrics"`, every consumer declaring `reads: [metrics]` either orders after the producer ($\text{order} > \text{recordMetrics.order}()$, `998`: `print-phase-breakdown` at `999`, `emit-landing` at `1000`) or reads a labelled snapshot (`plan-retrospective` at `995`). The engine has one metrics reader, the composition function of `record-metrics`: for a consumer ordered after `998` it returns the recorded `metrics.json`, and for a consumer ordered before it a snapshot composed at the consumer's call and labelled `measured_until`, never the unwritten store. A consumer before `998` that renders a snapshot figure without its `measured_until` label violates the rule at runtime.
-6. *Anchor & Fact Contract Completeness*: Every descriptor with `headDependent == true` declares `inputScope` from the closed set `remote_state`, `open_ended`, `plan_footprint`, `declared` (xref:06-finalize-re-entry-and-merge.adoc#verdict-input-scope[Verdict Input Scope]); a missing `inputScope` on a `headDependent` step is a validation error and is never defaulted, and a descriptor with `headDependent == false` declares neither `inputScope` nor `verdictInputs`. `inputScope == declared` requires non-empty `verdictInputs`; every other value requires `verdictInputs.isEmpty() == true`. And every step whose `done` outcome is reachable through a no-op/skipped branch as well as a work-performing branch must include `"work_performed"` in `recordsFacts` and emit `work_performed=true|false`.
-7. *No Guard After the Irreversible Move*: No step with $\text{order} > \text{MERGE\_GATE\_ORDER}$ (`70`) may declare an outcome that refuses on its inputs; post-merge steps record degraded results (`indeterminate` facts, `landing_delivery: pending`, carried late findings, owed items) instead. An I/O failure of a post-merge step routes to a bounded `retry` state or `finalize.step-failed`, never to a refusal that strands the merged plan. There is no exception: `archive-plan` holds no open pull request.
-8. *Declared Finding Sources*: The finding-filing step set is $\{d : \neg d.\text{filesFindings}().\text{isEmpty}()\}$ over the registered roster; it is derived, never listed. At runtime the findings store refuses a write from a step whose `filesFindings` does not contain the finding's `source`.
+The validator, https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/finalize/FinalizePipelineValidator.java[`FinalizePipelineValidator`] with its closed rule set https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/finalize/PipelineRule.java[`PipelineRule`], implements rules 1 to 5, the input-scope part of rule 6, and the derivation of the finding-filing steps of rule 8 over a roster it takes as input, and the loader of the project-owned units runs it over the project roster on every load (https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-finalize.adoc#_the_rules[Finalize Pipeline Developer Guide § The Rules]). The build-time run over the default roster belongs to the assembly and is not implemented yet. What a descriptor cannot decide stays here, a named hook of `PipelineRule`, not implemented yet:
+
+* *Runtime guards of rules 3 and 5*: the post-run source guard checks `git status --porcelain` after every post-merge step to detect stray tracked writes. The engine has one metrics reader, the composition function of `record-metrics`: for a consumer ordered after `998` it returns the recorded `metrics.json`, and for a consumer ordered before it a snapshot composed at the consumer's call and labelled `measured_until`, never the unwritten store. A consumer before `998` that renders a snapshot figure without its `measured_until` label violates the rule at runtime.
+* *Rule 6, `work_performed`*: every step whose `done` outcome is reachable through a no-op/skipped branch as well as a work-performing branch must include `"work_performed"` in `recordsFacts` and emit `work_performed=true|false`.
+* *Rule 7, No Guard After the Irreversible Move*: No step with $\text{order} > \text{MERGE\_GATE\_ORDER}$ (`70`) may declare an outcome that refuses on its inputs; post-merge steps record degraded results (`indeterminate` facts, `landing_delivery: pending`, carried late findings, owed items) instead. An I/O failure of a post-merge step routes to a bounded `retry` state or `finalize.step-failed`, never to a refusal that strands the merged plan. There is no exception: `archive-plan` holds no open pull request.
+* *Rule 8 at runtime*: the findings store refuses a write from a step whose `filesFindings` does not contain the finding's `source`.
