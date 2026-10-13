@@ -7,7 +7,7 @@ link:../UseCases.adoc[Use Cases] » Onboarding
 
 The operator makes a machine ready for `PM-MCP`: the languages it speaks, the harnesses it works with, the models plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
 
-Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, and each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow it calls. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app or in the terminal: both render the same states, and each use case is designed for both. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
+Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow it calls, and <<UC-ONB-10>> changes later what they recorded. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app or in the terminal: both render the same states, and each use case is designed for both. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
 
 [#preselect-first]
 *Preselect as much as possible, hide nothing.* Every choice opens with a proposal the operator can accept as it is: the defaults, the found harnesses, the detected tools. The operator sees the whole of what will be recorded in one overview and can change any part of it; the detail is one step away, never in the way.
@@ -16,7 +16,7 @@ Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the on
 *Every verification reports back.* A state that checks something (a harness, a profile, a credential store, a provider) shows each check as its own line that ends in a checkmark or in an error; an error names what failed, the answer that was received, and the fix. No check passes silently, and none fails without saying why.
 
 [#consent-first]
-*Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes; only where the action is optional (an icon, an advice, a script whose result can stay unknown, the description of modules) does the process go on without it. Every kind of consent, where it is asked, and whether it can be remembered is listed in <<consents>>; a remembered consent can be withdrawn in the machine settings at any time (<<change-consent>>).
+*Nothing happens until the operator says so.* Every action that looks at the machine or acts on it (looking for programs, running a found program, asking a model) is preceded by a consent state in which the operator is asked first. The answers are _yes_, _yes and don't ask again_ for this action, and _no_. With _no_ the process stays where it is: nothing is looked at, nothing is run, nothing is recorded, and the onboarding does not progress past that point until the operator says yes; only where the action is optional (an icon, an advice, a script whose result can stay unknown, the description of modules) does the process go on without it. What the operator does with their own hands needs no consent: a credential the operator types is stored on that act alone. Every kind of consent, where it is asked, and whether it can be remembered is listed in <<consents>>; a remembered consent can be withdrawn in the machine settings at any time (<<UC-ONB-10>>, <<change-consent>>).
 
 [#machine-defaults]
 *The machine sets defaults, not final values.* Every value the onboarding records is the default of every project, and a project may set its own: the model language, the allowed models, the role assignment, the providers, and the plan defaults. Only what is a fact of the machine itself has no project value: the interface language (the operator's own), the enrolled harnesses (the programs installed here, with their paths and digests), and the credential store (where this machine keeps its secrets). A plan overrides what <<change-plan-overrides>> names.
@@ -30,71 +30,19 @@ The closed list of the consent kinds, for every use case that asks one (<<change
 |===
 |Kind |What the operator allows |Asked in |Remembered |With _no_
 
-|`scan_harnesses`
-|look for the executables of the harnesses the profiles know, and run their version probe
-|`harness.consent` (<<UC-ONB-4>>)
-|yes, for the machine
-|stays
-
-|`fetch_icons`
-|download the makers' icons of the found harnesses, once, through the runtime
-|`harness.icons-consent` (<<UC-ONB-4>>)
-|yes, for the machine
-|goes on with monograms
-
-|`probe_harness_login`
-|run the login probe of each chosen harness: its command, or one minimal headless call with its token cost
-|`harness.probe-consent` (<<UC-ONB-4>>)
-|yes, for the machine
-|stays
-
-|`verify_harness_profile`
-|run a harness the binary does not know, to verify its draft profile, with the token cost of its stages
-|`harness.add-consent` (<<UC-ONB-4>>)
-|never
-|stays
-
-|`probe_harness_models`
-|run the model probe of each enrolled harness
-|`catalogue.consent` (<<UC-ONB-5>>)
-|yes, for the machine
-|stays
-
-|`model_advice`
-|a task of the steward, with its expected cost
-|`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>)
-|yes, for the machine
-|goes on without the advice
-
-|`scan_providers`
-|look for the CLI tools of the providers and the credentials already stored
-|`providers.consent` (<<UC-ONB-8>>)
-|yes, for the machine
-|stays
-
-|the automatic run
-|every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only
-|`auto.consent` (<<UC-ONB-2>>)
-|never
-|back to `onboard.mode`
-
-|`inspect_checkout`
-|read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the version probes of host tools from the absolute directories of the login `PATH`
-|`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
-|yes, for the project
-|stays
-
-|`run_checkout_scripts`
-|run the named scripts of a project's checkout, each with its arguments, confined like a job
-|`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
-|yes, for the project and the digest of each script
-|goes on, what needs the scripts unknown
-
-|`model_cost`
-|a role task whose expected cost is shown first: the qualification of the roles, the description of the modules
-|`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1])
-|yes, for the project
-|qualification: stays; description: goes on without
+|`scan_harnesses` |look for the executables of the harnesses the profiles know, and run their version probe |`harness.consent` (<<UC-ONB-4>>) |yes, for the machine |stays
+|`fetch_icons` |download the makers' icons of the found harnesses, once, through the runtime |`harness.icons-consent` (<<UC-ONB-4>>) |yes, for the machine |goes on with monograms
+|`probe_harness_login` |run the login probe of each chosen harness: its command, or one minimal headless call with its token cost |`harness.probe-consent` (<<UC-ONB-4>>) |yes, for the machine |stays
+|`verify_harness_profile` |run a harness the binary does not know, to verify its draft profile, with the token cost of its stages |`harness.add-consent` (<<UC-ONB-4>>) |never |stays
+|`probe_harness_models` |run the model probe of each enrolled harness |`catalogue.consent` (<<UC-ONB-5>>) |yes, for the machine |stays
+|`model_advice` |a task of the steward, with its expected cost |`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>) |yes, for the machine |goes on without the advice
+|`check_credential_store` |write, read, and delete one test entry in the chosen OS credential store (the keychain) |`store.consent` (<<UC-ONB-7>>) |yes, for the machine |stays
+|`scan_providers` |look for the CLI tools of the providers and the credentials already stored |`providers.consent` (<<UC-ONB-8>>) |yes, for the machine |stays
+|`verify_providers` |call each chosen provider with its credential, and run its CLI tool |`providers.verify-consent` (<<UC-ONB-8>>, <<UC-ONB-10>>) |yes, for the machine |stays
+|the automatic run |every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only |`auto.consent` (<<UC-ONB-2>>) |never |back to `onboard.mode`
+|`inspect_checkout` |read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the host tools' version probes from the absolute directories of the login `PATH`; changes nothing |`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |stays
+|`run_checkout_scripts` |run the named scripts of a project's checkout, each with its arguments, confined like a job |`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project and the digest of each script, in `consents.json` (never in the enrolment) |goes on, what needs the scripts unknown
+|`model_cost` |a role task whose expected cost is shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
 |===
 
 A grant is not a consent: reading the issues of another repository (link:05-starting-work.adoc#UC-STA-4[UC-STA-4]) is a cross-repository read grant, kept with the grants.
@@ -105,57 +53,44 @@ A grant is not a consent: reading the issues of another repository (link:05-star
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal of the machine.
 Goal:: get from a freshly installed `PM-MCP` to a machine on which the first project can be set up, in one guided run.
-Trigger:: the operator enters on a machine that is not fully onboarded (link:02-entry.adoc#UC-ENT-1[UC-ENT-1]) and chooses to go on in the terminal or in the web app. A later run of one aspect starts from the machine settings of either client.
+Trigger:: the operator enters on a machine that is not fully onboarded (link:02-entry.adoc#UC-ENT-1[UC-ENT-1]) and chooses to go on in the terminal or in the web app. A later run of one aspect starts from the machine settings of either client (<<UC-ONB-10>>).
 Preconditions:: the binaries are installed (link:../specification/cli-and-security/01-cli-and-installer.adoc#installation-layout[Installation Layout]); the runtime can be started.
 Flow::
 +
 [source,text]
 ----
-  onboard.entry                      first run, or a later run of one aspect
-       │ first run                           │ reconfigure <aspect>
-       │                                     └──────────► the sub-workflow of that aspect,
-       │                                                   then onboard.completed
+  onboard.entry                first run, or a later run of one aspect
+       │ first run                     │ reconfigure <aspect> (UC-ONB-10)
+       │                               └──► ↳ the sub-workflow of that aspect,
+       │                                      then onboard.completed
        ▼
-  [O] onboard.mode             guided, or automatic (UC-ONB-2)
-       │ guided                      │ automatic ──► UC-ONB-2, then onboard.completed
+  [O] onboard.mode             guided, or automatic
+       │ guided                      │ automatic ──► ↳ auto (UC-ONB-2),
+       │                             │               then onboard.completed
        ▼
-  ┌──────────────────────────┐
-  │ onboard.language         │  UC-ONB-3   first: every later screen is in it
-  └────────────┬─────────────┘
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.harnesses        │  UC-ONB-4   one scan, every harness found; no
-  └────────────┬─────────────┘             model yet: server and operator only
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.models           │  UC-ONB-5   from here on a model may advise
-  └────────────┬─────────────┘
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.assign-roles     │  UC-ONB-6
-  └────────────┬─────────────┘
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.credential-store │  UC-ONB-7   before any credential is entered
-  └────────────┬─────────────┘
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.providers        │  UC-ONB-8   uses the credential store of UC-ONB-7
-  └────────────┬─────────────┘
-               ▼
-  ┌──────────────────────────┐
-  │ onboard.plan-defaults    │  UC-ONB-9   how plans run unless a project or
-  └────────────┬─────────────┘             a plan says otherwise
-               ▼
-  onboard.completed                  names the next step: enrol and set up a project
+  ↳ onboard.language           UC-ONB-3   first: every later screen is in it
+       ▼
+  ↳ onboard.harnesses          UC-ONB-4   one scan, every harness found; no
+       ▼                                  model yet: server and operator only
+  ↳ onboard.models             UC-ONB-5   from here on a model may advise
+       ▼
+  ↳ onboard.assign-roles       UC-ONB-6
+       ▼
+  ↳ onboard.credential-store   UC-ONB-7   before any credential is entered
+       ▼
+  ↳ onboard.providers          UC-ONB-8   uses the credential store of UC-ONB-7
+       ▼
+  ↳ onboard.plan-defaults      UC-ONB-9   how plans run unless a project or
+       ▼                                  a plan says otherwise
+  onboard.completed            names the next step: enrol and set up a project
 ----
-Variations:: the operator stops at any state; the next run resumes there, in the web app or the terminal alike. The remembered consents are listed in the machine's settings, where the operator withdraws any of them (<<change-consent>>). A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
+Variations:: the operator stops at any state; the next run resumes there, in the web app or the terminal alike. The remembered consents are listed in the machine's settings, where the operator withdraws any of them (<<UC-ONB-10>>). A later run of one aspect starts its sub-workflow with the current values as the proposal: the first run and a later change are one process, as the project setup's `first_run` and `reconcile`.
 Outcome:: the languages chosen, the harnesses enrolled with one of them the default, the catalogue of allowed models recorded, every role assigned a harness and a model, the credential store chosen, the machine's providers recorded, and the default way plans run.
 Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
 Requirements:: none yet; the parts that exist are named in each use case below.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#frame[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#frame[Web App, Onboarding]
 
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
@@ -170,31 +105,34 @@ Flow::
 ----
   [O] auto.consent             one consent for everything the automatic run
        │                       does, listed in full: the consents of UC-ONB-4
-       │                       to UC-ONB-8 (<<consents>>), for this run only, and
-       │                       that it asks no model
+       │                       to UC-ONB-8, for this run only, and that it
+       │                       asks no model
        ├── no ──────────────► onboard.mode   nothing was done
        ▼ yes
   [S] auto.run                 each sub-workflow with its proposal accepted:
-       │                       the system language for both languages, the
+       │                       the system language for both languages,
        │                       every supported harness found, the first one
-       │                       the default, and their models, the default role assignment,
-       │                       the OS credential store where available, the
-       │                       providers whose tools are found, the default
-       │                       plan behaviour; every check reports ✓ or ✗
+       │                       the default, and their models, the default
+       │                       role assignment, the OS credential store where
+       │                       available, the providers whose tools are
+       │                       found, the default plan behaviour; every check
+       │                       reports ✓ or ✗
        ├── needs the operator ─► the state that needs it (a login, a token,
-       │                         no harness found), then auto.run continues
+       │                         no harness found, the model ids of a harness
+       │                         that cannot list its models), then auto.run
+       │                         continues
        ▼
   [O] auto.result              everything that was decided, per step, with
        │                       the reason and a link to change it there
        ▼
   onboard.completed
 ----
-Variations:: a step whose proposal fails its check stops the run in that step's own state, which names the failure and the fix; the run continues after it.
+Variations:: a step whose proposal fails its check stops the run in that step's own state, which names the failure and the fix; the run continues after it. The consent kinds the run covers are those of <<consents>>.
 Outcome:: as <<UC-ONB-1>>, with every value the automatic run chose shown to the operator.
 Changes::
 * *Automatic onboarding* (<<change-auto>>).
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#auto[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-auto[Terminal Client, The Automatic Run]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#auto[Consents, The Automatic Run's One Consent]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-auto[Terminal Client, The Automatic Run]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#auto[Web App, Onboarding]
 
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Languages
@@ -228,7 +166,7 @@ Outcome:: the interface language and the model language recorded.
 Changes::
 * *Languages and internationalisation* (<<change-i18n>>).
 Requirements:: the model language exists per project as `user_language` (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]); an interface language does not.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-language[Terminal Client, Languages]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-language[Terminal Client, Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding]
 
 [#UC-ONB-4]
 == UC-ONB-4: Enrol the Harnesses
@@ -242,8 +180,6 @@ Flow::
 +
 [source,text]
 ----
-  [S] = the server   [O] = the operator   [M] = a model, through a role task
-
   [O] harness.consent          may the server look for harnesses on this
        │                       machine and run their version probe?
        │                       (consent kind scan_harnesses)
@@ -252,10 +188,13 @@ Flow::
        ▼ yes | yes, don't ask again
   [S] harness.scan             one scan: the executables of every harness the
        │                       profiles know, with their versions
-       ├── none found ──────► [S] harness.none     names how to install a known
-       │                            │                one, and offers to add another
+       ├── none found ──────► [O] harness.none     no usable harness: names how
+       │                            │                to install a known one, and
+       │                            │                offers to add another
        │                            │ recheck ──► harness.scan
        │                            │ add another ──► harness.add
+       │                            │ later ──► the onboarding rests here; its
+       │                            │           next run resumes here
        ▼ found one or more
   [O] harness.icons-consent    may the server fetch the makers' icons of the
        │                       found harnesses? (consent kind fetch_icons)
@@ -283,8 +222,10 @@ Flow::
        ├── one fails ───────► [O] harness.blocked  names the harness, the cause,
        │                            │              and the fix
        │                            │ recheck ──► harness.probe
-       │                            │ leave it out ──► harness.confirm without it
+       │                            │ leave it out (not the last) ──►
+       │                            │     harness.confirm without it
        │                            │ choose again ──► harness.choose
+       ├── every chosen one fails ──► harness.none
        ▼ every chosen one passes
   [O] harness.confirm          per harness: path, version and digest to be
        │                       recorded; the default marked
@@ -317,6 +258,7 @@ Flow::
 ----
 Variations::
 * A known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
+* The step cannot finish without one usable harness: the last chosen harness cannot be left out, and when every chosen harness fails its probe the step goes to `harness.none`, where the operator rechecks, adds one, or leaves the onboarding to continue later.
 * A later run scans again: a harness found that is not enrolled is offered, an enrolled one no longer found is shown as missing and offered for removal; the default can change, and a harness that roles use cannot be removed before they are reassigned (<<UC-ONB-6>>).
 Outcome:: every harness the operator chose is enrolled on the machine, one of them the default.
 Changes::
@@ -326,7 +268,7 @@ Changes::
 * *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon, fetched on consent.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
 Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
 
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Models for the Work
@@ -370,7 +312,7 @@ Changes::
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
 Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Models]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Models]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]
 
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
@@ -384,8 +326,9 @@ Flow::
 +
 [source,text]
 ----
-  [S] roles.load               the roles with their class, tools and form;
-       │                       the catalogue of UC-ONB-5
+  [S] roles.load               the roles with their class, tools and form,
+       │                       the steward not among them; the catalogue of
+       │                       UC-ONB-5
        ▼
   [S] roles.default            applies the shipped default assignment to the
        │                       catalogue: per role a harness, model and effort,
@@ -415,13 +358,15 @@ Flow::
   roles.done                   qualification follows per project
 ----
 Variations:: the operator accepts the defaults as they are: one choice completes the step. The model task fails: `roles.review` stays as it was. A role whose default cannot be met on this machine (no allowed model of its tier on any enrolled harness) is shown without a value and with its advisory, and must be assigned by hand.
-Outcome:: every role names an enrolled harness and an allowed model.
+Outcome:: every role names an enrolled harness and an allowed model. The steward is not among the roles assigned here: it always runs on the default harness with that harness's default model, outside the catalogue and exempt from qualification (<<change-steward-role>>).
 Changes::
-* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
+* *Consent* (<<change-consent>>, <<consents>>): the steward's proposal waits for the operator's consent (`model_advice`).
+* *Steward role* (<<change-steward-role>>): the role that proposes, itself not assigned here.
 * *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
+* *Plan overrides* (<<change-plan-overrides>>): a plan may override the harness, model and effort of a role.
 Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]
 
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
@@ -443,11 +388,18 @@ Flow::
        │                       in it and what does not; the recommendation
        │                       is preselected (the OS store where one is
        │                       available, else files)
-       ├── an OS store not available now ──► [S] store.unavailable
+       ├── an OS store not available now ──► [O] store.unavailable
        │                                         names why (locked, no session
        │                                         bus over SSH) and the fix
        │                                         │ recheck ──► store.detect
-       ▼                                         │ choose another ──► store.choose
+       │                                         │ choose another ──► store.choose
+       ▼ an OS store
+  [O] store.consent            may the server write, read and delete one
+       │                       test entry in it? (consent kind
+       │                       check_credential_store)
+       ├── no ──────────────► stays at store.consent
+       ▼ yes | yes, don't ask again   (skipped when remembered,
+       │                               and for the files)
   [S] store.check              writes, reads and deletes a test entry;
        │                       each ✓ or ✗ with its cause
        ├── fails ───────────► store.unavailable
@@ -459,9 +411,10 @@ Flow::
 Variations:: a later run that changes the store moves every entry to the new store after the operator confirmed the count, deletes each from the old one only once it reads back from the new one, and records the new store last; an interrupted move is resumed by the next run, so a secret is never in both stores after a completed move and never in neither.
 Outcome:: the machine's credential store is recorded; every credential and the enrolment integrity key are kept there.
 Changes::
+* *Consent* (<<change-consent>>, <<consents>>): the check of an OS store waits for the operator's consent (`check_credential_store`); the file store lies in the machine's own directory and is checked without one.
 * *Credential store as an operator choice* (<<change-credential-store>>).
 Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]
 
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
@@ -476,9 +429,10 @@ Flow::
 [source,text]
 ----
   [O] providers.consent        may the server look for CLI tools and stored
-       │                       credentials on this machine?
+       │                       credentials on this machine? (consent kind
+       │                       scan_providers)
        ├── no ──────────────► stays at providers.consent
-       ▼ yes | yes, don't ask again
+       ▼ yes | yes, don't ask again   (skipped when remembered)
   [S] providers.scan           the CLI tools found (git, gh, glab, ...) and the
        │                       credentials already stored
        ▼
@@ -486,8 +440,14 @@ Flow::
        │                       the variant of each (native or CLI)
        ▼
   [O] providers.credentials    each missing credential, entered by the
-       │                       operator only, never through a model
+       │                       operator only, never through a model; stored
+       │                       on that act, without a consent
        ▼
+  [O] providers.verify-consent may the server call each selected provider
+       │                       with its credential, and run its CLI tool?
+       │                       (consent kind verify_providers)
+       ├── no ──────────────► stays at providers.verify-consent
+       ▼ yes | yes, don't ask again   (skipped when remembered)
   [S] providers.verify         every selected provider, one line per check,
        │                       each ending in ✓ or ✗ with its cause:
        │                       reachable; the credential authenticates and
@@ -505,16 +465,16 @@ Flow::
        ▼
   providers.done
 ----
-Variations:: the operator selects no provider: projects work with what their own setup selects.
+Variations:: the operator selects no provider: projects work with what their own setup selects. A credential is rotated or replaced later in the machine settings (<<UC-ONB-10>>).
 Outcome:: the machine's providers recorded as defaults; a project's setup and a single plan may override them.
 Changes::
-* *Consent* (<<change-consent>>): every scan, probe and model task waits for the operator's consent.
+* *Consent* (<<change-consent>>, <<consents>>): the scan (`scan_providers`) and the verification (`verify_providers`) wait for the operator's consent; a credential the operator types is stored without one. No model task runs here.
 * *Machine provider defaults* (<<change-provider-defaults>>).
 * *Provider verification* (<<change-provider-verification>>): a configured provider is verified before it is recorded, and again when the operator asks.
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
 Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]
 
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
@@ -533,27 +493,97 @@ Flow::
        │                       need a provider the machine lacks are marked
        ▼
   [O] defaults.review          one overview, one line per axis:
-       │                       • landing   branch and pull request (git flow)
-       │                                   | commit on main | files only
+       │                       • landing   pull request (landing.pull-request)
+       │                                   | commit on the base branch
+       │                                   (landing.main) | files only
+       │                                   (landing.files)
        │                       • method    test first (TDD) | tests after
        │                       • asking    at every phase | at the key points
        │                                   (outline, merge) | only questions
        │                       each with what it means; accept, or change a line
        ▼
-  [S] defaults.validate        each chosen variant can run on this machine
-       │                       (✓ or ✗ with the cause)
+  [S] defaults.validate        what the machine itself provides for each
+       │                       chosen variant (a provider for a pull
+       │                       request), ✓ or ✗ with the cause; never
+       │                       checked against a repository
        ├── invalid ─────────► defaults.review   names the axis and why
        ▼ valid
   [S] defaults.record          the machine's plan defaults
        ▼
   defaults.done
 ----
-Variations:: the operator accepts the shipped defaults: one choice completes the step.
+Variations:: the operator accepts the shipped defaults: one choice completes the step. A machine default that does not fit a project (`landing.main` on a protected base branch) is refused for that project, with the reason, at its setup or at a plan's start, and the project or the plan chooses another.
 Outcome:: the machine's default for every axis; a project's setup may set its own, and a plan its own where it first needs it, or later (<<change-plan-overrides>>).
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
+* *Plan overrides* (<<change-plan-overrides>>): a plan may set its own variant of an axis.
 Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#plan-defaults[Web App, Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#plan-defaults[Web App, Onboarding]
+
+[#UC-ONB-10]
+== UC-ONB-10: Change the Machine's Settings
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, or a credential.
+Trigger:: the operator opens the machine settings of either client; or a credential has expired or is about to (reported by the status, or a plan held by it, link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
+Preconditions:: the onboarding has completed once (<<UC-ONB-1>>, resting in `onboard.completed`).
+Flow::
++
+[source,text]
+----
+  [O] settings.choose          what the machine recorded, per aspect, with
+       │                       the remembered consents, the documents mode,
+       │                       and the credentials with their status
+       ├── reconfigure <aspect> ──► ↳ the aspect's sub-workflow (UC-ONB-3 to
+       │                              UC-ONB-9) as a later run, its current
+       │                              values the proposal ─► settings.choose
+       ├── withdraw a consent ───► [O] settings.withdraw   the consent, and
+       │                              │                    where it will be
+       │                              │                    asked again
+       │                              ├── keep ──► settings.choose
+       │                              ▼ withdraw
+       │                         [S] settings.remove-consent  removed from
+       │                                consents.json, audited ─► settings.choose
+       ├── documents mode ───────► [O] settings.documents-mode  copy | move |
+       │                              │                         ask
+       │                              ▼
+       │                         [S] settings.record   the machine setting,
+       │                                               audited ─► settings.choose
+       ▼ a credential
+  [O] settings.credential      rotate (a new secret for the entry, its other
+       │                       fields kept) or replace (a new entry, another
+       │                       kind of credential); entered by the operator
+       │                       only, stored on that act, without a consent
+       ▼
+  [S] settings.store-credential  into the recorded store; every token
+       │                         derived from the old secret dropped
+       ▼
+  [O] providers.verify-consent as in UC-ONB-8 (verify_providers)
+       ▼
+  [S] providers.verify         every provider that uses the credential
+       │                       ✓ or ✗ (UC-ONB-8)
+       ├── a check fails ───► [O] providers.failed   as in UC-ONB-8
+       ▼ all pass
+  settings.choose              a plan held by the old credential goes on
+                               (UC-CTL-4)
+----
+Variations::
+* Withdrawing a consent changes nothing that was recorded with it; the consent state is asked again the next time its action runs.
+* The documents mode is the machine's `sources.documents_mode` (`copy`, `move`, or `ask`, the default; link:05-starting-work.adoc#change-documents[Documents]); answering _always_ in a plan's start writes the same setting.
+* A credential that has expired holds every plan that needs it as a condition; the hold names the act that resolves it, which is this flow, and the plan goes on once the new credential verifies (link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
+* In the web app a secret is entered only on the loopback listener; on the LAN listener the form names the terminal command (<<change-web-credentials>>).
+* An aspect a project sets for itself is changed in that project's setup, never here.
+Outcome:: the changed value is recorded for the machine and audited; every project and plan that follows the machine's value uses it from its next read.
+Open points:: the documents mode and the credentials (rotate, replace) are not yet designed in the machine settings of either client.
+Changes::
+* *Consent* (<<change-consent>>, <<consents>>): the remembered consents are listed and withdrawn here.
+* *Operator choices in the web app and the terminal* (<<change-two-channels>>): every aspect can be changed alone later.
+* *Credential store as an operator choice* (<<change-credential-store>>): changing the store is a move.
+* *Provider verification* (<<change-provider-verification>>): a changed credential is verified again.
+* *Credentials in the web app* (<<change-web-credentials>>).
+Requirements:: the credential verbs exist: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials] (`rotate`, `set`).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#remembered[Consents, The Remembered Consents]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-later[Terminal Client, Later Changes]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc[Web App, Machine Settings]
 
 [#changes]
 == Changes to the Specification
@@ -565,19 +595,20 @@ The changes these use cases need, each modelled as the fix of a gap. They are pr
 
 Gap:: nothing in the specification asks before the server looks at the machine, runs a program it found, or spends model tokens; the trust model of the onboarding (<<consent-first>>) has no place to live.
 Fix::
-* Every such action has a consent kind from a closed list, the one of <<consents>>: `scan_harnesses`, `fetch_icons`, `probe_harness_login`, `verify_harness_profile`, `probe_harness_models`, `model_advice`, `scan_providers`, `inspect_checkout`, `run_checkout_scripts` (link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]), `model_cost`; the automatic run asks the ones it needs as one consent for that run.
+* Every such action has a consent kind from a closed list, the one of <<consents>>: `scan_harnesses`, `fetch_icons`, `probe_harness_login`, `verify_harness_profile`, `probe_harness_models`, `model_advice`, `check_credential_store`, `scan_providers`, `verify_providers`, `inspect_checkout`, `run_checkout_scripts` (link:04-projects.adoc#change-project-onboarding[Onboarding a Project as One Process]), `model_cost`; the automatic run asks the ones it needs as one consent for that run.
 * Each action's state is preceded by a consent state (`<sub-workflow>.consent`, or `<sub-workflow>.<action>-consent` where a step asks several) with the operator links `yes`, `yes_remember` (only where the kind can be remembered), and `no`. `no` leaves the scope in the consent state and records nothing, and the state offers the same links again; only for an optional action (<<consents>>, column _With no_) does the process go on without it. The server never takes the action without one of the two yes links.
-* A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`, and for a kind of a project its `project_id` and, for `run_checkout_scripts`, the digest of each script it covers, so that a changed script is asked again); its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it; both are audited.
+* A remembered consent is kept in a machine store `<PM_MCP_BASE>/consents.json` (kind, `granted_at`, channel and `device_id`, and for a kind of a project its `project_id` and, for `run_checkout_scripts`, the digest of each script it covers, so that a changed script is asked again); this store is the only place a remembered consent lives, a project's enrolment holds none. Its consent state is then passed without a question. The machine settings list the remembered consents, and withdrawing one removes it (<<UC-ONB-10>>); both are audited.
+* An act of the operator's own needs no consent: a credential the operator types is stored on that act.
 * A consent covers its action kind, never a wider one: consent to `scan_harnesses` runs no login or model probe.
 Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Stores], link:../specification/workflow-dsl/02-units-jobs-decisions.adoc[Units, Jobs & Decisions] (the consent state as a pattern of the machine scope), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Audit Trail].
 
 [#change-machine-scope]
 === Machine Scope
 
-Gap:: workflows have the scopes plan, epic, workspace (one per enrolled project) and entity; every scoped request needs an enrolled project.
+Gap:: workflows have three top-level scopes, plan, epic, and workspace (one per enrolled project), beside the entity units and sub-workflows that run inside them; every scoped request needs an enrolled project.
 Fix::
 * A fourth top-level scope `machine`, exactly one per machine, with its state in `<PM_MCP_BASE>/machine/mcp/status.json`.
-* Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow of it.
+* Its unit `onboarding.pmwf` is compiled into the binary and never project-owned, like `project-setup.pmwf`; each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow of it, and the machine settings (<<UC-ONB-10>>) are states of it reached from `onboard.completed`.
 * Like the project setup it has no terminal state and rests in `onboard.completed`; `onboard.entry` records `onboard_run: first_run | reconfigure` and the aspect.
 * A role task of the machine scope runs on an enrolled harness like any worker task; no state before `onboard.models` may start one.
 * The onboarding's choice states are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]). Its wait is the one that halts the system: while the onboarding is not complete, the machine is not configured, so the setup gate of every start (`start.open`, today `start.resolve`) refuses to start a plan or an epic and names the terminal client and the web app; the onboarding itself and the operator's verbs work.
@@ -590,8 +621,9 @@ Gap:: every machine-level choice is a `pm-operator` verb today; the web app is s
 Fix::
 * The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app and the terminal client, each as its design says. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
 * A choice is an operator act in either: audited with channel `web` and the `device_id`, or channel `cli`; never relayed by a model and never taken through MCP elicitation. The terminal keeps the operator checks of `pm-operator` (an interactive terminal, no coding-agent environment).
-* Every aspect can also be changed alone later, with its current values as the proposal: the aspect's sub-workflow runs as a later run. A client may take the choices of an aspect as answers given in advance and ask only for the ones it was not given; the terminal client does (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/01-commands.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]).
+* Every aspect can also be changed alone later, with its current values as the proposal: the aspect's sub-workflow runs as a later run (<<UC-ONB-10>>). A client may take the choices of an aspect as answers given in advance and ask only for the ones it was not given; the terminal client does (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/01-commands.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]).
 * Identifiers, and the commands and options of a client, are the same in every language; only the texts are translated (<<change-i18n>>).
+* The same two channels answer what a plan asks: the content answers of channel `cli` (link:03-plans.adoc#change-cli-answers[Answers from the Terminal Client]) rest on this change, and the specification parts it affects are listed here once.
 Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`).
 
 [#change-auto]
@@ -601,7 +633,7 @@ Gap:: every step asks; an operator who does not want to weigh options has no way
 Fix::
 * `onboard.mode` offers _automatic_, in both clients alike.
 * One consent (`auto.consent`) lists every scan and probe of the run and covers exactly those, once; it is not remembered. The automatic run asks no model, so it costs no tokens; the steward can be asked later from the settings.
-* Each sub-workflow runs with its proposal accepted; a state that cannot be decided without the operator (a login, a secret, no harness found) is shown as in the guided run, and the run continues after it.
+* Each sub-workflow runs with its proposal accepted; a state that cannot be decided without the operator (a login, a secret, no harness found, the model ids of a harness that cannot list its models) is shown as in the guided run, and the run continues after it.
 * `auto.result` lists every value with its reason (detected, default, the only option) and the check that confirmed it; each entry opens its step to change it.
 Affects:: the onboarding unit (<<change-machine-scope>>), link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer].
 
@@ -634,10 +666,12 @@ Affects:: link:../specification/client-profiles/01-profile-schema.adoc[Profile S
 
 Gap:: how a plan lands, how it works, and how often it asks are scattered or missing: the finalize phase always lands through a branch and a pull request (or hands back without a push remote), `merge.auto_merge` and `questions.*` are per-project operator keys with a machine default in `project_defaults`, `review_outline` is a choice at a plan's start, and there is neither a way to commit on `main` or to leave the changes as files, nor a test-first method.
 Fix::
-* *Axes and variants are workflow units.* Each axis is a call site of the plan workflow, and each variant a sub-workflow of it: landing `land.pull-request` (branch, pull request, merge, today's finalize), `land.main` (commit and push on the base branch, no pull request), `land.files` (no commit: the changes stay in the working tree, the plan ends handed back); method `method.test-first` and `method.tests-after` (the order of the implementing and the testing tasks in the execute phase); asking `ask.every-phase`, `ask.key-points`, `ask.questions-only` (which phase transitions wait for the operator, the generalisation of plan-marshall's `*_without_asking` settings).
+* *Axes and variants are workflow units.* Each axis is a call site of the plan workflow, and each variant a sub-workflow of it; the variant's prefix names its axis.
+* *Landing.* The landing axis is a call site inside the phase `finalize`: the phase keeps its checks and reviews, and the variant is what lands: `landing.pull-request` (push the branch, the pull request, its reviews and the merge: the landing part of today's finalize), `landing.main` (commit and push on the base branch, no pull request), `landing.files` (no commit: the changes stay in the working tree, the plan ends handed back). The land lane, a plan that calls no outline and no plan phase, is another thing and keeps its name; the landing axis is never called land.
+* *Method and asking.* The method `method.test-first` or `method.tests-after` (the order of the implementing and the testing tasks in the execute phase); the asking `ask.every-phase`, `ask.key-points`, `ask.questions-only` (which phase transitions wait for the operator, the generalisation of plan-marshall's `*_without_asking` settings).
 * *Selection is composition.* The plan instance binds the chosen variant of each axis where the plan first needs it (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]), the project's or machine's value where the plan sets none, and a later change composes a new instance version; the variants not chosen are pruned with the reason `plan_default`, so the process in force shows the choice.
 * *Three levels.* Machine default (this use case, `machine-config.json` `plan_defaults`), the project's choice (its setup), and the plan's own, set where the plan first needs it or later (<<change-plan-overrides>>). The nearest level wins; a level that says nothing defers to the next. The landing axis of a project belongs to the team: it is kept with the team's configuration (`.marshall/config/`), because how a repository lands is a convention of the repository, and it overrides the machine default; the method and asking axes of a project are the operator's (`local-config.json`).
-* *Validation.* A variant that cannot run is refused where it is chosen: `land.pull-request` without a provider, `land.main` on a protected base branch (known from the provider), with the reason.
+* *Validation.* A landing variant is validated where a project is known: at the project's choice in its setup and at a plan's start, `landing.pull-request` without a provider and `landing.main` on a protected base branch (known from the provider) are refused with the reason. The machine default is never validated against a repository: `defaults.validate` checks only what the machine itself provides (a provider for `landing.pull-request`). A machine default that does not fit a project is refused for that project, with the reason, at its setup or at the plan's start. A plan from local changes needs a landing that commits: `landing.files` is refused at its `start.ready` (link:05-starting-work.adoc#UC-STA-9[UC-STA-9]).
 * `merge.auto_merge` and `review_outline` become parts of the asking axis; of `questions.*` only what Waiting for the Operator keeps stays (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]): the modes, the wait and the deadline go. Where the asking axis sets the outline review, the plan does not ask it again (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]).
 Affects:: link:../specification/workflow-dsl/09-plan-instance.adoc#composition-rules[Composition Rules], link:../specification/phase-workflows/06-finalize-re-entry-and-merge.adoc[Finalize, Re-Entry & Merge], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration], link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc[Questions, Waivers & Operator Influence] and link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine] (no in-run operator decision), link:../requirements/08-security.adoc[PM-SEC-3].
 
@@ -688,7 +722,7 @@ Affects:: link:../specification/store-schemas/12-machine-stores.adoc[Machine Sto
 Gap:: no role advises on machine-level choices.
 Fix::
 * A shipped `read_only` role `steward` serves `catalogue.advise` and `roles.propose`. It reads the profiles, the catalogue, the roles with their classes, and the qualification records of the machine's projects; it submits a recommendation with a rationale, never a choice.
-* It runs on the default harness, set in `onboard.harnesses`, with that harness's default model.
+* It is not among the roles <<UC-ONB-6>> assigns: it always runs on the default harness, set in `onboard.harnesses`, with that harness's default model, outside the model catalogue, since it advises at `onboard.models` before the catalogue exists; `model_not_allowed` never applies to it.
 * It runs before any project exists and has no project to be qualified in: like `judge`, it is exempt from qualification; what it submits is a recommendation the operator confirms, never a choice.
 Affects:: link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set], link:../specification/model-work/01-roles-and-configuration.adoc[Roles & Configuration] (qualification and its exemptions).
 
@@ -749,10 +783,10 @@ Affects:: link:../specification/cli-and-security/02-credentials-and-operator.ado
 [#change-plan-overrides]
 === Plan Overrides
 
-Gap:: a plan has no override of a provider, a role, or a model.
+Gap:: a plan has no override of a provider, a role, a model, or how it runs.
 Fix::
-* A plan store `overrides.json`, written only by the operator, in either client: per role `harness`, `model` and `effort`; the variant of an integration; the optional providers (code analysis, review bots) the plan uses.
-* Set where the plan first needs the value (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]), or later from the plan's settings (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]); a later change composes a new instance version with the composition event `override`, under the position rule, and is audited.
+* A plan store `overrides.json`, written only by the operator, in either client: per role `harness`, `model` and `effort`; the variant of each plan behaviour axis (<<change-plan-axes>>); the variant of an integration; the optional providers (code analysis, review bots) the plan uses.
+* Set where the plan first needs the value (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]), or later from the plan's settings (link:06-controlling-work.adoc#UC-CTL-5[UC-CTL-5]); a later change composes a new instance version with the composition event `override`, under the position rule, and is audited.
 * An override passes the same validation as the machine values (enrolled harness, allowed model, available provider).
 Affects:: link:../specification/workflow-dsl/09-plan-instance.adoc[Plan Instance] (composition event), link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc[Plan Instance Store], link:../specification/model-work/04-worker-launch.adoc#harness-selection[Harness Selection].
 

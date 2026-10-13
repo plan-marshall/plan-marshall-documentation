@@ -13,21 +13,23 @@ How the operator gets to work with `PM-MCP`: the first command after installing,
 Status:: `DRAFT`
 Actor:: the operator, in a terminal of the machine the runtime runs on: sitting at it, or logged in over SSH.
 Goal:: get to work with one command and no further friction: onboard the machine when it is not ready, in the terminal or in the web app, and otherwise reach the web app, whether the browser is on this machine or on the operator's own computer at the other end of an SSH connection.
-Trigger:: the operator starts the terminal client without naming anything to do, the first command after installing. On a machine not fully onboarded it asks first whether to go on in the terminal or in the web app (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); on an onboarded machine it connects the web app at once.
+Trigger:: the operator starts the terminal client without naming anything to do, the first command after installing. On a machine not fully onboarded it asks first whether to go on in the terminal or in the web app (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); on an onboarded machine it connects the web app at once. This is the one use case bound to a client by its nature: the first command is typed in a terminal, so its flow names what the terminal client does on its own (`[C]`).
 Flow::
 +
 [source,text]
 ----
-  [S] = the server or the terminal client   [O] = the operator
-
-  [S] entry.runtime            starts the runtime when none runs, opens the
-       │                       loopback web listener
+  [C] entry.runtime            starts the runtime when none runs; the runtime
+       │                       opens the loopback web listener
        ▼
   [S] entry.check-onboarded    is the machine's onboarding complete?
        ├── no ──────────────► [O] entry.where-to-onboard   here in the terminal,
        │                           │                      or in the web app?
-       │                           ├── terminal ──► the onboarding (UC-ONB-1),
+       │                           ├── terminal ──► ↳ the onboarding (UC-ONB-1),
        │                           │                in the terminal client
+       │                           │                ├── complete ──► entry.pairing,
+       │                           │                │   as for a ready machine
+       │                           │                └── left unfinished ──► done;
+       │                           │                    the next entry asks again
        │                           ▼ web app
        │                      entry.pairing, the web app opens at the
        │                      onboarding
@@ -35,14 +37,14 @@ Flow::
   [S] entry.pairing            a pairing code, unless a browser of this
        │                       machine is paired already (web open)
        ▼
-  [S] entry.where              a desktop session, or an SSH session
+  [C] entry.where              a desktop session, or an SSH session
        │                       (SSH_CONNECTION, SSH_TTY)?
-       ├── desktop ─────────► [S] entry.browser    opens the default browser
+       ├── desktop ─────────► [C] entry.browser    opens the default browser
        │                            │ cannot start ──► entry.show
        │                            ▼
        │                       entry.show
        ▼ SSH
-  [S] entry.show               the ways in, each to copy:
+  [C] entry.show               the ways in, each to copy:
        │                       • URL  http://127.0.0.1:<port>/pair#code=…
        │                       • over SSH: the forward command for the
        │                         operator's own computer
@@ -61,18 +63,22 @@ Flow::
   [O] entry.other-device       reach it from a phone or another computer on
        │                       the network? HTTPS on all interfaces with a
        │                       self-signed certificate, fingerprint to compare
-       ├── no (default) ─────► entry.wait, unchanged
+       ├── no ← ─────────────► entry.wait, unchanged
        ▼ yes
-  [S] entry.lan                LAN listener; shows the URL with the host
+  [S] entry.lan                LAN listener
+       ├── cannot open ──────► entry.wait, unchanged, with the cause
+       ▼ open
+  entry.wait                   the ways in gain the URL with the host, its
+                               QR code, and the fingerprint
 ----
-Variations:: the operator forwards to another local port (`-L 8000:127.0.0.1:<port>`): the app works the same. A browser of this machine that is paired already is not paired again.
+Variations:: the operator forwards to another local port (`-L 8000:127.0.0.1:<port>`): the app works the same. A browser of this machine that is paired already is not paired again. The terminal client's own views are reached by its verbs, typed in the console the entry leaves open or given as a command (the overview of running work, link:03-plans.adoc#UC-PLN-4[UC-PLN-4]); the command without a verb never opens one of them, it connects the web app.
 Outcome:: the web app is open in a browser of the operator's choice, paired; nothing is reachable from the network unless the operator said yes in `entry.other-device`.
 Changes::
 * *The terminal client as the entry* (<<change-start>>).
 * *Loopback `Host` without the port* (<<change-loopback-host>>).
 * *A fresh code after a redemption* (<<change-fresh-code>>).
-Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-entry[Terminal Client, The Entry]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-entry[Terminal Client, The Entry]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/entry.adoc[Web App, Entry]
 
 [#UC-ENT-2]
 == UC-ENT-2: Manage Paired Devices
@@ -80,7 +86,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see which browsers can act on the machine and take that right away from any of them.
-Trigger:: the operator opens the paired devices in the machine's settings, or acts on a pairing reported above the prompt (<<UC-ENT-1>>).
+Trigger:: the operator opens the paired devices in the machine's settings, or acts on a pairing the client reports (<<UC-ENT-1>>).
 Flow::
 +
 [source,text]
@@ -91,18 +97,27 @@ Flow::
        ▼
   [O] devices.act              rename one, revoke one, revoke all others, or
        │                       turn the network listener off
+       ├── rename ──────────► [S] devices.rename   the device's new label
+       │                           ──► devices.list
        ├── revoke ──────────► [S] devices.revoke   the device's token is void
        │                           at once; its open pages are closed with the
-       │                           reason
-       ▼
-  devices.list
+       │                           reason ──► devices.list
+       ├── revoke all others ──► [S] devices.revoke-others   as devices.revoke
+       │                           for every device but the one the operator
+       │                           acts from ──► devices.list
+       ├── listener off ────► [S] devices.listener-off   the network listener
+       │                           closes; the devices on the network stay
+       │                           paired, the loopback listener stays open
+       │                           ──► devices.list
+       ▼ done
+  done
 ----
-Variations:: revoking the device the operator acts from asks first and leaves the web app at the pairing page. The terminal client needs no pairing and is never listed.
+Variations:: revoking the device the operator acts from asks first and leaves the web app at the pairing page. The terminal client needs no pairing and is never listed; from it, _revoke all others_ revokes every paired device. _Turn the network listener off_ is offered only while it is on; turning it on again is the entry's `entry.other-device` (<<UC-ENT-1>>).
 Outcome:: only the devices the operator wants can act on the machine.
 Changes::
 * *Devices in both clients* (<<change-devices>>).
-Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#devices[Web App, Machine Settings]
 
 [#changes]
 == Changes to the Specification
@@ -142,8 +157,9 @@ Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-pairing[
 [#change-devices]
 === Devices in Both Clients
 
-Gap:: the paired devices are listed and revoked only by `pm-operator web devices`; the web app shows none, a device has no label the operator chose, and a revoked device's open pages are not told.
+Gap:: the paired devices are listed and revoked only by `pm-operator web devices`; the web app shows none, a device has no label the operator chose, a revoked device's open pages are not told, and the network listener is turned off only by `web disable`, which closes the loopback listener as well.
 Fix::
-* `GET /api/v1/devices` and the acts rename and revoke over the local API, for both clients; a revocation ends the device's event streams with a reason the web app shows.
+* `GET /api/v1/devices` and the acts rename, revoke, revoke all others, and turning the network listener off over the local API, for both clients; a revocation ends the device's event streams with a reason the web app shows.
+* Turning the network listener off leaves the loopback listener open, unlike `web disable`, which closes both.
 Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
