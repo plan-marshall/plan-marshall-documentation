@@ -20,7 +20,7 @@ Flow::
 . *A sub-workflow.* Selecting a sub-workflow shows its workflow the same way, and so on through every level of nesting, down to the leaves: the states that call nothing.
 . *A leaf.* A leaf shows what runs or ran in it: its job or its tasks (role, worker, attempt, outcome), its times, and its outcome; a state waiting for the operator leads into <<UC-PLN-2>>.
 . *Where it is.* At every level the path from the plan down to the level shown is visible, and the way back up; the level the plan is at is marked, and the operator can jump to it.
-Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an epic has a view of its own (<<UC-PLN-5>>).
+Variations:: the view follows the plan as it runs: a state that is entered becomes _running_, one that is left _done_, and a new version of the plan's composition (an outline, a replan) changes what is planned, which the view shows as changed. A plan whose process changed after a state ran shows that state as it was when it ran. This use case is about plans; an epic has a view of its own (<<UC-PLN-5>>). *One step to its project and its epic*: from a plan, its project and its epic, if it has one, are each one step away, wherever the plan is shown (Running Work, the project, the epic, a decision, ended work); a plan opened from its epic's view leads back to the epic in that one step, and from an epic its project is one step away (<<UC-PLN-5>>). The way back to where the plan was opened stays as it is.
 Outcome:: the operator knows, at every level of the plan's process, what is done, what runs, and what is still to come, and has found the part that needs attention.
 Changes::
 * *Phases as sub-workflows* (<<change-phase-sub-workflows>>).
@@ -166,7 +166,7 @@ Flow::
 . *Its landings.* Each landed plan with its pull request and the epic's analysis of the landing.
 . *Its findings and watches.* The open items with their counts, leading into the reviews (link:06-controlling-work.adoc#UC-CTL-3[UC-CTL-3]).
 . *Its events.* What happened in the epic, newest first: plans started and ended, messages of its plans, acts of the operator, decompositions.
-Variations:: the view follows the epic as it runs. An epic that ended shows as it ended, from Ended Work, with a read-only chat about it (<<change-ended-work>>). An epic waiting for the operator (a decomposition, a held item, a decision) shows that first, leading to it.
+Variations:: the view follows the epic as it runs. An epic that ended shows as it ended, from Ended Work, with a read-only chat about it (<<change-ended-work>>). An epic waiting for the operator (a decomposition, a held item, a decision) shows that first, leading to it. From the epic, its project is one step away, and from each of its plans the epic (the rule of <<UC-PLN-1>>).
 Outcome:: the operator knows where the epic stands, plan by plan, and has reached the part to act on.
 Changes::
 * *The epic as a resource* (<<change-epic-resource>>).
@@ -201,6 +201,7 @@ Gap:: the composed process of a plan is available only as DSL text and as a diag
 Fix::
 * `GET /api/v1/plans/{plan_id}/process` returns the composed process of the version in force as a tree: the plan, its phases, every workflow's states in their order, and every call with the sub-workflow it calls, expanded, down to the leaves; each node with its id, its kind (phase, sub-workflow, state, and the kind of a state), and its *state*, derived by the runtime: `done`, `running`, `planned`, `waiting_for_operator`, `failed`, `not_taken`, or `not_in_plan` with its prune reason; with how often it ran and the run it is in, its first and last entry and exit times, and for a leaf its job or tasks.
 * The path to the plan's current position is part of the answer, so a client can mark it and jump to it.
+* The answer names the plan's project (`project_id`, with its `display_name`) and its epic, if it has one (`epic_id`, with its title), each with a link to its resource, so that a client leads to either in one step (<<UC-PLN-1>>).
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], link:../specification/hypermedia-format/01-representation-and-link-forms.adoc#call-path-breadcrumb[Call Path].
 
 [#change-plan-history]
@@ -321,7 +322,7 @@ Affects:: what link:01-onboarding.adoc#change-two-channels[Operator Choices in t
 
 Gap:: an epic is read through `pm://epic/{epic_id}/ledger` and `pm-operator status` only; the local API has no epic resource, no queue row with its status and what it waits for, no registers, no decomposition draft, no archive check, and no endpoint for the operator's acts on an epic.
 Fix::
-* `GET /api/v1/epics/{epic_id}`: the header (title, state, `parallelization_scope`, `needs_operator`), the workstreams with their rows (status, what it waits for, since when, the plan of a running row), the sources' manifest, the landings, the counts of the registers.
+* `GET /api/v1/epics/{epic_id}`: the header (title, state, `parallelization_scope`, `needs_operator`, its project by `project_id` and `display_name` with a link to the project's resource), the workstreams with their rows (status, what it waits for, since when, the plan of a running row), the sources' manifest, the landings, the counts of the registers.
 * Sub-resources: the registers of findings and watches, the decomposition draft while one is open, the archive check, the epic's history of events.
 * The operator's acts on an epic as endpoints (next plan, decompose again, archive, cancel, a review's dispositions), validated like every operator act and answered with the new state.
 Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/mcp-tools/03-resource-uris.adoc[Resource URIs] (`pm://epic/*`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Epic Queue Row].
