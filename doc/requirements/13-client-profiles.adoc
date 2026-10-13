@@ -14,6 +14,19 @@ The identity of an interactive host is declared at entry and recorded with the s
 
 See the link:specification/client-profiles.adoc[Client Profiles & Dynamic Translation Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/filesystem-layout.adoc[Filesystem Layout Specification], link:specification/store-schemas.adoc[Store Schemas Specification], and link:specification/runtime-model.adoc[Runtime & Interaction Model Specification] for implementation details.
 
+Implementation (the stores the entry writes: the scope session log with its closed entry row, which holds no path of the checkout, appended through the scope's transaction; the pending entry record of the workspace scope with a freshly allocated `entry_id`, so concurrent entries never share a record, created, replaced and removed in workspace transactions; `pm-mcp enter` itself, the consumption of a record by the bootstrap and the worker connection are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeSessionLog.java[ScopeSessionLog],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ScopeSessionRow.java[ScopeSessionRow],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/PendingEntryRecord.java[PendingEntryRecord],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/PendingEntryStore.java[PendingEntryStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EntryId.java[EntryId]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeSessionLogTest.java[ScopeSessionLogTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/ScopeSessionRowSchemaParityTest.java[ScopeSessionRowSchemaParityTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/PendingEntryStoreTest.java[PendingEntryStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/PendingEntrySchemaParityTest.java[PendingEntrySchemaParityTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Scope Stores Developer Guide]
+
 Implementation watch: link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-42[PM-WATCH-STORE-42], link:implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-9[PM-WATCH-CLIENT-9]
 
 [#PM-CLIENT-2]

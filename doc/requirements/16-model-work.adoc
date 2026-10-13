@@ -76,6 +76,16 @@ The interactive session that entered a scope may take tasks while it is attentiv
 
 See the link:specification/model-work.adoc[Model Work Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/client-profiles.adoc[Client Profiles & Bundle Manifest Specification], link:specification/mcp-tools.adoc[MCP Tool & Resource Surface Specification], and link:specification/store-schemas.adoc[Store Schemas Specification] for implementation details. The measurements behind its values are recorded in the link:specification/evaluation.adoc[Evaluation Reference].
 
+Implementation (the session generation record: a new generation that fences every earlier generation of the same session identity in one write under the queue lock, the binding rules of the relay start, a new host session and `pm-mcp enter`, the scope a commit sets, and the check that tells a fenced generation from one superseded by an `enter`; the issue at `pm-mcp enter` and at the relay, the refusal of a fenced generation's calls and the session as a worker are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/queue/SessionGenerationStore.java[SessionGenerationStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/queue/SessionGeneration.java[SessionGeneration],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/queue/GenerationCheck.java[GenerationCheck]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/queue/SessionGenerationStoreTest.java[SessionGenerationStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/queue/SessionGenerationCodecTest.java[SessionGenerationCodecTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/queue/SessionGenerationSchemaParityTest.java[SessionGenerationSchemaParityTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-queue.adoc[Session Generations Developer Guide]
+
 [#PM-WORK-6]
 === PM-WORK-6: Role Qualification
 

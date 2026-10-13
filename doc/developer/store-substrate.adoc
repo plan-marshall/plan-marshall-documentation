@@ -47,7 +47,7 @@ A reader of a store document or record accepts exactly the current `format_versi
 
 The message names the file and both versions. A refusal is never repaired: no reader migrates or rewrites what it refuses. The factories are `absent(file, current)`, `unreadable(file, current, detail, cause)` and `ofVersion(file, found, current)`, which picks outdated or newer from the two versions.
 
-`StrictJson` is the package-private reading every codec of `core.store` shares, built on the streaming API of `jackson-core`. `StrictJson.read(file, document, current, reader)` first checks the version (`requireCurrentVersion`: a JSON object with exactly one integer `format_version`, equal to the current one), then lets the codec's reader read the object, and refuses anything that follows it. Whatever the codec throws through the helpers, or the parser throws, becomes a `StoreRefusal` naming the file.
+`StrictJson` is the reading every store codec of `pm-core` shares, built on the streaming API of `jackson-core`. `StrictJson.read(file, document, current, reader)` first checks the version (`requireCurrentVersion`: a JSON object with exactly one integer `format_version`, equal to the current one), then lets the codec's reader read the object, and refuses anything that follows it. Whatever the codec throws through the helpers, or the parser throws, becomes a `StoreRefusal` naming the file.
 
 A new codec follows the shape of `DigestSidecar`, the smallest one:
 
@@ -56,7 +56,7 @@ A new codec follows the shape of `DigestSidecar`, the smallest one:
 . After the loop, call `requireFields(seen, "<object>", …)` for the required fields, and turn an `IllegalArgumentException` of the record's constructor into `unreadable(message, cause)`.
 . Write an instant with `writeInstant`, so it has the one shape `instant` reads: `Instant.toString()`, UTC with `Z`.
 
-A codec outside `core.store` cannot use `StrictJson`; a new store codec belongs in this package.
+`StrictJson`, its reading entry, its field helpers and its refusals are public API of `core.store`, so the codec of a store of another package of `pm-core` (the session generation record of `core.queue`) reads with the same strictness; a `Malformed` a helper throws never leaves `read` on its own (https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/adr/core-queue/002-substrate-codec-helpers-shared-with-core-queue.adoc[ADR core-queue/002]).
 
 Tests: `StoreRefusalTest` (all four outcomes with file, found and current version), the refusal cases of `LeaseCodecTest`, `TransactionJournalTest` and `DigestSidecarTest`.
 
@@ -85,18 +85,19 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7], link:../Requireme
 
 [source,json]
 ----
-{"format_version": 2, "transaction_id": "...", "scope_type": "plan", "scope_id": "...", "created_at": "...",
- "targets": [{"path": "...", "mode": "append", "staged_path": "...", "size_before": 120, "new_size": 160, "new_sha256": "..."}],
+{"format_version": 3, "transaction_id": "...", "scope_type": "plan", "scope_id": "...", "created_at": "...",
+ "targets": [{"path": "...", "mode": "append", "staged_path": "...", "size_before": 120, "new_size": 160, "new_sha256": "..."},
+             {"path": "...", "mode": "delete"}],
  "owed_events": [{"event": "cross_scope_reconciled", "category": "store", "outcome": "succeeded",
                   "details": {"reconciliation": "...", "store": "...", "transaction_id": "..."}}]}
 ----
 
 * `transaction_id` is a `TransactionId`: a lower-case UUID of version 7, so ids sort by time. `TransactionId.ofSuffix(fileName)` recognises it as the last name segment of a staged file, which is how the recovery tells a staged file from any other.
 * `scope_type` is the wire name of a `JournalScopeType` (`plan`, `epic`, `workspace`, `lessons`); `scope_id` is the plan or epic id and `null` for the other two, enforced in both directions.
-* `targets` is never empty. A `Target` has its `Mode` (`REPLACE`, `APPEND`), its paths relative to the path base of the scope, `sizeBefore` and the `StoreDigest` of the store once applied. An `APPEND` target without `sizeBefore` is refused when the record is built and when the document is read; a `REPLACE` target may omit it.
-* `owed_events` lists the audit records the transaction hands over once its targets are applied (`ScopeTransaction.owe`), possibly none. An owed record is an `AuditEvent` whose detail values are strings, integers or lists of strings (`OwedAuditEvents`); version 1, which had no owed records, is refused as `format_outdated`.
+* `targets` is never empty. A `Target` has its `Mode` (`REPLACE`, `APPEND`, `DELETE`), its paths relative to the path base of the scope, `sizeBefore` and the `StoreDigest` of the store once applied. An `APPEND` target without `sizeBefore` is refused when the record is built and when the document is read; a `REPLACE` target may omit it. A `DELETE` target (`Target.delete(path)`) is `{"path", "mode"}` alone: it stages nothing and leaves no store, so a staged path, a size before or a digest is refused on it.
+* `owed_events` lists the audit records the transaction hands over once its targets are applied (`ScopeTransaction.owe`), possibly none. An owed record is an `AuditEvent` whose detail values are strings, integers or lists of strings (`OwedAuditEvents`); version 1, which had no owed records, and version 2, which had no delete target, are refused as `format_outdated`.
 
-`DigestSidecar` is the record of the sidecar document `{"format_version": 1, "stores": {"<relative path>": {"size", "sha256"}}}`. Its entries are kept and written in the sorted order of their paths, so the same digests give the same bytes. `DigestSidecar.load(file)` reads the file without a lock and returns an empty sidecar when it does not exist; `with(path, digest)` returns a copy with one entry changed. `StoreDigest` is `(size, sha256)` with `of(bytes)` (SHA-256 in lower-case hex) and `matches(bytes)`.
+`DigestSidecar` is the record of the sidecar document `{"format_version": 1, "stores": {"<relative path>": {"size", "sha256"}}}`. Its entries are kept and written in the sorted order of their paths, so the same digests give the same bytes. `DigestSidecar.load(file)` reads the file without a lock and returns an empty sidecar when it does not exist; `with(path, digest)` returns a copy with one entry changed, `without(path)` one without the entry of a deleted store. `StoreDigest` is `(size, sha256)` with `of(bytes)` (SHA-256 in lower-case hex) and `matches(bytes)`.
 
 Neither type decides anything: the journal is written by `ScopeTransaction` and read by `JournalRecovery`, and the sidecar is written only through the journal.
 
@@ -153,12 +154,12 @@ try (var transaction = lockManager.openTransaction()) {
 }
 ----
 
-`open` refuses a transaction that does not hold the scope's key (`InternalFaultException`, `store_lock_not_held`). `replace` and `append` collect the targets; they refuse a second target for the same path, the journal or the sidecar of the scope, a path outside the directories the scope owns, and, for `append`, a block that is empty or does not end with a newline. `commit()` runs the five steps:
+`open` refuses a transaction that does not hold the scope's key (`InternalFaultException`, `store_lock_not_held`). `replace`, `append` and `delete` collect the targets; they refuse a second target for the same path, the journal or the sidecar of the scope, a path outside the directories the scope owns, and, for `append`, a block that is empty or does not end with a newline. `commit()` runs the five steps:
 
-. *Stage*: every replaced store to `<store>.tmp.<transaction id>`, every appended block to `<store>.append.<transaction id>`, each forced to disk. Before an append is staged, the tail of its store is repaired (`JsonlStoreFile.repairTail`), so the size before the append is the repaired size.
+. *Stage*: every replaced store to `<store>.tmp.<transaction id>`, every appended block to `<store>.append.<transaction id>`, each forced to disk. Before an append is staged, the tail of its store is repaired (`JsonlStoreFile.repairTail`), so the size before the append is the repaired size. A delete stages nothing.
 . *Journal*: the journal, written by `AtomicStoreFile` with a temporary file named after the transaction id, and forced with its directory.
-. *Apply*: every staged file renamed over its store (`ATOMIC_MOVE`), every staged block appended and its staged file deleted; then the directories of the stores are forced.
-. *Digests*: the sidecar with the new digest of every target; the other entries stay.
+. *Apply*: every staged file renamed over its store (`ATOMIC_MOVE`), every staged block appended and its staged file deleted, every deleted store removed if it exists; then the directories of the stores are forced.
+. *Digests*: the sidecar with the new digest of every replaced or appended store and without the entry of every deleted one; the other entries stay.
 . *Close*: the records the transaction owes handed to the sink, then the journal deleted and its directory forced. If the sink refuses a record, the commit returns with its data complete and leaves the journal, which the next recovery closes after handing the records over.
 
 A transaction is committed once. A commit that fails throws (`UncheckedIOException` for a file that cannot be written) and leaves its journal and staged files for the recovery; it is not tried again. A commit while the journal of an earlier transaction is still open is refused with `IllegalStateException` before anything is written: the scope is recovered first. `ScopeTransaction` creates no directory: the directories of the stores exist before the commit.
@@ -174,7 +175,7 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
 `JournalRecovery.recover(transaction, scope, auditSink)` runs under the key of the scope (refused otherwise) and answers with one of three outcomes:
 
 * `NothingToRecover(deletedStagedFiles)`: there is no journal. Staged files that a transaction left before it journaled are deleted: every regular file in the scope's owned directories whose name ends in `.tmp.<transaction id>` or `.append.<transaction id>`.
-* `RolledForward(journal, applied)`: every target was applied already or is applied now: a replace by renaming its staged file, an append by cutting its store back to `size_before` and appending the staged block. A target is applied already when its store has the size and SHA-256 the journal records. Then the sidecar takes the digests of the journal, one `transaction_rolled_forward` record and the records the journal owes are handed to the sink, and only then the journal and the staged files are deleted. If the sink refuses a record, the outcome is the same, but the journal stays; the next recovery finds every target applied and hands the records over again. `applied` lists the targets this recovery applied.
+* `RolledForward(journal, applied)`: every target was applied already or is applied now: a replace by renaming its staged file, an append by cutting its store back to `size_before` and appending the staged block, a delete by removing its store. A replace or append target is applied already when its store has the size and SHA-256 the journal records, a delete target when its store is absent; a delete is always appliable, so it never makes a journal violate its invariant. Then the sidecar takes the digests of the journal, one `transaction_rolled_forward` record and the records the journal owes are handed to the sink, and only then the journal and the staged files are deleted. If the sink refuses a record, the outcome is the same, but the journal stays; the next recovery finds every target applied and hands the records over again. `applied` lists the targets this recovery applied.
 * `InvariantViolation(journal, stores)`: a target is neither applied nor appliable. It is appliable when applying its staged file yields the digest the journal records: the staged bytes of a replace have it, and the store of an append cut to its `size_before`, followed by the staged block, has it. A missing or changed staged file, and an append store that is shorter than, or differs from, what it was before the append, make it violating. Every target is checked before the first is applied, so nothing is applied, and the journal and every store stay as they are; `stores` names the violating stores in the order of the journal.
 
 A journal or a sidecar of another format version, or one that is unreadable, propagates as `StoreRefusal`, and the journal is left in place. A recovery of a consistent scope changes no byte and records nothing.
@@ -189,7 +190,7 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]_
 
 `ScopeIntegrity` decides only under the scope's key, and only after the recovery of the scope has run:
 
-* `verify(transaction, scope, relativePath, auditSink)` runs `JournalRecovery.recover` and compares one store with its sidecar entry. The answer is a `Verification`: `Verified(store, digest)`; `Mismatch(store, recorded, current)`, with `current` empty for a deleted store, the evidence of an edit outside a transaction; `Untracked(store)` when the sidecar has no entry; or the recovery's `InvariantViolation`, and then nothing was compared.
+* `verify(transaction, scope, relativePath, auditSink)` runs `JournalRecovery.recover` and compares one store with its sidecar entry. The answer is a `Verification`: `Verified(store, digest)`; `Mismatch(store, recorded, current)`, with `current` empty for a deleted store, the evidence of an edit outside a transaction; `Untracked(store)` when the store exists and the sidecar has no entry; `Absent(store)` when neither exists, which is what a transaction's delete leaves and is consistent; or the recovery's `InvariantViolation`, and then nothing was compared.
 * `verifyAll(transaction, scope, auditSink)` does the same for every entry of the sidecar, in the sorted order of the paths, or answers with the `InvariantViolation` alone.
 * `snapshot(scope, relativePath)` takes no lock and decides nothing. It returns a `StoreSnapshot`: `DIGEST_UNVERIFIED` while the journal of the scope exists or when the content differs from the sidecar entry, `VERIFIED` when it matches, `UNCHECKED` when the sidecar has no entry.
 * `rebaseline(transaction, scope, relativePath, auditSink)` accepts an edit: after the recovery it opens a `ScopeTransaction` that replaces the store by its own current bytes, so the new digest is recorded through the journal like any other, and then returns `verifyAll` of the scope. A store that does not exist is refused with `IllegalArgumentException`, and nothing is journaled.
