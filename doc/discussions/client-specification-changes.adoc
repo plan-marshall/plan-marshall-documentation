@@ -37,13 +37,13 @@ Beyond the sections each change names in its _Affects_:
 |Change |Also needed
 
 |link:../use-cases/01-onboarding.adoc#change-consent[Consent]
-|a consent store in the machine layout; the closed list of consent kinds, with one for running an unknown program to verify its profile; which consents can never be remembered; one state with several consents answered separately; endpoints to list and withdraw remembered consents.
+|a consent store in the machine layout; the closed list of consent kinds, with one for running an unknown program to verify its profile, and `check_credential_store` and `verify_providers`; a remembered `run_checkout_scripts` in `consents.json`, keyed by the project and the scripts' digests, never in the enrolment; which consents can never be remembered; one state with several consents answered separately; endpoints to list and withdraw remembered consents, also from the machine's settings (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]).
 
 |link:../use-cases/01-onboarding.adoc#change-machine-scope[Machine Scope]
 |the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for cost estimates; how a sub-workflow writes a project or plan level.
 
 |link:../use-cases/01-onboarding.adoc#change-two-channels[Operator Choices]
-|the configuration over the local API: every value with its origin (`default`, `machine`, `project`, `team`, `plan`) and what it overrides, `set` and `unset` per key and level, and a later run of an aspect for a project or a plan; the runtime refuses an aspect-owned key in `config set` with an error code; a verb that needs a step of the onboarding not done yet is refused with an error code that names the terminal client; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
+|the configuration over the local API: every value with its origin (`default`, `machine`, `project`, `team`, `plan`) and what it overrides, `set` and `unset` per key and level, and a later run of an aspect for the machine (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]), a project, or a plan; the runtime refuses an aspect-owned key in `config set` with an error code; a verb that needs a step of the onboarding not done yet is refused with an error code that names the terminal client; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
 
 |link:../use-cases/01-onboarding.adoc#change-auto[Automatic Onboarding]
 |the closed list of reasons and the item schema of `auto.result`, matching the design's reasons.
@@ -55,7 +55,7 @@ Beyond the sections each change names in its _Affects_:
 |the icon store in the machine layout, an endpoint that serves an icon, the outbound fetch through the proxy, and the monogram's colour rule, the same in both clients.
 
 |link:../use-cases/01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]
-|the prune reason `plan_default`; error codes for the axes of a running plan, bound at its start, and for the landing of a project, owned by its team; the units of the variants; the method's order of tasks; the team key of the landing; the axes in the project setup and at the plan's start; a provider read of branch protection; and it must drop "`questions.*` stays as it is", which Waiting for the Operator replaces.
+|the prune reason `plan_default`; error codes for the axes of a running plan, bound at its start, and for the landing of a project, owned by its team; the landing variants `landing.pull-request`, `landing.main`, and `landing.files` as a call site inside the phase `finalize`, apart from the land lane; the units of the variants; the method's order of tasks; the team key of the landing; the axes in the project setup and at the plan's start; a provider read of branch protection, used where a project is known (its setup, a plan's start), never against the machine default, which is refused for a project it does not fit; and it must drop "`questions.*` stays as it is", which Waiting for the Operator replaces.
 
 |link:../use-cases/01-onboarding.adoc#change-harness-scan[Harness Scan], link:../use-cases/01-onboarding.adoc#change-login-probe[Login Probe], link:../use-cases/01-onboarding.adoc#change-unknown-harness[Unknown Harness]
 |an install hint per profile; the login command of the probe; how a probe runs (a job, its confinement); every closed list of client ids that would refuse a harness added by the operator.
@@ -64,10 +64,10 @@ Beyond the sections each change names in its _Affects_:
 |the stores in the layouts and their resources; the steward's submit schemas; where the shipped default assignment and its advisory live, and a role's group for the grouped views; the rule "an artifact replaces as a whole" against an assignment of three fields; the qualification digest over the effective values; the steward's own harness against the resolution order.
 
 |link:../use-cases/01-onboarding.adoc#change-credential-store[Credential Store], link:../use-cases/01-onboarding.adoc#change-provider-defaults[Provider Defaults], link:../use-cases/01-onboarding.adoc#change-provider-verification[Provider Verification], link:../use-cases/01-onboarding.adoc#change-web-credentials[Credentials in the Web App]
-|`PM-CRED-4`; an error code for a credential entered before a store is chosen; where an interrupted move resumes from; the enrolment integrity key in the move; an error code for a recorded store that is unavailable; one naming of the stores; review bots among the providers; where a verification's last result lives and the schema of its check lines; the LAN refusal's code.
+|`PM-CRED-4`; an error code for a credential entered before a store is chosen; replacing an expired credential and resuming a plan held by it (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]); where an interrupted move resumes from; the enrolment integrity key in the move; an error code for a recorded store that is unavailable; one naming of the stores; review bots among the providers; where a verification's last result lives and the schema of its check lines; the LAN refusal's code.
 
 |link:../use-cases/01-onboarding.adoc#change-plan-overrides[Plan Overrides]
-|the composition event `override`; setting overrides at the plan's start; a write that answers the new instance version.
+|the composition event `override`; setting overrides at the plan's start and while it runs (link:../use-cases/06-controlling-work.adoc#UC-CTL-5[UC-CTL-5]), told to the epic as `settings changed`; a write that answers the new instance version.
 
 |link:../use-cases/02-entry.adoc#change-start[The Terminal Client as the Entry], link:../use-cases/02-entry.adoc#change-fresh-code[A Fresh Code]
 |switching an open loopback listener to the LAN, against "refused while enabled with the other exposure"; an event of a pairing; a new code that reaches only the terminal client, never a stream a browser reads; a description of a paired device.
@@ -76,37 +76,37 @@ Beyond the sections each change names in its _Affects_:
 |the named schemas of a decision, an answer, an interpretation, and a vote on a part with several options or a value; who sets what a decision blocks and how reversible it is, also for server-raised questions; who may revise a decision; the support per option derived by the runtime (counts, models, band, dissent), within the quorum's at most three votes; the asking role and phase on the record; the device and channel of an answer; how the runtime tells the channel `cli` apart; a new outcome for _none fits_; access to a decision's evidence over the local API; the list of open decisions across scopes, with since when each waits (`delivered_at`); what follows from an answer, composed by the runtime for `decision.confirm`; the progress of the interpreting role while the operator waits; the refusal of an answer to an older revision and of an answer to a part whose dependency is unanswered.
 
 |link:../use-cases/03-plans.adoc#change-running-work[Running Work], link:../use-cases/03-plans.adoc#change-titles[Titles], link:../use-cases/03-plans.adoc#change-phase-start[Phase Start], link:../use-cases/03-plans.adoc#change-needs-operator[Needs the Operator], link:../use-cases/03-plans.adoc#change-overview-resource[Overview Resource]
-|`last_activity_at`; a closed activity state of a plan (running, pausing, paused, waiting for the operator, stalled); an epic's progress; the order of the kinds of `needs_operator` and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
+|`last_activity_at`; a closed activity state of a plan (running, pausing, paused, waiting for the operator, stalled); an epic's progress; the order of the kinds of `needs_operator`, without `paused`, and a reference to each item; who sets a plan's title at its creation and who may replace it; whether a re-entry resets `phase_entered_at`; the list of all enrolled projects for a picker, apart from those with running work; resolving the working directory to a project.
 
 |link:../use-cases/05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]
 |every specification that names the entry session or the model relaying the user (Session-Driven Units, the bootstraps, `PM-WF-12`, the setup's links, Operator Channel Isolation, the client profiles' entry); what of `pm-mcp enter` stays for a host (none, or the recording of a worker's identity); the static verification rule that allows links-only states in session-driven units.
 
 |link:../use-cases/05-starting-work.adoc#change-start-from-clients[Starting from the Clients], link:../use-cases/05-starting-work.adoc#change-source-directory[Source Directory], link:../use-cases/05-starting-work.adoc#change-documents[Documents], link:../use-cases/05-starting-work.adoc#change-screen-stored[Screened Once Stored]
-|the manifest's schema and its digests; the bounds of size and count of documents; the listing of files for the web app and its confinement; how a list of sources maps onto `origin` and `PlanSource`; the composed original input of `request.md`; the recovery of a source directory after a crash between storing and screening; the epic header's list of sources and its ledger write; the machine key `sources.documents_mode`; the refusal codes of a source (`not_found`, `not_readable`, `too_large`, `outside_allowed`).
+|the manifest's schema and its digests; the bounds of size and count of documents; the listing of files for the web app and its confinement; how a list of sources maps onto `origin` and `PlanSource`; the composed original input of `request.md`; the recovery of a source directory after a crash between storing and screening; the epic header's list of sources and its ledger write; the machine key `sources.documents_mode` (`copy`, `move`, `ask`; default `ask`); the refusal codes of a source (`not_found`, `not_readable`, `too_large`, `outside_allowed`).
 
 |link:../use-cases/05-starting-work.adoc#change-issues[Issues by Number or URL], link:../use-cases/05-starting-work.adoc#change-forgejo[Codeberg and Forgejo]
 |the URL grammar per forge; the grant for another repository in the grant store; `ci.issue-view` and `ci.issue-comment` in the CI contract of `pm-provider-ci`; the team key that enables writing back; the Forgejo provider in every closed list of providers, integrations, and credential keys; the allowlist origin of a source's forge.
 
 |link:../use-cases/05-starting-work.adoc#change-recipe-workflow[A Recipe Is a Workflow], link:../use-cases/05-starting-work.adoc#change-options-when-needed[Asked When Needed]
-|the recipe descriptor's workflow and parameters; what goes of the recipe states in Phases 1 and 3; the operator wait of each option and where it sits; the operator wait for `parallelization_scope`.
+|the recipe descriptor's workflow and parameters; what goes of the recipe states in Phases 1 and 3; the operator wait of each option and where it sits; `epic.parallelization_scope` never asked at the start, raised through _Next plan_ or the project's settings.
 
 |link:../use-cases/06-controlling-work.adoc#change-plan-pause[Pausing and Starting], link:../use-cases/06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning], link:../use-cases/06-controlling-work.adoc#change-epic-informed[The Epic Is Told]
-|the plan's activity `pausing` and `paused` beside the terminal states, and the point of a pause (now, after the task, after the phase); what a pause now does to a job in its retry loop and to a held lock; where a pause after the phase holds when the phase ends in a loop-back; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of an aborted plan and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
+|the plan's activity `pausing` and `paused` beside the terminal states, and `pausing` among the queue row statuses; the plan outcomes `cancelled`, `abandoned`, and `released` beside `merged` and the integrity abort's; and the point of a pause (now, after the task, after the phase); what a pause now does to a job in its retry loop and to a held lock; where a pause after the phase holds when the phase ends in a loop-back; the inbox record kinds of the operator's acts; the comment that closes a pull request; the archive of a plan ended without landing and its `delete-plan`; the endpoints and the operator verbs; what a paused plan counts against the slots.
 
 |link:../use-cases/05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]
 |the draft as a record apart from the ledger until agreed; the server's checks over a draft; the submits of `decompose` for a rewrite; how a later run marks a change against a staged row; what `epic.next-work` does while the first decomposition waits.
 
 |link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
-|the registers' schema and their ledger files; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion`; the planning role's submit schemas for proposal, draft, and rewrite; the `needs_operator` kind of new findings.
+|the epic's `terminal_reason` `abandoned` renamed to `cancelled`, and `released` added; the registers' schema and their ledger files, an item of the findings register a finding; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion` (only `open` findings block; kept findings and watches are carried into the archive); the planning role's submit schemas for proposal, draft, and rewrite; the `needs_operator` kind of new findings.
 
 |link:../use-cases/03-plans.adoc#change-epic-resource[The Epic as a Resource], link:../use-cases/03-plans.adoc#change-event-streams[Events per Scope], link:../use-cases/03-plans.adoc#change-ended-work[Ended Work]
 |the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
 
 |link:../use-cases/06-controlling-work.adoc#change-chat[Chatting with the Planning Role]
-|the unit section of `chat` and its states; the submit schemas of `replan` and `decompose` in a chat (an answer, a proposed change); the facts of a scope; where the transcript lives and how long; how a revision waits for the next task boundary of a running plan; the re-planning record of an operator's revision outside `replan_budget`; the inbox record `revised`; the representation of a chat for the clients; in a decision: the routing to the role that asked, the proposed answer as own words, the closure `withdrawn` of a decision a revision removed, the decision record's mark of a chat; while starting: _chat_ at `start.sources` and `start-epic.sources`, the role `refine`'s chat task, the description as its one change, the entry's transcript and its move at `start.create`; ended work: the read-only facts of an archived plan or epic, the transcript beside the archived record, and the follow-up start with its description.
+|the unit section of `chat` and its states; its phase, from a plan the phase sub-workflow on the call stack; the submit schemas of `replan` and `decompose` in a chat (an answer, a proposed change); the facts of a scope; where the transcript lives and how long; how a revision waits for the next task boundary of a running plan; the re-planning record of an operator's revision outside `replan_budget`; the inbox record `revised`; the representation of a chat for the clients; in a decision: the routing to the role that asked, the proposed answer as own words, the closure `withdrawn` of a decision a revision removed, the decision record's mark of a chat; while starting: _chat_ at `start.sources` and `start-epic.sources`, the role `refine`'s chat task, the description as its one change, the entry's transcript and its move at `start.create`; ended work: the read-only facts of an archived plan or epic, the transcript beside the archived record, and the follow-up start with its description.
 
 |link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
-|the device's label; the closing of a revoked device's streams; the release's confirmation against the engine-owned abort; the closed list of holds, their acts and their arguments, and the end of `facts.operator_command`.
+|the device's label; the closing of a revoked device's streams; revoking all others; turning the LAN listener off with the loopback listener left open; the release's confirmation against the engine-owned abort, every plan ending with the outcome `released` and every epic with the `terminal_reason` `released`; the closed list of holds (`stalled`, `condition`, `integrity_pause`, `held`, `landing_failed`), their acts and their arguments, and the end of `facts.operator_command`.
 
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
@@ -115,7 +115,7 @@ Beyond the sections each change names in its _Affects_:
 |if the package `cli-test-infra` chooses a seam the operator checks accept only in tests, a statement of it in Operator Channel Isolation, item 2.
 |===
 
-UC-PLN-3 (designing a plan's process) proposes no change yet: its building blocks are open points of the use case, to be worked out there before any specification. It builds on link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1.
+UC-PLN-3 (designing a plan's process) proposes no change yet: its building blocks are open points of the use case, to be worked out there before any specification. link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1 stands on its own (showing, replacing, and extending a phase); UC-PLN-3 is a later user of it.
 
 [#conflicts]
 == Conflicts Between the Changes
@@ -145,7 +145,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`machine-onboarding-unit`
 |`pm-mcp-core`
-|the engine side of the onboarding: its sub-workflows in the machine scope, the consent store and its kinds, the harness scan and probes, the unknown harness, the catalogue, steward, and role stores, the credential store and its move, provider verification, automatic onboarding, the plan axes and overrides in the composition
+|the engine side of the onboarding: its sub-workflows in the machine scope, the consent store and its kinds, the harness scan and probes, the unknown harness, the catalogue, steward, and role stores, the credential store and its move, provider verification, automatic onboarding, the plan axes and overrides in the composition, the machine's settings changed later (UC-ONB-10)
 |`operator-wait-and-machine-scope`; UC-ONB agreed
 
 |`decision-engine`
@@ -170,7 +170,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`phase-sub-workflows`
 |`pm-mcp-core`
-|Phases as Sub-Workflows, The Plan's History: the plan unit as a workflow of phase sub-workflows, the plan's append-only history of its process
+|Phases as Sub-Workflows, The Plan's History: the plan unit as a workflow of the six phase sub-workflows (the land lane its choice of phases, its `land.*` states a sub-workflow within `execute`), the plan's append-only history of its process
 |`operator-wait-and-machine-scope`; `workflow-engine`; `plan-instance`; UC-PLN-1 agreed
 
 |`process-contract`
@@ -195,7 +195,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`onboarding-contract`
 |`pm-mcp-clients`
-|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`)
+|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`); the machine's settings (UC-ONB-10)
 |`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; UC-ONB agreed
 
 |`entry-contract`
@@ -225,8 +225,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`plan-and-epic-control`
 |`pm-mcp-core`
-|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts; _chat_ among the actions of a plan and an epic
-|`operator-wait-and-machine-scope`; `chat`; UC-CTL-1, UC-CTL-2, UC-CTL-4, and UC-PLN-5 agreed
+|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts; _chat_ among the actions of a plan and an epic; a plan's settings changed while it runs (UC-CTL-5)
+|`operator-wait-and-machine-scope`; `chat`; UC-CTL-1, UC-CTL-2, UC-CTL-4, UC-CTL-5, and UC-PLN-5 agreed
 
 |`epic-findings-review`
 |`pm-mcp-core`
@@ -240,7 +240,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, a plan's settings, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource
 |`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
 
 |`start-contract`

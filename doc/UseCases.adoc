@@ -1,4 +1,4 @@
-= plan-marshall-mcp Use Cases
+= PM-MCP Use Cases
 :toc: left
 :toclevels: 2
 :toc-title: Table of Contents
@@ -14,9 +14,18 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 
 * *Identifier*: every use case has a stable anchor `[#UC-<AREA>-<N>]` and the heading `== UC-<AREA>-<N>: <title>`. A number is never reused.
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
-* *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys.
-* *Status*: each use case states one of `DRAFT` (being written, open points named), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
-* *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit, marked `[S]` when the server acts, `[O]` when the operator chooses, and `[M]` when a model acts through a role task; the arrows carry the outcomes. The diagram shows the process, never a screen.
+* *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys. The one exception is link:use-cases/02-entry.adoc#UC-ENT-1[UC-ENT-1]: the first command after installing is typed in a terminal, so the entry is bound to the terminal client by its nature and names its steps.
+* *Status*: each use case states one of `DRAFT` (not yet agreed by the operator; its open points named where there are any), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
+* *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit; the arrows carry the outcomes. The diagram shows the process, never a screen. One legend holds for every diagram, and no diagram repeats it:
+** `[S]` the server acts.
+** `[O]` the operator chooses; every choice offered to the operator is `[O]`.
+** `[M]` a model acts through a role task.
+** `[C]` the operator's client acts on its own (only in UC-ENT-1).
+** `↳` a call of a sub-workflow.
+** `[O]⇄[M]` an exchange between the operator and a model.
+** `←` after an option: the option preselected.
+* *No macros in diagrams*: a `[source,text]` block renders no cross reference (`&lt;&lt;…&gt;&gt;`) and no `link:`; a diagram names a use case or a state by its plain id (`UC-STA-5`), and where a link helps, the prose below the diagram carries it.
+* *Design*: the part lists, in this order, the shared design (what both clients show) where there is one, the terminal client's, and the web app's; where the web app has no design file yet, it names the web package that designs it.
 * *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
 
 [source,asciidoc]
@@ -38,6 +47,7 @@ Requirements:: the requirements that serve it (link:Requirements.adoc[Requiremen
 Design:: the design documents that show it, per client (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 ----
 
+
 [#index]
 == Use Case Areas
 
@@ -47,7 +57,7 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-ONB`
 |link:use-cases/01-onboarding.adoc[01-onboarding.adoc]
-|Making a machine ready, guided or automatically: the languages, the harnesses (one scan, one default), the models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default.
+|Making a machine ready, guided or automatically: the languages, the harnesses (one scan, one default), the models for the work, the models of the roles, where credentials are kept, the providers of the machine, and how plans run by default; changing the machine's settings later (link:use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]).
 
 |`UC-ENT`
 |link:use-cases/02-entry.adoc[02-entry.adoc]
@@ -67,5 +77,16 @@ Design:: the design documents that show it, per client (link:https://github.com/
 
 |`UC-CTL`
 |link:use-cases/06-controlling-work.adoc[06-controlling-work.adoc]
-|Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; an epic's next plan, cancel, and archive once it is through; reviewing an epic's findings and watches item by item with its planning role; chatting with the planning role of a plan or an epic, also inside a decision, while starting, and about ended work; resolving what holds a plan.
+|Controlling work: pausing, starting, cancelling, and abandoning a plan, its epic always told; changing a plan's settings (link:use-cases/06-controlling-work.adoc#UC-CTL-5[UC-CTL-5]); an epic's next plan, cancel, and archive once it is through; reviewing an epic's findings and watches item by item with its planning role; chatting with the planning role of a plan or an epic, also inside a decision, while starting, and about ended work; resolving what holds a plan.
 |===
+
+[#open-points]
+== Open Points
+
+What the use cases do not cover yet, each to be decided before a use case is written for it:
+
+* *The runtime's lifecycle*: stopping, restarting, and upgrading the runtime are not yet a use case of the clients.
+* *Cost and budget visibility*: what of the cost of the work and of its budgets the operator sees, and where, needs a decision of what is shown.
+* *Deleting archived work*: whether and how the operator deletes or purges archived plans and epics.
+
+Not offered, by the operator's decision: pausing an epic as a whole. Its plans are paused one by one (link:use-cases/06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]).

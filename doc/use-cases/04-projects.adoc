@@ -24,7 +24,9 @@ Flow::
        ▼
   [O] project.consent          may the server look at the checkout? (its git
        │                       configuration, build wrappers, host tools,
-       │                       language servers, project scripts; read only)
+       │                       language servers, project scripts: it reads
+       │                       the checkout and runs the host tools' version
+       │                       probes; changes nothing)
        ├── no ──────────────► stays at project.consent
        ▼ yes | yes, don't ask again
   [S] project.detect           the remote, the base branch, the build wrappers,
@@ -34,14 +36,16 @@ Flow::
        │      [O] project.run-consent   may the server run these scripts of
        │           │                    the checkout? (each named with its
        │           │                    arguments, confined like a job)
-       │           ├── no ──► project.detect, what needs it unknown
-       │           ▼ yes, for this project
+       │           ├── no ──► project.identity, what needs the scripts
+       │           │          unknown; not asked again in this run
+       │           ▼ yes | yes, for this project
        │      [S] project.probe          the named scripts, confined
        ▼
   [O] project.identity         the project's id, proposed from the remote's
-       │                       name; its display name; for a release whose
-       │                       plan lifecycle is not open yet, whether the
-       │                       project is a pilot, and what that means
+       │                       name; its display name; while this version of
+       │                       PM-MCP keeps the plan lifecycle closed (the
+       │                       lifecycle gate), whether the project is a
+       │                       pilot, and what that means
        ▼
   [O] project.enrolment        everything to be enrolled, each with where it
        │                       comes from (detected, the machine, the default);
@@ -50,38 +54,69 @@ Flow::
        ▼
   [S] project.enrol            the enrolment and the project's machine store
        ▼
-  [S] setup.*                  the project setup, its choices as operator
-       │                       waits of both clients: the team's settings
-       │                       (base branch, branch prefix, lanes), the
-       │                       providers, the build map, the finalize steps
+  [S] setup.entry,             the run recorded as a first run; .marshall/config/
+      setup.prepare-workspace, created with the default workflow units; the
+      setup.check-operator-files  operator file and the role set validated
        ▼
-  [O] project.operator         what the project uses of the machine and what
-       │                       it sets of its own: the model language, the
-       │                       allowed models, the role assignment, the
-       │                       providers and their credentials, the plan
-       │                       defaults, the integration variants, the commit
-       │                       identity; the machine's value is the proposal
+  [O] project.operator         the operator's values of the project, each with
+       │                       the machine's value as the proposal: the model
+       │                       language, the allowed models, the role
+       │                       assignment, the method and asking axes, the
+       │                       integration variant and credential of each
+       │                       provider, the commit identity
        ▼
-  [S] setup.detect-domains,    the project's architecture, by its type: the
-      setup.discover-modules   domains that apply (Java, Python, JavaScript,
-       │                       documentation, ...) from their descriptors and
-       │                       files, and the modules the parser of each build
-       │                       system finds (Maven, Gradle, npm, Python)
+  [S] setup.probe-integration-variants,   each integration's variant valid,
+      setup.verify-credentials            its credential or CLI tool acting
+       ├── a variant invalid ──► project.operator, its findings named
+       ▼
+  [O] setup.project-settings   the team's settings: base branch, branch
+       │                       prefix, lanes
+       ▼
+  [S] setup.detect-domains     the domains that apply (Java, Python,
+       │                       JavaScript, documentation, ...) from their
+       │                       descriptors and files
+       ▼
+  [S] setup.discover-modules   the modules the parser of each build system
+       │                       finds (Maven, Gradle, npm, Python)
+       ▼
+  [O] setup.seed-build-map     the build map derived from the modules,
+       │                       confirmed or its routes customised
+       ▼
+  [O] setup.select-providers   the team's providers: the CI provider derived
+       │                       from the remote (or overridden), the code
+       │                       analysis providers, the review bots
+       ▼
+  [O] setup.configure-finalize the finalize steps and the landing variant
+       │                       (landing.pull-request, landing.main,
+       │                       landing.files); a machine default that does
+       │                       not fit the project is refused with the reason
+       ▼
+  [S] setup.probe-merge-queue  only where the base branch has no enforced
+       │                       merge queue and could have one:
+       │                       [O] setup.merge-queue (recheck | skip)
        ▼
   [O] setup.qualify-consent    the qualification's expected cost (consent
-       │                       kind model_cost)
-       ▼
+       │                       kind model_cost); asked only where roles
+       │                       need grading
+       ├── no ──► setup.enrich-consent, the qualification skipped with
+       │          its reason, to be run later
+       ▼ yes
   [S] setup.qualify-roles      role qualification
        ▼
   [O] setup.enrich-consent     the enrichment's expected cost (model_cost);
-       │                       no: the project is ready without descriptions
-       ▼
+       │                       asked only where modules need a description
+       ├── no ──► setup.commit-changes, the description skipped with its
+       │          reason, to be run later; the project is ready without
+       ▼ yes
   [M] setup.enrich-architecture  each module's responsibility, purpose, and
        │                       key packages, by the role enrich, one task per
        │                       module; the architecture is written to
        │                       .marshall/project-architecture/
        ▼
   [O] setup.commit-changes     the team's configuration to commit, or to leave
+       ├── leave ───────────► project.completed, left to commit
+       ▼ commit
+  [S] setup.land-changes       one commit, pushed where there is a push remote
        ▼
   project.completed            names what comes next: an epic, a plan,
                                or the project's running work
@@ -90,15 +125,15 @@ Variations::
 * *Machine values as the proposal.* Every value the project can take from the machine is proposed from it and marked so; accepting it records nothing for the project, which keeps following the machine. Only a changed value is recorded for the project (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]).
 * *The architecture is the setup workflow's work, typed by the project*: the domain descriptors and the build systems the project uses decide what is detected, discovered, and enriched (link:../specification/domain-extensions/01-four-axis-architecture.adoc[Four-Axis Domain Architecture], link:../specification/domain-extensions/03-module-discovery.adoc[Module Discovery]); a project of a type no other descriptor covers is set up with the domain `general-dev`; a later run of the setup reconciles the architecture with the checkout.
 * *A later run of one aspect* opens its states with the project's current values, as the first run and a later change are one process.
-* *A step that cannot pass* (a credential refused, a tool missing, the build map not derivable) shows its check line with the cause and the fix and waits for the operator; the project is enrolled but not ready until it passes.
+* *A step that cannot pass* (a credential refused, a tool missing, the modules not discoverable) shows its check line with the cause and the fix and waits for the operator in `setup.needs-repair`, whose retry runs the step again; the project is enrolled but not ready until it passes.
 * *An enrolled project without setup*, such as one enrolled with `pm-operator enrol`, continues at its setup.
 * *A released project* is offered to be enrolled again, which reopens its plan lifecycle.
-Outcome:: the project is enrolled and set up, its architecture discovered and enriched; its team configuration is committed or left to commit; it takes from the machine what it does not set itself.
+Outcome:: the project is enrolled and set up, its architecture discovered and described (or the description skipped, to be run later); its team configuration is committed or left to commit; it takes from the machine what it does not set itself.
 Changes::
 * *Onboarding a project as one process* (<<change-project-onboarding>>).
 * *Project values over machine values* (<<change-project-levels>>).
 Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1] (enrolment, the lifecycle gate), link:../Requirements.adoc#PM-EXT-3[PM-EXT-3] (module discovery, build map, architecture enrichment), link:../Requirements.adoc#PM-EXEC-2[PM-EXEC-2] (the enrolment as the source of execution); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], the setup in link:../specification/domain-extensions/04-setup-state-machine.adoc[Setup State Machine].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-onboarding.adoc[Project Onboarding] (shared); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; the web app: designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-projects.adoc[`web-projects`]
 
 [#UC-PRJ-2]
 == UC-PRJ-2: Explore Projects
@@ -119,7 +154,7 @@ Outcome:: the operator has found the project and is on the way to an epic, a pla
 Changes::
 * *The projects of the machine* (<<change-project-explorer>>).
 Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc[Project Explorer] (shared); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; the web app: designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-projects.adoc[`web-projects`]
 
 [#UC-PRJ-3]
 == UC-PRJ-3: Release a Project
@@ -128,30 +163,47 @@ Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: take a project out of `PM-MCP`'s work, for a while (release) or for good (unenrol), knowing what happens to its running work.
 Trigger:: the operator chooses _Release_ or _Unenrol_ in the project's setup (<<UC-PRJ-2>>).
+Preconditions:: the project is enrolled; for _Release_, it is not released.
 Flow::
 +
 [source,text]
 ----
   [O] project.release-confirm  what it does: releasing ends every plan of
-       │                       the project (each archived as cancelled, its
-       │                       epics told) and closes its plan lifecycle;
+       │                       the project with the outcome released,
+       │                       whatever its state, and every epic with the
+       │                       reason released, each archived; it deletes
+       │                       the pending entries, ends a running onboarding
+       │                       of the project, and closes its plan lifecycle;
        │                       unenrolling is refused while work runs and
        │                       removes the enrolment; the reason
        ├── unenrol, work runs ──► refused, the running work listed, each
        │                          leading to its actions
        ▼ confirm
-  [S] project.release          the plans ended as UC-CTL-1 ends them, then
-       │                       the lifecycle closed; or the enrolment removed
+  [S] project.release-wait     a running git.land-removal of the project
+       │                       finishes first, within its bound
+       ├── not finished in its bound ──► refused, nothing ended; the
+       │                                 removal named
+       ▼
+  [S] project.release          the pending entries deleted with their
+       │                       sources, a running onboarding ended, every
+       │                       plan and epic ended as released, then the
+       │                       lifecycle closed; or the enrolment removed
        ▼
   released | unenrolled        a released project stays listed, offering to
                                be enrolled again; an unenrolled one leaves
                                the list
 ----
+Variations::
+* *Plans in every state*: a running, pausing, paused, waiting, or held plan ends alike, with the outcome `released`, never `cancelled` or `abandoned`, and is archived; its branch stays.
+* *Epics*: an epic ends with the `terminal_reason` `released`; its plans end with the release, so nothing is left to tell it.
+* *Pending entries*: an entry not yet started as a plan or an epic is deleted with the sources it holds.
+* *A running onboarding of the project* (a later run of one of its aspects, <<UC-PRJ-1>>) is ended where it stands; the next run starts afresh.
+* *A running `git.land-removal`* (the short landing of a moved source, link:05-starting-work.adoc#change-source-directory[The Source Directory]) is let finish before anything ends, so no removal is left half landed; the release waits for it within its bound and is refused, ending nothing, when the removal does not finish in it.
 Outcome:: the project runs no work of `PM-MCP`; released, it can be enrolled again with its values.
 Changes::
 * *Releasing ends work as the operator ends it* (<<change-project-release>>).
 Requirements:: link:../Requirements.adoc#PM-MIG-1[PM-MIG-1]; the release and the unenrolment are specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc#release[Project Explorer, Release and Unenrol]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc[Web App]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/project-explorer.adoc#release[Project Explorer, Release and Unenrol] (shared); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/17-projects.adoc[Terminal Client, Projects]; the web app: designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-projects.adoc[`web-projects`]
 
 [#changes]
 == Changes to the Specification
@@ -164,8 +216,8 @@ The changes these use cases need, each modelled as the fix of a gap; written int
 Gap:: a project is enrolled only by the terminal verb `pm-operator enrol`, whose inputs are not specified (where the project's id comes from, how wrappers, host tools, language servers, scripts, and the build environment are found); the enrolment precedes the setup and is never one of its states; the setup is driven only by a coding-agent session (`/mcp-marshall-steward`), its choices are links the session relays, and the web app never shows them (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#session-driven-units[Session-Driven Units]; link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App]).
 Fix::
 * A project onboarding unit runs `project.checkout` to `project.enrol` and then the project setup, in a scope of its own per project being onboarded (an entry like a plan's start until `project.enrol`, then the project's workspace scope), so that several projects are onboarded at once and the machine scope's state is never touched; it starts only while the machine's onboarding is complete; its choices are operator waits (link:03-plans.adoc#change-operator-wait[Waiting for the Operator]) served to both clients; the setup keeps its states and gains the operator's choices of the project (<<change-project-levels>>).
-* *Detection*, after the operator's consent (a consent kind `inspect_checkout`; every kind is listed in link:01-onboarding.adoc#consents[Consents]): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. What can be read is read (a build wrapper's version from its pinned properties); only host tools found on the operator's `PATH` run their version probe without more.
-* *Running the checkout's own scripts* needs the operator's consent per project (a consent kind `run_checkout_scripts`), asked in `project.run-consent` with every script and its arguments named, before any of them runs. It is the same trust the enrolment grants anyway, since the enrolled wrapper runs in every build of the project's plans; the yes is recorded with the project's enrolment, and a later run of the onboarding asks again only for a script that changed (its digest). The probes run as jobs, through the job launcher with the confinement of a job, never in the runtime's own process.
+* *Detection*, after the operator's consent (a consent kind `inspect_checkout`: the server reads the checkout and runs the host tools' version probes, and changes nothing; every kind is listed in link:01-onboarding.adoc#consents[Consents]): the remote and its owner and name, the base branch, the build wrappers with their pinned files, the host tools the project uses, the language servers, the project scripts; each with a check line. What can be read is read (a build wrapper's version from its pinned properties); only host tools found on the operator's `PATH` run their version probe without more.
+* *Running the checkout's own scripts* needs the operator's consent per project (a consent kind `run_checkout_scripts`), asked in `project.run-consent` with every script and its arguments named, before any of them runs. It is the same trust the enrolment grants anyway, since the enrolled wrapper runs in every build of the project's plans; a remembered yes is kept in the machine store `consents.json`, keyed by the project and the digest of each script (link:01-onboarding.adoc#change-consent[Consent Before Acting]), never in the enrolment, and a later run of the onboarding asks again only for a script that changed. A _no_ goes on without the scripts, what needs them unknown, and is not asked again in that run. The probes run as jobs, through the job launcher with the confinement of a job, never in the runtime's own process.
 * *Identity*: the project's id is proposed from the remote's name, valid by the identifier grammar and unique on the machine; the display name from the remote's owner and name; the operator may change both before enrolment, the display name also later.
 * *The build environment* is the operator's login environment as the terminal client captures and sends it, never the runtime's own (link:../specification/runtime-model/01-processes-and-transport.adoc#_environment[Environment]); a project onboarded from the web app takes the build environment the terminal client last captured on this machine and says so, and with none names the terminal command that captures it.
 * *The setup from the clients*: the two clients drive it through its operator waits, whichever answers first wins; no coding-agent session drives it (link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]).
@@ -177,8 +229,9 @@ Affects:: link:../specification/cli-and-security/02-credentials-and-operator.ado
 
 Gap:: a project's operator values fall back to the machine only for the keys of `project_defaults`; the aspects the machine's onboarding records (the model language, the allowed models, the role assignment, the providers, the plan defaults) have no place in the project's setup, the integration variant and the commit identity are per project only, and the setup never asks the operator's settings, which only `pm-operator config --project` writes.
 Fix::
-* `project.operator` shows every aspect a project may set (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]) with the machine's value as the proposal; accepting the proposal records nothing for the project, a changed value is recorded in the project's operator configuration or its own store (its role assignment, its model catalogue).
+* `project.operator` shows the operator's values of the project, every aspect the project may set of the machine's (link:01-onboarding.adoc#machine-defaults[The machine sets defaults]) that is the operator's: the model language, the allowed models, the role assignment, the method and asking axes, the integration variant and credential of each provider, and the commit identity; it takes over the operator's choices of `setup.select-integration-variants` and the operator posture of `setup.project-settings`. Each shows the machine's value as the proposal; accepting the proposal records nothing for the project, a changed value is recorded in the project's operator configuration or its own store (its role assignment, its model catalogue).
 * The integration variant and the provider credential are proposed from the machine's provider defaults (link:01-onboarding.adoc#change-provider-defaults[Machine Provider Defaults]); the commit identity from the machine's last one, else the global git identity.
+* The team's values stay in the setup and in `.marshall/config/`: the landing axis of the project (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]), chosen in `setup.configure-finalize` and validated against the project there, and the providers' declaration (the CI provider derived from the remote or overridden, the code analysis providers, the review bots), chosen in `setup.select-providers`.
 * `project_defaults` of the machine configuration is the machine's value of the project's operator keys, and the onboarding's machine values (`language.model`, `plan_defaults`, the role assignment, the model catalogue) are the machine's values of their aspects; one rule, the nearest level wins, for all of them.
 Affects:: link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store], link:../specification/store-schemas/07-project-configuration.adoc[Project Configuration] (the resolution chains), link:../specification/domain-extensions/06-configuration.adoc#config-split[Configuration Split], link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants].
 
@@ -196,6 +249,8 @@ Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#lo
 
 Gap:: `pm-operator release-project` aborts every plan and epic of the project through the engine-owned abort, without an archive and without telling their epics, and neither the release nor `unenrol` is an act of the clients.
 Fix::
-* Release and unenrol are operator acts of both clients, confirmed with what they end; the release ends each plan as a cancel does (link:06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning Archive]) and cancels each epic of the project with its plans.
-Affects:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
+* Release and unenrol are operator acts of both clients, confirmed with what they end.
+* The release ends every plan of the project, whatever its state, through `plan.aborted` with the outcome `released` (never `cancelled` or `abandoned`) and archives it like a completed plan (link:06-controlling-work.adoc#change-plan-end[Cancelling and Abandoning Archive]); it ends every epic of the project with the `terminal_reason` `released` and archives it; its plans end with the release, so nothing is left to tell it.
+* Before it ends anything, the release lets a running `git.land-removal` of the project finish, within its bound, and is refused, ending nothing, when it does not; it deletes the project's pending entries with their sources and ends a running onboarding of the project.
+Affects:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header] (`terminal_reason` `released`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 

@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Controlling Work
 
-The operator steers work that exists: pauses, starts, cancels, or abandons a plan; has an epic start its next plan, cancels or archives it; reviews what an epic has found and keeps under watch; and chats with the planning role of a plan or an epic, also about one that ended. The operator does this in the web app or in the terminal client, from the plan or the epic wherever it is shown (Running Work, the plan view, the project); how each client offers the actions is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator steers work that exists: pauses, starts, cancels, or abandons a plan, or changes its settings; has an epic start its next plan, cancels or archives it; reviews what an epic has found and keeps under watch; and chats with the planning role of a plan or an epic, also about one that ended. The operator does this in the web app or in the terminal client, from the plan or the epic wherever it is shown (Running Work, the plan view, the project); how each client offers the actions is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#principles]
 == Principles
@@ -22,22 +22,23 @@ Ending archives:: A plan that the operator cancels or abandons is archived, with
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: stop a plan for a while, let it go on, end it, or chat with its planning role about it, and know what that does to its work and to its epic.
+Goal:: stop a plan for a while, let it go on, end it, change its settings, or chat with its planning role about it, and know what that does to its work and to its epic.
 Trigger:: the operator selects a plan in Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), in its plan view (link:03-plans.adoc#UC-PLN-1[UC-PLN-1]), or names it.
 Flow::
 +
 [source,text]
 ----
-  [S] = the server   [O] = the operator   [M] = a model through a role task
-
   [S] plan.actions             the actions of the plan's state:
-       │                       running: pause, cancel
-       │                       pausing: start (the pause is withdrawn), cancel
-       │                       paused: start, abandon
-       │                       and in every state not ended (also while it
-       │                       waits for the operator or something holds
-       │                       it): settings (the plan's overrides,
-       │                       link:01-onboarding.adoc#change-plan-overrides[Plan Overrides]), chat
+       │                       running: pause, cancel, chat, settings
+       │                       pausing: start (the pause is withdrawn),
+       │                         cancel, chat, settings
+       │                       paused: start, abandon, chat, settings
+       │                       waiting for the operator: those of running,
+       │                         beside the decision it waits for (UC-PLN-2)
+       │                       held (stalled, or another hold): those of
+       │                         running, and the acts of its hold
+       │                         (UC-CTL-4), whose end of the plan is cancel
+       │                       ended: its view and a read-only chat
        ├── chat ─────────────► ↳ chat               with the plan's planning
        │                             │              role replan, over the
        │                             │              whole plan
@@ -52,10 +53,10 @@ Flow::
        │                             │              a change; again, until the
        │                             │              operator ends the chat
        │                             ├── a change ──► [O] chat.read-back   the
-       │                             │                change in one sentence
-       │                             │                beside the operator's
-       │                             │                words: accept, or reject
-       │                             │                ─► chat.turn
+       │                             │                proposed change in one
+       │                             │                sentence beside the
+       │                             │                operator's message: accept,
+       │                             │                or reject ─► chat.turn
        │                             │                     │
        │                             │                     ▼ accept
        │                             │                [S] chat.apply   a revision
@@ -64,6 +65,7 @@ Flow::
        │                             ▼ end
        │                        [S] chat.end        the transcript kept with
        │                                            the plan
+       ├── settings ─────────► the plan's own values (UC-CTL-5)
        ├── pause ────────────► [O] plan.pause-when   when it holds:
        │                             │             • now: running tasks are
        │                             │               withdrawn, running jobs
@@ -94,26 +96,29 @@ Flow::
        ▼ every action, where an epic started the plan
   [S] plan.inform-epic         the act reaches the epic's inbox: paused,
                                started, cancelled, abandoned, revised in a
-                               chat, with the reason
+                               chat, settings changed, with the reason
 ----
++
+The settings are <<UC-CTL-5>>, a decision is answered in link:03-plans.adoc#UC-PLN-2[UC-PLN-2], and a hold is resolved in <<UC-CTL-4>>; the chat is the sub-workflow of <<change-chat>>.
 Variations::
 * *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan. A pause after the current task or phase holds at an operator wait, too, since nothing runs there.
 * *The runtime stops or the machine restarts*: a paused plan stays paused, a pausing plan holds at its point once it runs again, and a running plan runs on from its last committed state; an operator wait stays open (<<change-plan-pause>>).
 * *A plan always runs once it exists*: a plan the operator starts (link:05-starting-work.adoc#UC-STA-1[UC-STA-1]) and a plan an epic starts run at once; the only plan that exists and does not run is a paused one.
-* *Cancel* and *abandon* are the same end, named by the state the plan was in: a running or pausing plan is cancelled, a paused one abandoned.
+* *Cancel* and *abandon* are the same end, named by the state the plan was in: a running or pausing plan, and one waiting for the operator or held, is cancelled, a paused one abandoned. Only the cancel of a plan held by an integrity pause is that pause's resolution _abort_, and ends the plan with the outcome `aborted` (<<change-plan-end>>).
 * *Its epic reacts* in its own workflow: it may stage the plan's row again, hold the rows that depend on it, or ask the operator (<<UC-CTL-2>>); a plan the epic started is never ended by the epic itself.
 * *A plan that runs no longer* (it has ended) offers no action but its view and a chat about it: read-only, with the role `replan` over its archived record, whose one proposal may be a follow-up plan (link:03-plans.adoc#change-ended-work[Ended Work], <<change-chat>>).
 * *A chat on a running plan*: a question never touches the plan; an accepted revision takes effect at the next task boundary: what runs finishes, the revision is applied, the plan runs on. The revision is the operator's own act and does not spend the plan's re-planning budget; the server never starts a chat.
 * *Chat is offered disabled*, with its reason, while no configuration of the role `replan` qualifies.
-* *The operator's words* in a chat are the operator's own, interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); the role reads the plan as data, and nothing changes without _accept_.
-Outcome:: the plan is paused, running, revised, or archived as the operator chose, and its epic knows.
+* *The operator's messages* in a chat are not interpreted: the role answers them. Only a change the role proposes passes a read-back (link:03-plans.adoc#change-own-words[Own Words]) before it applies; the role reads the plan as data, and nothing changes without _accept_.
+* *A settings change* (<<UC-CTL-5>>) applies from where the plan next reads the value, and its epic is told (`settings changed`).
+Outcome:: the plan is paused, running, revised, with its settings changed, or archived as the operator chose, and its epic knows.
 Changes::
 * *Pausing and starting a plan* (<<change-plan-pause>>).
 * *Cancelling and abandoning archive* (<<change-plan-end>>).
 * *The epic is told* (<<change-epic-informed>>).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the operator abort is specified in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), the terminal states in link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], the revision of a running plan in link:../specification/phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Dynamic Re-Planning].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
 
 [#UC-CTL-2]
 == UC-CTL-2: Control an Epic
@@ -126,15 +131,24 @@ Flow::
 +
 [source,text]
 ----
-  [S] epic.actions             next plan, decompose again, findings review,
-       │                       watches review, archive, cancel; and in every
-       │                       state not ended: chat
-       ├── chat ─────────────► ↳ chat (<<UC-CTL-1>>), with the epic's planning
-       │                         role decompose, over the whole epic; an
-       │                         accepted change staged through the epic's
-       │                         checks (surfaces disjoint, dependencies
-       │                         without a cycle)
-       ├── decompose again ──► ↳ decomposition (link:05-starting-work.adoc#UC-STA-6[UC-STA-6]), with the
+  [S] epic.actions             the actions of the epic's state:
+       │                       running: next plan, decompose again, findings
+       │                         review, watches review, archive, cancel,
+       │                         chat
+       │                       waiting for the operator: those of running,
+       │                         beside what it waits for (a decomposition,
+       │                         a decision: UC-PLN-2)
+       │                       held: those of running, and the acts of its
+       │                         hold (UC-CTL-4), whose end is cancel
+       │                       landing: those of running; archive offered
+       │                         disabled until the ledger has landed
+       │                       ended: its view and a read-only chat
+       ├── chat ─────────────► ↳ chat (as in UC-CTL-1), with the epic's
+       │                         planning role decompose, over the whole
+       │                         epic; an accepted change staged through the
+       │                         epic's checks (surfaces disjoint,
+       │                         dependencies without a cycle)
+       ├── decompose again ──► ↳ decomposition (UC-STA-6), with the
        │                         operator's instruction
        ├── next plan ────────► [S] epic.next-work   the next launchable row in
        │                             │              the queue's order: the plan
@@ -143,22 +157,31 @@ Flow::
        │                             ├── none launchable ──► why, per row (a
        │                             │                       dependency, a lock,
        │                             │                       the scope full)
+       │                             ├── scope full ──► [O] epic.raise-scope
+       │                             │                  raise the scope by one
+       │                             │                  ─► epic.next-work, or
+       │                             │                  leave it
        │                             ▼
        │                        the plan runs (UC-CTL-1 controls it)
-       ├── findings review ──► ↳ review (<<UC-CTL-3>>), the findings    
-       ├── watches review ───► ↳ review (<<UC-CTL-3>>), the watches    
+       ├── findings review ──► ↳ review (UC-CTL-3), the findings
+       ├── watches review ───► ↳ review (UC-CTL-3), the watches
        ├── archive ──────────► [S] epic.archive-check   tests that it is
        │                             │                  through: no plan
        │                             │                  running or paused, every
        │                             │                  row shipped or ended, no
-       │                             │                  open finding, the ledger
+       │                             │                  open (undecided)
+       │                             │                  finding, the ledger
        │                             │                  landed, the completion
-       │                             │                  review done
+       │                             │                  review done; lists the
+       │                             │                  kept findings and the
+       │                             │                  watches it carries
        │                             ├── not through ──► what is open, each
        │                             │                   leading to it
        │                             ▼ through
-       │                        [S] epic.archive    the ledger moved to the
-       │                                            archive and landed
+       │                        [S] epic.archive    the ledger, its kept
+       │                                            findings and watches with
+       │                                            it, moved to the archive
+       │                                            and landed
        ├── cancel ───────────► [O] epic.confirm-cancel   its running and paused
        │                             │                   plans: cancel them too,
        │                             │                   or let them run on
@@ -167,13 +190,15 @@ Flow::
        │                             ▼
        │                        [S] epic.cancel     its tasks withdrawn, its
        │                                            plans as chosen, its ledger
-       │                                            archived as aborted
+       │                                            archived as cancelled
        ▼
   epic.active                  the epic rests between its events
 ----
++
+The chat is the one of <<UC-CTL-1>> (<<change-chat>>), the decomposition link:05-starting-work.adoc#UC-STA-6[UC-STA-6], the review <<UC-CTL-3>>, a hold <<UC-CTL-4>>.
 Variations::
-* *The epic starts plans itself* as specified, as many as its `parallelization_scope` admits (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans]); _next plan_ is the operator starting the next one now. With the scope full, _next plan_ says so and offers to raise the scope by one.
-* *Watches still open* when the epic is through are listed by the archive check; archiving keeps them in the archived ledger, so nothing the epic watched is lost.
+* *The epic starts plans itself* as specified, as many as its `parallelization_scope` admits (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans]); _next plan_ is the operator starting the next one now. The scope is never asked at the start: it is the project's `epic.parallelization_scope`, whose machine default is 1. The operator raises it here, where _next plan_ with the scope full says so and offers to raise it by one, or in the project's settings.
+* *Kept findings and watches* when the epic is through are listed by the archive check as carried; they do not hold the archive, and archiving keeps them in the archived ledger, so nothing the epic found or watched is lost. Only an open finding, one not decided yet, holds it.
 * *An epic task waiting for the operator* (a held item, a decision) is shown with the actions and reached from them (link:03-plans.adoc#UC-PLN-2[UC-PLN-2]).
 * *Chat is offered disabled*, with its reason, while no configuration of the role `decompose` qualifies; a chat changes only staged rows, never a plan that runs. An ended epic offers its view and a read-only chat with `decompose` over its archive, as an ended plan does (<<UC-CTL-1>>).
 Outcome:: the epic has started its next plan, has its staged rows changed in a chat, is archived because it is through, or is cancelled with its plans as the operator chose.
@@ -183,14 +208,14 @@ Changes::
 * *The decomposition is reviewed* (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its states in link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc[Actions on Plans and Epics]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc[Terminal Client, Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#epic-actions[Actions on Plans and Epics, An Epic's Actions], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic[Terminal Client, An Epic]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
 
 [#UC-CTL-3]
 == UC-CTL-3: Review an Epic's Findings or Watches
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client, with the epic's planning role.
-Goal:: go through what the epic found (defects its landings and plans surfaced) or keeps under watch, and decide each item: keep it, drop it, make a plan of it, or reshape it with a model's help.
+Goal:: go through what the epic found (findings: what its landings and plans surfaced that no plan owns yet) or keeps under watch, and decide each item: keep it, drop it, make a plan of it, or reshape it with a model's help.
 Trigger:: the operator chooses _findings review_ or _watches review_ on an epic (<<UC-CTL-2>>), or follows the note that new findings wait.
 Flow::
 +
@@ -198,15 +223,16 @@ Flow::
 ----
   [S] review.open              the items of the kind, open ones first: each
        │                       with its statement, its rules (what makes a
-       │                       watch fire, what a defect requires), its
+       │                       watch fire, what a finding requires), its
        │                       origin (a landing, a plan's message, an
        │                       observation), since when, and the planning
        │                       role's proposal for it
        ▼
   [O] review.item              per item: keep, drop, promote, edit, chat; or
        │                       accept the remaining proposals, or finish
-       ├── keep ─────────────► [S] review.keep   kept, as a watch or as a
-       │                            defect (the kind may change)
+       ├── keep ─────────────► [S] review.keep   kept as a finding (to be
+       │                            fixed) or as a watch, moved to the
+       │                            other register where the kind changes
        ├── drop ─────────────► [S] review.drop   dropped, with the operator's
        │                            reason
        ├── promote ──────────► [M] review.draft-plan   the planning role
@@ -215,10 +241,26 @@ Flow::
        │                             │                 deliverables, surface,
        │                             │                 dependencies
        │                             ▼
-       │                        [O] review.confirm-plan   stage it, edit it
-       │                             │                    (as below), or back
-       │                             ├── edit ──► review.instruct
+       │                        [O] review.confirm-plan   stage it, edit it,
+       │                             │                    or back
        │                             ├── back ──► review.item
+       │                             ├── edit ──► [O] review.instruct-plan
+       │                             │            what to change in the
+       │                             │            drafted plan
+       │                             │                 │
+       │                             │                 ▼
+       │                             │            [M] review.redraft-plan
+       │                             │            the planning role drafts
+       │                             │            the plan again
+       │                             │                 │
+       │                             │                 ▼
+       │                             │            [O] review.read-back-plan
+       │                             │            the plan, old against new:
+       │                             │            accept ─► review.confirm-plan
+       │                             │            with the new draft; instruct
+       │                             │            again ─► review.instruct-plan;
+       │                             │            discard ─► review.confirm-plan
+       │                             │            with the draft before
        │                             ▼ stage
        │                        review.item, the item promoted
        ├── edit ─────────────► [O] review.instruct   what to adapt or add to
@@ -229,27 +271,33 @@ Flow::
        │                             │               rewrites them
        │                             ▼
        │                        [O] review.read-back   the change, old against
-       │                                               new: accept, instruct
-       │                                               again, or discard
-       ├── chat ─────────────► ↳ chat (<<UC-CTL-1>>), with the planning role
-       │                         decompose, over the item or the whole
+       │                                               new: accept ─►
+       │                                               review.item, the change
+       │                                               applied; instruct again
+       │                                               ─► review.instruct;
+       │                                               discard ─► review.item,
+       │                                               the item unchanged
+       ├── chat ─────────────► ↳ chat (as in UC-CTL-1), with the planning
+       │                         role decompose, over the item or the whole
        │                         register; an accepted change applied as the
        │                         item's disposition or rewrite ─► review.item
        ▼ finish
   [S] review.commit            the dispositions written to the epic's ledger
                                and landed; a promoted item is a staged row
 ----
++
+The chat is the one of <<UC-CTL-1>> (<<change-chat>>).
 Variations::
 * *Usually interactive*: the operator decides item by item; _accept the remaining proposals_ takes the planning role's proposal for every item not decided yet, after one confirmation that lists them.
 * *Leaving* keeps the decisions made so far; the review continues where it stopped, in either client.
-* *The operator's words* in _edit_ and _chat_ are the operator's own, interpreted with a read-back as in a decision (link:03-plans.adoc#change-own-words[Own Words]); the planning role reads the items as data, and a finding that came from outside the machine stays marked untrusted.
-Outcome:: every reviewed item is kept, dropped, or staged as a plan, its statement and rules as the operator shaped them, recorded in the epic's ledger.
+* *The operator's words* in _edit_ and _chat_ are not interpreted: the planning role works from them, and what it proposes (a rewrite, a redrafted plan, a change in the chat) passes a read-back (link:03-plans.adoc#change-own-words[Own Words]) before it applies; the planning role reads the items as data, and a finding that came from outside the machine stays marked untrusted.
+Outcome:: every reviewed item is kept as a finding, moved to the watches, dropped, or staged as a plan, its statement and rules as the operator shaped them, recorded in the epic's ledger.
 Changes::
 * *An epic's findings and watches* (<<change-findings-watches>>).
 * *The review* (<<change-epic-review>>).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic's coordination is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
 
 [#UC-CTL-4]
 == UC-CTL-4: Resolve What Holds a Plan
@@ -257,7 +305,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see why a plan, an epic, or a project's landing does not go on, when no decision is asked, and resolve it.
-Trigger:: Running Work marks something that needs the operator and is not a decision (link:03-plans.adoc#change-needs-operator[What Needs the Operator]): a plan stalled, a condition that needs an operator act, an integrity pause, an item of an epic held, a failed landing of an epic or of a move.
+Trigger:: Running Work marks a hold (link:03-plans.adoc#change-needs-operator[What Needs the Operator]), one of the kinds `stalled` (a plan stalled), `condition` (a condition that needs an operator act), `integrity_pause`, `held` (an item of an epic held), and `landing_failed` (a failed landing of an epic or of a move).
 Flow::
 +
 [source,text]
@@ -269,13 +317,16 @@ Flow::
        │                       • condition: the act it names (grant access,
        │                         add a credential, raise a budget), each as
        │                         a dialogue of the clients
-       │                       • integrity pause: inspect the change, accept
+       │                       • integrity_pause: inspect the change, accept
        │                         it, or restore
-       │                       • held item, failed landing: retry, or the
+       │                       • held, landing_failed: retry, or the
        │                         item's own acts; for the removal of moved
        │                         documents from git also give it up (the
        │                         files stay tracked; the source keeps its copy)
-       │                       • and always: end the plan (UC-CTL-1)
+       │                       • and always, for a plan or an epic: cancel
+       │                         (UC-CTL-1, UC-CTL-2); for an integrity
+       │                         pause the cancel is its abort: a plan
+       │                         ended as aborted, an epic as cancelled
        ▼
   [O] hold.resolve             the operator's act, confirmed where it cannot
        │                       be undone
@@ -284,11 +335,64 @@ Flow::
                                landing goes on, or what still holds is shown
 ----
 Variations:: an act the operator needs a terminal for today (`pm-operator grant-access`, `accept-edit`) is offered in both clients; a hold that clears by itself (a provider back) disappears without an act.
-Outcome:: what held is resolved, or the plan is ended; nothing waits without the operator knowing why.
+Outcome:: what held is resolved, or the plan or the epic is ended; nothing waits without the operator knowing why.
 Changes::
 * *Holds and their acts* (<<change-holds>>).
 Requirements:: the conditions are specified in link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], stalled plans in link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#holds[Terminal Client, What Holds a Plan]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#holds[Terminal Client, What Holds a Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+
+[#UC-CTL-5]
+== UC-CTL-5: Change a Plan's Settings
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client.
+Goal:: give one plan its own value of an aspect (how it lands, works, and asks; a role's harness, model, or effort; an integration's variant or an optional provider) without changing the project's or the machine's, and know from where it applies.
+Trigger:: the operator chooses _settings_ on a plan (<<UC-CTL-1>>), in any state until the plan has ended.
+Preconditions:: the plan has not ended.
+Flow::
++
+[source,text]
+----
+  [S] plan-settings.open       the plan's values per aspect, each with where
+       │                       it comes from (the plan, the project, the
+       │                       machine): the plan defaults (landing, method,
+       │                       asking), the roles, the providers
+       ▼
+  [O] plan-settings.aspect     the aspect to change, or close
+       │
+       ▼
+  [O] plan-settings.value      the plan's own value, the current one
+       │                       preselected ←; or remove the plan's value, so
+       │                       that the project's or the machine's applies
+       ▼
+  [S] plan-settings.validate   the validation of the machine values: an
+       │                       enrolled harness, an allowed model, an
+       │                       available provider, a landing variant that
+       │                       fits the project and the plan
+       ├── refused ──► the reason ─► plan-settings.value
+       ▼ valid
+  [S] plan-settings.apply      the value written to the plan's overrides
+       │                       and audited; a new instance version
+       │                       composed, under the position rule, from
+       │                       which the plan reads the value where it next
+       │                       needs it
+       ├── too late ──► the reason: the version would not contain the
+       │                plan's position ─► plan-settings.aspect
+       ▼
+  [S] plan.inform-epic         where an epic started the plan, its inbox
+                               is told: settings changed, with the aspect
+----
+Variations::
+* *Set where first needed*: a value the plan asks where it first needs it (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]) is the same plan value; this use case changes it later, or sets it before it is asked, so that it is not asked.
+* *A running plan* goes on while its settings change; what runs keeps the value it started with, and the new value applies from where the plan next reads it (a task started after it, the call site of an axis not yet reached).
+* *Too late*: a change whose new version would not contain the plan's current state and its call stack (the landing variant while the plan lands, for example) is refused with the reason; what has already run is not run again.
+* *Refused values*: a landing variant that cannot run for the project (`landing.pull-request` without a provider, `landing.main` on a protected base branch) or for the plan (`landing.files` for a plan from local changes, link:05-starting-work.adoc#UC-STA-9[UC-STA-9]) is refused with the reason; so is a harness, model, or provider the machine does not allow.
+Outcome:: the plan has its own value of the aspect, a new instance version shows it, the change is audited, and its epic knows.
+Changes::
+* *Plan overrides* (link:01-onboarding.adoc#change-plan-overrides[Plan Overrides]).
+* *The epic is told* (<<change-epic-informed>>).
+Requirements:: the plan instance and its composition events are specified in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], the harness of a role in link:../specification/model-work/04-worker-launch.adoc#harness-selection[Harness Selection].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
 
 [#changes]
 == Changes to the Specification
@@ -309,12 +413,12 @@ Affects:: link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessi
 [#change-plan-end]
 === Cancelling and Abandoning Archive
 
-Gap:: `pm-operator abort plan` moves a plan to `plan.aborted`, which is never archived: the aborted plan stays among the project's plans. Its open pull request is left as it is.
+Gap:: `pm-operator abort plan` moves a plan to `plan.aborted`, which is never archived: the aborted plan stays among the project's plans. Its open pull request is left as it is. Every end through `plan.aborted` has the one outcome `aborted`, whether the operator ended the plan, resolved an integrity pause by aborting it, or released the project (reason `project_released`).
 Fix::
-* *Cancel* (a running or pausing plan) and *abandon* (a paused one) end the plan through `plan.aborted` with the outcome `cancelled` or `abandoned` and the operator's reason, then archive it like a completed plan; its lesson claim is released as today.
+* *Cancel* (a running or pausing plan, and one waiting for the operator or held) and *abandon* (a paused one) end the plan through `plan.aborted` with the outcome `cancelled` or `abandoned` and the operator's reason, then archive it like a completed plan; its lesson claim is released as today.
 * *The pull request*: the operator chooses in the confirmation whether an open pull request of the plan is closed (with a comment naming the reason) or left open; its branch stays.
 * `pm-operator abort plan` becomes the shell form of cancel and abandon.
-* *The four outcomes*: `cancelled` and `abandoned` join the closed list of plan outcomes; the integrity abort and the release of a project keep their own reasons and are archived the same way.
+* *Four outcomes of an operator's or the project's end* join the closed list of plan outcomes beside `merged`, `handed_back`, `returned`, and `no_change`: `cancelled` and `abandoned` (above); `released`, set by the release of the project on every plan that has not ended, whatever its state, never `cancelled` or `abandoned`; and `aborted`, which stays the outcome of the integrity abort (the resolution _abort_ of an `integrity_breach`). All four are archived the same way, with their reason.
 Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), link:03-plans.adoc#change-running-work[Running Work] (an aborted plan is not active), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-abort[Operator Abort] and `delete-plan`, link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Release] (the release aborts every plan), link:../specification/store-schemas/13-leases-integrity-testing.adoc[Integrity] (the integrity abort), link:../requirements/02-workflow.adoc[PM-WF] (the closed list of plan outcomes), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
 [#change-epic-informed]
@@ -322,30 +426,31 @@ Affects:: link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#s
 
 Gap:: an epic learns a plan's outcome from the plan's events (`plan_outcome`) only once the plan ends in a terminal state; an operator's pause or start of its plan does not reach it, and nothing says what an epic does with a plan the operator ended.
 Fix::
-* Every operator act on a plan whose `origin.epic_id` names a live epic appends a record to the epic's inbox (`paused`, `started`, `cancelled`, `abandoned`, `revised` by a chat, with the reason and the operator's channel), and the queue row follows the plan's state.
+* Every operator act on a plan whose `origin.epic_id` names a live epic appends a record to the epic's inbox (`paused`, `started`, `cancelled`, `abandoned`, `revised` by a chat, `settings_changed` by a change of its settings (<<UC-CTL-5>>), with the reason and the operator's channel), and the queue row follows the plan's state.
 * The epic's `coordinate` task decides on it as on every inbox message: re-stage the row, hold the rows that depend on it, leave it, or raise a decision for the operator; the epic never ends a plan itself.
-* The queue row's status gains `paused`, `cancelled`, and `abandoned`, following its plan.
+* The queue row's status gains `pausing`, `paused`, `cancelled`, and `abandoned`, following its plan.
+* The release of the project is no act on one plan: it ends the epic with its plans (<<change-epic-actions>>), so nothing is left to tell it.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Epic Inbox Record], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Queue Row].
 
 [#change-epic-actions]
 === An Epic's Actions
 
-Gap:: the operator can only abort an epic (`pm-operator abort epic`); it starts its plans only by itself, archives only when its completion review says so, and has nothing to show the operator why it is or is not through.
+Gap:: the operator can only abort an epic (`pm-operator abort epic`, which sets `terminal_reason` `abandoned`, also when the release of the project aborts it); it starts its plans only by itself, archives only when its completion review says so, and has nothing to show the operator why it is or is not through.
 Fix::
 * *Next plan*: an operator act that has `epic.next-work` start the next launchable row now (which creates its plan implicitly), in the queue's order, under the same admission tests (dependencies, surfaces, locks); with no launchable row it answers why per row; with the scope full it offers to raise `parallelization_scope` by one.
 * *Decompose again*: the operator's instruction starts `decomposition` (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]) over the staged rows.
-* *Archive*: the operator's request runs the archive check (no plan running or paused, every row shipped or ended, no open finding, the ledger landed, the completion review done) and archives through `epic.archive` only when it passes; otherwise it answers what is open. Open watches go into the archive.
+* *Archive*: the operator's request runs the archive check (no plan running or paused, every row shipped or ended, no open finding, the ledger landed, the completion review done) and archives through `epic.archive` only when it passes; otherwise it answers what is open. Only an `open` finding, one not decided yet, holds the archive; kept findings and the watches go into the archive with the epic, and the check lists them as carried.
 * *Cancel*: `pm-operator abort epic` with the operator's choice for its plans: cancel them too (each through <<change-plan-end>>), or let them run on detached (link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Children of a Terminal Epic]).
 * *Endpoints*: the acts are operator endpoints of the epic resource (link:03-plans.adoc#change-epic-resource[The Epic as a Resource]).
-* *Outcome*: the epic's `terminal_reason` gains `aborted`, set by cancel; `completed` by the archive.
-Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.next-work`, `epic.archive`, `epic.review-completion`), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI], link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header] (`terminal_reason`, `parallelization_scope`).
+* *Outcome*: the epic's `terminal_reason` is `completed`, set by the archive; `cancelled`, set by cancel, the value `abandoned` of today renamed (before 1.0, without a shim), so that an epic ends in the words of a plan ended while it runs; or `released`, new, set by the release of the project, which ends the epic and its plans together (each plan `released`, <<change-plan-end>>).
+Affects:: link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States] (`epic.next-work`, `epic.archive`, `epic.review-completion`), link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI], link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Release] (`released`), link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header] (`terminal_reason`, `parallelization_scope`).
 
 [#change-findings-watches]
 === An Epic's Findings and Watches
 
-Gap:: the epic routes each message of its inbox (`coordinate`: transferred, re-scoped, left alone) and analyses each landing, but keeps nothing of what they surface: no defect that no plan owns yet, no observation to check again later. `plan-marshall` keeps them as _Open Defects_ and _Watches_ in its epic narrative, by hand.
+Gap:: the epic routes each message of its inbox (`coordinate`: transferred, re-scoped, left alone) and analyses each landing, but keeps nothing of what they surface: no problem that no plan owns yet, no observation to check again later. `plan-marshall` keeps both in its epic narrative, by hand.
 Fix::
-* The epic keeps two registers in its ledger: *findings* (a defect no plan owns yet) and *watches* (an observation to check again, with the trigger that checks it). Each item has an id, its statement, its rules, its origin (a landing, a plan's message, an observation), when it was opened, and its state (open, kept, dropped, promoted with the row it became).
+* The epic keeps two registers in its ledger: *findings* (a problem no plan owns yet, to be fixed) and *watches* (an observation to check again, with the trigger that checks it). Each item has an id, its statement, its rules, its origin (a landing, a plan's message, an observation), when it was opened, and its state (open, kept, dropped, promoted with the row it became); _open_ is an item not decided yet, and keeping an item keeps it as a finding or moves it to the watches.
 * `epic.analyze-landing` and `coordinate` add items instead of only routing; a watch whose trigger fires (a landing, an advance of the default branch) is re-checked by the epic's task and becomes a finding or is closed.
 * New findings are a kind of `needs_operator` of the epic, so the operator learns of them in Running Work.
 Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger] (the registers), link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States], link:03-plans.adoc#change-needs-operator[What Needs the Operator].
@@ -364,9 +469,9 @@ Affects:: link:../specification/model-work/08-epic-coordination.adoc[Epic Coordi
 
 Gap:: the operator chats with a planning role only inside the decomposition's review and the review of an epic's items, each with an exchange of its own; nothing lets the operator ask a plan or an epic about itself, or steer a running plan in words: a plan is re-planned only when the server's checkpoints raise a trigger, and re-planning never asks the operator (`PM-WF-17`). Nor can the operator ask back before answering a decision (an answer names an option, or is the operator's words alone), talk over what a start's sources say before the work exists, or ask an ended plan or epic why it ended.
 Fix::
-* *One sub-workflow `chat`*, a compiled unit like the source and epic units, its states `chat.<state>`; a plan calls it with `phase inherit`, an epic, `decomposition.review`, `review`, a decision (`decision.answer`), a start (`start.sources`, `start-epic.sources`), and the ended work call it too, each with its subject (a plan, an epic, or an entry) and a scope: the whole plan, the whole epic, the decomposition's draft, one item of a register, the whole register, one decision, a start's entry, or an ended plan's or epic's archived record.
+* *One sub-workflow `chat`*, a compiled unit like the source and epic units, its states `chat.<state>`; a plan calls it, and the chat has the phase of the phase sub-workflow on its call stack, the phase it is called in; an epic, `decomposition.review`, `review`, a decision (`decision.answer`), a start (`start.sources`, `start-epic.sources`), and the ended work call it too, each with its subject (a plan, an epic, or an entry) and a scope: the whole plan, the whole epic, the decomposition's draft, one item of a register, the whole register, one decision, a start's entry, or an ended plan's or epic's archived record.
 * *It routes to the subject's planning role*: for a plan the role `replan`, whose facts are those of a re-planning task without a trigger (the outline's deliverables with their state, the plan tasks with their status, the declared and the realized footprint); for an epic, its decomposition, and its review the role `decompose`; for a decision a worker asked, the role of the task that asked, and for one a server rule raised or a quorum escalated, the subject's planning role; for a start, `refine` for a plan's entry and `decompose` for an epic's; for ended work, `replan` for a plan and `decompose` for an epic. A plan and an epic offer _chat_ in every state, an ended one read-only; every caller offers it disabled with its reason while no configuration of the routed role qualifies.
-* *Its states*: `chat.open` (server) assembles the facts of the scope as data, an untrusted item still marked untrusted; `chat.turn`, an operator wait for the operator's message, then one task of the routed role that answers and may propose changes, again until the operator ends the chat; `chat.read-back`, an operator wait that shows each proposed change as a read-back (link:03-plans.adoc#change-own-words[Own Words]) to accept or reject; `chat.apply` (server); `chat.end`, which keeps the transcript with the subject for the audit and sends it nowhere else. Nothing changes without _accept_.
+* *Its states*: `chat.open` (server) assembles the facts of the scope as data, an untrusted item still marked untrusted; `chat.turn`, an operator wait for the operator's message, which is not interpreted, then one task of the routed role that answers and may propose changes, again until the operator ends the chat; `chat.read-back`, an operator wait that shows each proposed change as a read-back (link:03-plans.adoc#change-own-words[Own Words]) to accept or reject; `chat.apply` (server); `chat.end`, which keeps the transcript with the subject for the audit and sends it nowhere else. Nothing changes without _accept_.
 * *An accepted change goes through the caller's own path and its checks*: for the decomposition into the draft and the server's checks; for a review as the item's disposition or rewrite; for an epic as staged rows through the epic's checks (surfaces disjoint, dependencies without a cycle); for a plan as a revision through the guards of a first plan (the outline validation, the derivation dry-run, the task graph, the Q-Gate's mechanical checks), applied as `replan.apply` applies one and composing a plan instance version of the event `replan`, its re-planning record naming the operator's chat as who decided.
 * *A running plan*: a question never touches it; an accepted revision takes effect at the next task boundary (what runs finishes, the revision is applied, the plan runs on). The revision is the operator's own act and does not spend `replan_budget`; `PM-WF-17` stays true, since the operator starts a chat and the server never does.
 * *The epic is told* of a revision of a plan it started (<<change-epic-informed>>).
@@ -381,6 +486,7 @@ Affects:: link:../specification/state-catalogue.adoc[State Catalogue] (a unit se
 
 Gap:: what holds a plan without a decision (a stall, a condition that names an operator command, an integrity pause, a held item, a failed landing) is reported as a condition with an operator command as text (`facts.operator_command`); the acts are terminal verbs, several of them unavailable in the web app, and none is described for a client.
 Fix::
-* Each hold is a record of the scope with its kind (the `needs_operator` kinds that are not decisions), cause, since when, attempts, and the acts that resolve it, each act an operator endpoint of both clients with its arguments; an operator command as relay text goes.
+* Each hold is a record of the scope with its kind, from the closed list `stalled`, `condition`, `integrity_pause`, `held`, `landing_failed` (the same kinds in `needs_operator`), cause, since when, attempts, and the acts that resolve it, each act an operator endpoint of both clients with its arguments; an operator command as relay text goes.
 * A hold that clears by itself ends its record and its event says so.
+* Beside its own acts, a hold of a plan or an epic offers *cancel* (<<change-plan-end>>, <<change-epic-actions>>); for an integrity pause the cancel is its resolution _abort_, which ends a plan with the outcome `aborted` and an epic as `cancelled`. `paused` is no hold: a paused plan shows by its state.
 Affects:: link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], link:../specification/hypermedia-format/01-representation-and-link-forms.adoc#operator-command-relay[Operator Commands as Relay Text], link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans], link:../specification/cli-and-security/02-credentials-and-operator.adoc[Operator CLI] (`grant-access`, `accept-edit`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
