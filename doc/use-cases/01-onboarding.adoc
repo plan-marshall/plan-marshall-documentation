@@ -527,7 +527,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, or a credential.
+Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, a credential, or the cleanup's durations.
 Trigger:: the operator opens the machine settings of either client; or a credential has expired or is about to (reported by the status, or a plan held by it, link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
 Preconditions:: the onboarding has completed once (<<UC-ONB-1>>, resting in `onboard.completed`).
 Flow::
@@ -536,7 +536,8 @@ Flow::
 ----
   [O] settings.choose          what the machine recorded, per aspect, with
        │                       the remembered consents, the documents mode,
-       │                       and the credentials with their status
+       │                       the cleanup's durations, and the credentials
+       │                       with their status
        ├── reconfigure <aspect> ──► ↳ the aspect's sub-workflow (UC-ONB-3 to
        │                              UC-ONB-9) as a later run, its current
        │                              values the proposal ─► settings.choose
@@ -552,6 +553,9 @@ Flow::
        │                              ▼
        │                         [S] settings.record   the machine setting,
        │                                               audited ─► settings.choose
+       ├── cleanup durations ────► [S] settings.record   the durations of
+       │                                               UC-SYS-3, audited
+       │                                               ─► settings.choose
        ▼ a credential
   [O] settings.credential      rotate (a new secret for the entry, its other
        │                       fields kept) or replace (a new entry, another
@@ -575,6 +579,7 @@ Variations::
 * The documents mode is the machine's `sources.documents_mode` (`copy`, `move`, or `ask`, the default; link:05-starting-work.adoc#change-documents[Documents]); answering _always_ in a plan's start writes the same setting.
 * A credential that has expired holds every plan that needs it as a condition; the hold names the act that resolves it, which is this flow, and the plan goes on once the new credential verifies (link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
 * In the web app a secret is entered only on the loopback listener; on the LAN listener the form names the terminal command (<<change-web-credentials>>).
+* *The cleanup's durations*: how long archived plans, archived epics, the logs of ended work, read reports, and unenrolled projects are kept before the cleanup offers them, and after how many days a postponed cleanup asks again, are machine settings changed here, as in the cleanup view (link:07-system.adoc#UC-SYS-3[UC-SYS-3]); a project's own duration for its plans, epics, and logs is set in its settings.
 * An aspect a project sets for itself is changed in that project's setup, never here.
 * *Changed in two clients at once*: the first change wins; a later one made against an older value is refused with `conflict`, the current value shown, and the operator may apply theirs again on top of it (<<concurrent-changes>>).
 Outcome:: the changed value is recorded for the machine and audited; every project and plan that follows the machine's value uses it from its next read.
@@ -584,6 +589,7 @@ Changes::
 * *Credential store as an operator choice* (<<change-credential-store>>): changing the store is a move.
 * *Provider verification* (<<change-provider-verification>>): a changed credential is verified again.
 * *Credentials in the web app* (<<change-web-credentials>>).
+* *One cleanup* (link:07-system.adoc#change-cleanup[One Cleanup]): the durations `cleanup.*`.
 Requirements:: the credential verbs exist: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials] (`rotate`, `set`).
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#remembered[Consents, The Remembered Consents]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-settings[Terminal Client, The Machine's Settings] (with link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-documents[the documents mode] and link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-credential[a credential]); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc[Web App, Machine Settings] (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#documents[Documents], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#credentials[Credentials])
 

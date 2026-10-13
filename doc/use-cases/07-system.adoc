@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » System
 
-The operator looks after the runtime itself: stops it, starts it, restarts it, and upgrades it to a newer version, and sees what it is doing: its version, how long it runs, what it uses of the machine, the work it carries, and the tokens the models use. The operator does this in the web app or in the terminal client; how each client offers it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
+The operator looks after the runtime itself: stops it, starts it, restarts it, and upgrades it to a newer version, sees what it is doing: its version, how long it runs, what it uses of the machine, the work it carries, and the tokens the models use, and cleans up the work history the machine keeps. The operator does this in the web app or in the terminal client; how each client offers it is its design (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]).
 
 [#principles]
 == Principles
@@ -14,6 +14,8 @@ The operator looks after the runtime itself: stops it, starts it, restarts it, a
 Nothing is lost by stopping:: Whatever stops the runtime, and however fast, the work resumes from its last committed state on the next start, by the recovery the specification defines (link:../specification/runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Per-Project Recovery]); stopping only decides how much of what runs is finished first.
 [#measured-where-it-happens]
 Figures are kept, not searched:: The runtime counts its figures where things happen, as metrics, and a client reads them; no figure is computed by reading the stores on each request. A figure the runtime cannot measure here is shown as unavailable, never as `0`.
+[#one-cleanup]
+Work history goes only when the operator says so:: There is one cleanup of the machine, and it is the only place where work history is deleted: archived plans and epics, the logs of ended work, read reports, and the stores of unenrolled projects go only after the operator confirms it (<<UC-SYS-3>>). What the runtime leaves behind as technical residue it removes by itself, and only counts.
 
 [#UC-SYS-1]
 == UC-SYS-1: Manage the Runtime
@@ -182,6 +184,80 @@ Changes::
 Requirements:: none yet: the metrics are a new requirement (<<change-runtime-metrics>>); the usage of a task is specified in link:../specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], the runtime status in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
 
+[#UC-SYS-3]
+== UC-SYS-3: Clean Up
+
+Status:: `DRAFT`
+Actor:: the operator, in the web app or in the terminal client; deleting is a privileged act of the operator's channels, like the acts of <<UC-SYS-1>>.
+Goal:: get rid of the work history the operator no longer needs, all of it in one place, seeing what goes before it goes, and nothing deleted without the operator's word.
+Trigger:: the report that work history can be deleted (link:03-plans.adoc#UC-PLN-6[UC-PLN-6]), whose detail is the cleanup job; or the operator opens the cleanup from the system view (<<UC-SYS-2>>) or by its own command.
+Preconditions:: the runtime runs.
+Flow::
++
+[source,text]
+----
+  [S] cleanup.check            once a day and at the start: the work
+       │                       history whose end (archived, read,
+       │                       unenrolled) is older than its duration,
+       │                       without the kept items and the items of an
+       │                       open or postponed job
+       ├── nothing new due ──► done
+       ▼ due since the last job
+  [S] cleanup.report           one cleanup job, its items fixed; one
+       │                       report system.cleanup_due ("12 plans,
+       │                       2 epics and 40 logs can be deleted"), its
+       │                       detail the job
+       ▼ the job opened (its report, the system view, its command)
+  [O] cleanup.job              summary: plans, epics, logs, reports,
+       │                       unenrolled projects, and the space it frees
+       │                       details, by project: each plan or epic with
+       │                       its title, outcome, when it ended, and its
+       │                       size, its logs counted; each read-only to
+       │                       open; each checked ←
+       │                       delete, ask me again in 3 days, ignore,
+       │                       or leave
+       ├── delete ───────────► [O] cleanup.confirm   the counts of what is
+       │                             │               checked; it cannot be
+       │                             │               undone
+       │                             ├── back ──► cleanup.job
+       │                             ▼ delete
+       │                        [S] cleanup.delete   every checked item
+       │                                             deleted, each audited;
+       │                                             an unchecked one kept
+       │                                             for good ─► done
+       ├── ask me again ─────► [S] cleanup.remind    nothing deleted; the
+       │                                             same items come back
+       │                                             as a new job in 3 days
+       │                                             ─► done
+       ├── ignore ───────────► [S] cleanup.keep      nothing deleted; the
+       │                                             items kept for good,
+       │                                             never offered again
+       │                                             ─► done
+       ▼ leave
+  done                         the job stays open, in the system view
+----
++
+The report is the one of link:03-plans.adoc#UC-PLN-6[UC-PLN-6]: it is read when the job is opened, like every report's detail, and deciding the job closes it. The settings are <<change-cleanup>>.
+Variations::
+* *What is work history*: the archived plans, each with everything its archive holds (its records, history, decisions, transcripts, and metrics rows); the archived epics, each with its store on the machine; the logs of ended work (the logs of ended jobs, and the worker and session logs of archived plans), counted per plan; the reports the operator has read; and the machine stores of unenrolled projects, each with its archive. Only these are offered, and only through the job.
+* *Technical residue* (temporary files, caches, the directories of ended jobs' workers, stale locks and leases, fenced generations, the workspace's technical rows, retired lesson bodies, rotated audit files) is removed by the runtime by itself, each removal audited; the cleanup view shows what it removed and when, as figures, and never asks.
+* *The durations*: one per kind, 30 days each by default, at least 7, or _never_; changed in the cleanup view and among the machine's settings (link:01-onboarding.adoc#UC-ONB-10[UC-ONB-10]); a project may have its own for its plans, epics, and logs, set in its settings. A shorter duration makes more due at the next check, never at once.
+* *Never offered*: what still runs (a live plan or epic, a pending entry), an unread report, and an archived plan that still owes the operator something (a retained capture ref not dropped); such an item becomes due when that ends.
+* *One job at a time*: what becomes due while a job is open or postponed waits for the next job; the job never grows while the operator looks at it.
+* *Ask me again*: the same items, and only those, come back as a new job and a new report after the reminder's days (3 by default, a setting).
+* *Ignore and unchecked items*: the items are kept for good and listed as _kept_ in the cleanup view, where the operator releases any of them back to the cleanup; a released item is offered again in the next job.
+* *What is never touched*: a plan's branch, its pull request, and the remote; an epic's archived ledger in the repository, which is the team's record (removing it is a change of the repository, not the cleanup); the audit log.
+* *After the delete*: a deleted plan or epic leaves ended work, and its reports' detail says "deleted" with the date; its id is never given again. The token figures of the system view (<<UC-SYS-2>>) stay as they were: what a deleted plan used is kept as an aggregate, so no figure goes down.
+* *An item no longer due* when the delete runs (a project enrolled again, a kept item) is left out and named; an item that cannot be deleted stays, with its reason, and comes back in the next job; the rest is deleted.
+* *Several devices*: the job is decided once for the machine; a decision from another device on a decided job is answered with the decision taken.
+* *A stop during the delete*: the delete goes on after the next start; what was deleted stays deleted.
+Outcome:: what the operator chose is deleted, postponed, or kept, the deletion audited; nothing of work history went without the operator's word.
+Changes::
+* *One cleanup* (<<change-cleanup>>).
+* *Reports to the operator* (link:03-plans.adoc#change-reports[Reports to the Operator]): the kind `system.cleanup_due`.
+Requirements:: none yet: the requirement is drafted in <<change-cleanup>>; today's retention is specified in link:../specification/timeouts/03-retention-host-config.adoc#retention-days[Retention & Rotation] and link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
+
 [#changes]
 == Changes to the Specification
 
@@ -216,3 +292,23 @@ Fix::
 * *Exposition*: an option, not required: `GET /api/v1/system/metrics` answered in the OpenMetrics text format for a tool of the operator that holds the runtime token. It is served on the runtime's socket only; a TCP listener of its own on loopback is excluded by link:../requirements/08-security.adoc#PM-SEC-4[PM-SEC-4].
 * *Open point*: which library implements the registry (a metrics library of the runtime's stack or a registry of its own) is a dependency decision of the operator, taken by the implementing package before it adds anything.
 Affects:: link:../requirements/01-architecture.adoc[PM-ARCH] (the new requirement), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the resources, the event), link:../specification/runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Periodic Sweep] (the disk use), link:../specification/runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Per-Project Recovery] (the gauges set from the recovered state), link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store] (the rows the models' figures are filled from, one writer per name), link:../specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], link:../specification/store-schemas/13-leases-integrity-testing.adoc#machine-lease-stores[Machine Lease Stores] (slots and leases), link:../specification/runtime-model/04-sessions-and-workers.adoc[Sessions & Workers] (the workers by role and state), link:../requirements/01-architecture.adoc#PM-ARCH-2[PM-ARCH-2] (kept on the machine), link:../requirements/08-security.adoc#PM-SEC-4[PM-SEC-4] (no listener of its own).
+
+[#change-cleanup]
+=== One Cleanup
+
+Gap:: work history and technical residue share one mechanism. The retention purges, archived plans with the machine store `epics/<epic_id>/` of an archived epic (`retention.archived_plans_days`), job records with their logs (`retention.job_logs_days`), the workspace's rows (`retention.workspace_rows_days`, metrics rows among them), retired lesson bodies, daemon store directories, and, with `--machine`, rotated audit files, run only through `pm-operator sweep --apply`, which lists or removes them all alike; only the pending-record and fenced-generation steps of the periodic sweep run by themselves (link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps]; link:../specification/runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Periodic Sweep]). The keys are per project in the operator's `local-config.json`, 5 days by default (link:../specification/timeouts/03-retention-host-config.adoc#retention-days[Retention & Rotation]); nothing tells the operator that something could go, and neither client offers it. Read reports are kept without a way to remove them (<<UC-SYS-3>>, link:03-plans.adoc#change-reports[Reports to the Operator]), and an unenrolled project's store is removed only outside `PM-MCP`, by deleting its directory. Residue that needs no judgement waits for the operator's verb as well.
+Fix::
+* *Requirement (new)*, in link:../requirements/01-architecture.adoc[Core Architecture (PM-ARCH)], the next free id after the one of <<change-runtime-metrics>>: "The system must delete work history (archived plans, archived epics' machine stores, the logs of ended work, read reports, and the machine stores of unenrolled projects) only through one cleanup the operator confirms in either client: it must find once a day what has been ended for longer than its configured duration, tell the operator by one report, show what would be deleted as a summary and item by item, and delete, postpone, or keep it as the operator chooses, auditing every deletion; and it must remove technical residue by itself, each removal audited." It is written by the implementing package, like every requirement of a change.
+* *Two classes*. _Work history_ is deleted only by the cleanup job: an archived plan with its whole archive entry (records, history, decisions, transcripts, metrics rows, and the workspace's metrics rows of the plan); an archived epic's machine store `epics/<epic_id>/`; the logs of ended work (the logs of ended jobs, the worker and session logs of archived plans), the job records staying with their plan; read reports; and the machine store of an unenrolled project, whole. _Technical residue_ is removed by the periodic sweep by itself from now on, each removal audited under the rules of the evidence-based sweeps (keep-rules, never on absence of evidence, the source of every value): pending entry records and fenced generations as today, the workspace's technical rows (`retention.workspace_rows_days`, without the plans' metrics rows), retired lesson bodies (`retention.retired_lesson_bodies_days`), daemon store directories of a write-set digest no longer the project's, worker directories of ended jobs, stale leases, temporary files and caches, and rotated audit files older than `audit_rotation.retain_days`, their index entries kept. The quiet-window retirement of `arch-constraint` lessons is a verdict on a lesson, not residue: it stays an act of `pm-operator sweep --apply`.
+* *The verbs*: `pm-operator sweep [<project_id>] [--machine] [--apply]` stays for technical residue: it lists what the next automatic pass would remove, with its evidence, runs that pass at once with `--apply`, and retires the quiet `arch-constraint` lessons only then. `pm-operator cleanup [--delete|--remind|--ignore] [--yes]` is the cleanup job of the terminal client; the work history is never a candidate of `sweep`.
+* *The durations*, in days, an integer of at least `7` or `never`: `cleanup.plans_after_days`, `cleanup.epics_after_days`, `cleanup.logs_after_days`, `cleanup.reports_after_days` (read reports), and `cleanup.unenrolled_after_days`, each `30` by default; `cleanup.remind_after_days`, at least `1`, default `3`. They are machine values in `machine-config.json` `cleanup`; a project's own value of the first three is kept in its `local-config.json` `cleanup` and wins for its items (link:04-projects.adoc#change-project-levels[Project Values over Machine Values]); reports and unenrolled projects belong to the machine only. `retention.archived_plans_days` and `retention.job_logs_days` go; the other `retention` keys stay for residue and the quiet-window retirement. An item is due when its end (archiving, reading, unenrolment) is older than its duration; the floor of `7` days keeps every window of the system view (at most 7 days) untouched by a deletion.
+* *Never due*: live work, a pending entry, an unread report, an archived plan with an undischarged owed item (a retained capture ref, link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-drop-capture[Capture Ref Removal]), a kept item, and an item of an open or postponed job.
+* *The check*: the first pass of the periodic sweep after the start and the first of each new UTC day compute the items due. When there are items not yet in a job, and no job is open or postponed, they form a new job, fixed from then on, and the runtime writes one report `system.cleanup_due` with the counts per kind, whose detail is the job; one report per job, never one per item. Items that become due while a job is open or postponed wait for the next job.
+* *The store*: one append-only journal of the machine scope, `<PM_MCP_BASE>/state/cleanup.jsonl`, with its own leaf lock like `state/reports.jsonl`. Its events: `job` (the job with its items: kind, id, project, title, outcome, ended at, size, the duration and its source), `decided` (`delete` with the unchecked items, `remind` with when it comes back, or `ignore`; the channel, the device, and when), `deleted` and `delete_failed` per item (with the reason), `kept` and `released` per item. A job's state (`open`, `postponed`, `deleting`, `done`) and the kept list are the fold of its events. A job is identified by `job_id`, store-assigned `cln-NNNN`, never reused; it is no job of the job runtime: it starts no process and has no job record.
+* *The decisions*: _delete_ deletes the checked items, the unchecked ones kept for good; _remind_ deletes nothing and, after `cleanup.remind_after_days`, opens a new job of the same items with a new report; _ignore_ deletes nothing and keeps every item for good. The first decision of a job is the one taken; a later one on a decided job is answered with the decision taken, unchanged. A released kept item is due again at the next check.
+* *Deleting*: item by item, each in its own journaled transaction with one audit record `cleanup_deleted` (category `store`; the kind, the id, the project, `job_id`, the channel, the size). An archived plan's directory `archive/<plan_id>/` is replaced by a tombstone `archive/<plan_id>/deleted.json` (its `plan_id`, title, outcome, when it ended, `deleted_at`, `job_id`), so its id is never allocated again, ended work leaves it out, and its reports' detail resolves to "deleted" with the date; an epic's `epics/<epic_id>/` likewise by `epics/<epic_id>/deleted.json`. Read reports leave `state/reports.jsonl` by a journaled rewrite under its lock; their ids are never reused. An unenrolled project's store goes as a whole; enrolling the project again starts a new store. Before a plan's metrics rows go, what it used is added to the machine's usage aggregate `<PM_MCP_BASE>/state/usage-aggregate.jsonl` (per day, project, model, and role, in tokens with their coverage), from which the system view's figures are filled at the start beside the metrics stores, so no figure goes down. An item no longer due (a project enrolled again) is skipped and named; a failure keeps the item with its reason for the next job. A delete cut by a stop goes on after the next start from its journal.
+* *Unenrolment*: `pm-operator unenrol` records `unenrolled_at` in the store's `store.json`; enrolling again removes it. The store is a cleanup item from then on, never a sweep candidate.
+* *Local API*: `GET /api/v1/system/cleanup` answers the open or postponed job (its summary with the counts per kind and the space it frees, its items by project, each linked read-only to its ended view), the durations with their sources, the count of kept items, and what the automatic pass removed and when; `POST /api/v1/system/cleanup/{job_id}/delete` with the unchecked items, `…/remind`, and `…/ignore` decide the job; `GET /api/v1/system/cleanup/kept` lists the kept items and `PUT /api/v1/system/cleanup/kept` writes the list, an item left out released. Each write is privileged (`[op]`), accepted from `pm-operator` and from a paired device, and audited with its channel. The runtime-wide stream `GET /api/v1/events` announces `cleanup.job_opened`, `cleanup.decided`, `cleanup.progress`, and `cleanup.done`.
+* *The report*: the kind `system.cleanup_due` joins the catalogue of link:03-plans.adoc#change-reports[Reports to the Operator]; its `from` is the machine, with no project; its detail is the job, and opening it reads the report.
+* *Recurring waivers* are counted over the `waiver_waived` records of the audit log of the last 90 days, whatever has been deleted since, instead of over the plans `archived_plans_days` retains (link:../specification/phase-workflows/02-planning-lanes-phases-3-4.adoc[Planning Lanes & Phases 3–4], Recurring Waivers).
+Affects:: link:../requirements/01-architecture.adoc[PM-ARCH] (the new requirement), link:../requirements/02-workflow.adoc#PM-WF-13[PM-WF-13] (archived records readable until the cleanup deletes them), link:../requirements/06-execution.adoc#PM-EXEC-2[PM-EXEC-2] (unenrol and `sweep`), link:../specification/timeouts/03-retention-host-config.adoc#retention-days[Retention & Rotation] and its link:../specification/timeouts/03-retention-host-config.adoc#configuration-keys[Configuration Keys], link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration] (`retention` reduced, `cleanup`), link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store] (`cleanup`), link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps], link:../specification/runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Periodic Sweep] (the residue, the daily check), link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (`sweep`, `cleanup`, the privileged endpoints), link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[Enrolment, Lifecycle Gate & Release], link:../specification/store-schemas/11-enrolment-store.adoc#project-store-identity[Project Store Identity] (`unenrolled_at`), link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives] (the tombstones), link:../specification/filesystem-layout/02-machine-runtime.adoc#machine-layout[Machine-Wide Runtime Layout] (`state/cleanup.jsonl`, `state/usage-aggregate.jsonl`), link:../specification/store-schemas/12-machine-stores.adoc#audit-log[Audit Log] (`cleanup_deleted`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/phase-workflows/02-planning-lanes-phases-3-4.adoc[Planning Lanes & Phases 3–4] (Recurring Waivers), <<change-runtime-metrics>> (the usage aggregate), link:03-plans.adoc#change-reports[Reports to the Operator] (the kind, `from` the machine, read reports deleted), link:03-plans.adoc#change-ended-work[Ended Work] (deleted items left out), link:01-onboarding.adoc#UC-ONB-10[UC-ONB-10] (the durations among the machine's settings).
