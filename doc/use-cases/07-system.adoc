@@ -181,7 +181,7 @@ Outcome:: the operator knows how the runtime is, what it does, and the tokens th
 Changes::
 * *The runtime's metrics* (<<change-runtime-metrics>>).
 * *Tokens, not money* (link:03-plans.adoc#change-token-usage[Tokens, Not Money]): the one token figure with its split, and no cost.
-Requirements:: none yet: the metrics are a new requirement (<<change-runtime-metrics>>); the usage of a task is specified in link:../specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], the runtime status in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-14[PM-WF-14] (the usage of every task, from the harness's own output), link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan, epic, worker, and task); the requirement of the metrics is drafted in <<change-runtime-metrics>>; the usage of a task is specified in link:../specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], the runtime status in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
 
 [#UC-SYS-3]
@@ -255,7 +255,7 @@ Outcome:: what the operator chose is deleted, postponed, or kept, the deletion a
 Changes::
 * *One cleanup* (<<change-cleanup>>).
 * *Reports to the operator* (link:03-plans.adoc#change-reports[Reports to the Operator]): the kind `system.cleanup_due`.
-Requirements:: none yet: the requirement is drafted in <<change-cleanup>>; today's retention is specified in link:../specification/timeouts/03-retention-host-config.adoc#retention-days[Retention & Rotation] and link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps].
+Requirements:: link:../requirements/06-execution.adoc#PM-EXEC-2[PM-EXEC-2] (today's retention purge, `sweep`), link:../requirements/02-workflow.adoc#PM-WF-13[PM-WF-13] (archived records readable as long as they are kept); the requirement of the one cleanup is drafted in <<change-cleanup>>; today's retention is specified in link:../specification/timeouts/03-retention-host-config.adoc#retention-days[Retention & Rotation] and link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
 
 [#changes]

@@ -123,9 +123,9 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 == UC-PLN-3: Design a Plan's Process
 
 Status:: `DRAFT`
-Actor:: the operator, in the web app only. Designing a process means reading and editing a unit of the workflow language beside its structure, which a terminal does not show well; the terminal client offers no designer and points to the web app. Like link:02-entry.adoc#UC-ENT-1[UC-ENT-1], which is bound to the terminal client, this use case is bound to the web app by its nature.
+Actor:: the operator, in the web app.
 Goal:: shape the process plans run, for example add a step to finalize or change how a remediation decides, by writing a workflow unit the operator may own; start it from a file, a pasted text, or a unit already installed; see before it is placed whether the server accepts it and what process it gives; and place it for this machine or for a project, or take it away as a file.
-Trigger:: the operator opens the designer in the web app: from the machine's settings or a project's (to design for the machine or for that project), or from a plan's process (<<UC-PLN-1>>), where the unit a phase or a sub-workflow comes from is one step away.
+Trigger:: the operator opens the designer in the web app: from the machine's settings or a project's (to design for the machine or for that project), or from a plan's process (<<UC-PLN-1>>), where the unit a phase or a sub-workflow comes from is one step away. This use case is bound to the web app by its nature: designing a process means reading and editing a unit of the workflow language beside its structure, which a terminal does not show well, so the terminal client offers no designer and points to the web app (as link:02-entry.adoc#UC-ENT-1[UC-ENT-1] is bound to the terminal client).
 Preconditions:: the machine is onboarded. A unit for the machine is designed with no project chosen, from the machine's building blocks; a project to validate against and to place in is enrolled and set up; without one, the operator can design and download, and place at machine level only once a project exists to compose against.
 Flow::
 +
@@ -219,7 +219,7 @@ Changes::
 * *Designing a process* (<<change-process-designer>>).
 * *Phases as sub-workflows* (<<change-phase-sub-workflows>>), the units a design replaces.
 * *The plan's process as a structure* (<<change-process-resource>>), the form in which the dry run shows its process.
-Requirements:: none yet: the requirement is drafted in <<change-process-designer>>; the units are specified in link:../specification/workflow-dsl/04-ast-node-model.adoc#project-owned-units[Project-Owned Workflow Units & Compiled Invariants], their composition in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance].
+Requirements:: link:../requirements/14-implementation.adoc#PM-IMPL-5[PM-IMPL-5] (the project-owned units, validated at build time and on every load); the requirement of designing them is drafted in <<change-process-designer>>; the units are specified in link:../specification/workflow-dsl/04-ast-node-model.adoc#project-owned-units[Project-Owned Workflow Units & Compiled Invariants], their composition in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance].
 Design:: the terminal client offers none; the web app: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/process-designer.adoc[Web App, Process Designer], built by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-designer.adoc[`web-designer`].
 
 [#UC-PLN-4]
@@ -268,7 +268,7 @@ Changes::
 * *The source directory* (link:05-starting-work.adoc#change-source-directory[The Source Directory]), for its sources.
 * *An epic's findings and watches* (link:06-controlling-work.adoc#change-findings-watches[An Epic's Findings and Watches]).
 * *Tokens, not money* (<<change-token-usage>>), for the tokens an epic used.
-Requirements:: the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-15[PM-WF-15] (the epic, its queue, and the plans it starts), link:../requirements/01-architecture.adoc#PM-ARCH-5[PM-ARCH-5] (its git-tracked ledger), link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every epic); the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic-view[Terminal Client, An Epic's View]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-PLN-6]
