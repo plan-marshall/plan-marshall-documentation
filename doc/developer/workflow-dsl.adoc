@@ -1,4 +1,4 @@
-= The Workflow Language: Tree, Parser and Printer
+= The Workflow Language: Tree, Parser, Printer, Verifier and Fuzzer
 :toc: left
 :toclevels: 2
 :toc-title: Table of Contents
@@ -8,9 +8,9 @@ link:../DeveloperGuide.adoc[Developer Guide] » The Workflow Language
 
 [#packages]
 == The Packages
-_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16], link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
 
-The workflow language lives in the module `pm-workflow` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`], in two packages. It uses `pm-core` for `OutcomeClass` and the streaming API of `jackson-core` for the instance header.
+The workflow language lives in the module `pm-workflow` of https://github.com/plan-marshall/pm-mcp-core[`pm-mcp-core`], in three packages. It uses `pm-core` for `OutcomeClass` and the primitive SPI (`PrimitiveRegistry`, `Primitive`, `FreeParam`, `PrimitiveOutcome`), and the streaming API of `jackson-core` for the instance header.
 
 [cols="1,3", options="header"]
 |===
@@ -21,9 +21,12 @@ The workflow language lives in the module `pm-workflow` of https://github.com/pl
 
 |https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/dsl/package-info.java[`de.planmarshall.workflow.dsl`]
 |The text side: the package-private lexer (`WorkflowLexer`, `Token`), the parser `WorkflowParser` with its result `ParseResult`, the refusal `Diagnostic` and its `RefusalRule`, the package-private reader of the instance header (`InstanceHeaderReader`), and the printer `WorkflowPrinter`.
+
+|https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/package-info.java[`de.planmarshall.workflow.verify`]
+|The checks over a parsed unit: the static verifier `WorkflowValidator` with its rule vocabulary `VerificationRule` and its results `Violation` and `VerificationResult`, the seeded transition fuzzer `TransitionFuzzer` with `FuzzConfiguration`, `FuzzReport` and `DeadState`, and the package-private transition graph `UnitGraph` both of them read.
 |===
 
-The static verification of a unit, the merge of the multi-file plan workflow and the loader of project-owned units build on these packages; they are not implemented yet, and what they will check is stated in the link:../specification/workflow-dsl.adoc[Workflow DSL & Engine Specification]. The interpreter and the diagram generator build on them too and are described in the developer guides of their packages: the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide] and the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-diagram.adoc[Workflow Diagrams Developer Guide].
+The merge of the multi-file plan workflow and the loader of project-owned units build on these packages; they are not implemented yet, and what they will do is stated in the link:../specification/workflow-dsl.adoc[Workflow DSL & Engine Specification], as are the verification rules the verifier does not check yet (<<verification>>). The interpreter and the diagram generator build on them too and are described in the developer guides of their packages: the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide] and the https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-diagram.adoc[Workflow Diagrams Developer Guide].
 
 [#tree]
 == The Tree
@@ -72,6 +75,47 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
 
 The round trip is the contract: parsing the printed source gives the same tree, source locations aside, and printing that tree again gives the same text.
 
+[#verification]
+== Static Verification
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
+
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/WorkflowValidator.java[`WorkflowValidator`] checks one parsed `WorkflowDefinition`. It reads nothing on its own: its constructor takes the `PrimitiveRegistry` of the primitives a unit may name and the released state names of earlier releases, the baseline, in the order they are reported. `verify(definition)` returns a https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/VerificationResult.java[`VerificationResult`]: every https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/Violation.java[`Violation`] of the unit (the rule, the state, its `SourceLocation` and a message naming the primitive, outcome, parameter, link or released name concerned), and `passed()` when there is none. A violation is a value; only a `null` argument throws.
+
+The checks are the constants of https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/VerificationRule.java[`VerificationRule`], the only source of the rule vocabulary; each constant carries the number of the specification rule it implements a part of. What each check does:
+
+* *Primitive binding*: the primitive of every `auto`, `job` and `composite_job` state, of every `facts` clause, of the `do` of every declared link (of a link state and of a question state) and of every `predicate:` atom of a link's guard is registered.
+* *Parameter equivalence*: the free parameters of a link whose primitive is registered equal the `@FreeParam` components of the primitive's parameter record: the same names, nothing missing and nothing extra, the type `text`, and the same length bounds, an absent range counting as `0..Integer.MAX_VALUE`. Optionality is not compared, because `@FreeParam` declares none.
+* *Outcome coverage*: the transitions of every `auto`, `job` and `composite_job` state and of every link whose primitive is registered route each wire name of the primitive's outcome enum exactly once. An outcome missing, unknown or routed twice is a violation; a job primitive's enum carries `cancelled`, so a job state needs no special case. A site whose primitive is not registered is left to primitive binding.
+* *Reachability*: every state is reachable from the start state over every transition target.
+* *Exit path*: every non-terminal state has a path to a terminal state; in a `workspace` unit every state has a path back to the start state instead.
+* *Link identifiers*: the identifier patterns of the declared links of a state are unique, and none repeats the implicit `step_out` the engine renders on a link state of a sub-workflow.
+* *Released states*: every name of the baseline is a state of the unit, or the old state of a `migrate` declaration whose target is a state. The violation names the released name and stands at its `migrate` line, or at the unit header when no `migrate` names it.
+
+No check stops at the first violation. The result lists every violation, ordered by the declaration order of its state (released names after every state) and then by rule; violations of one state and rule keep the order they were found in.
+
+The exemptions, each kept at its check:
+
+* *Abort terminals*: `plan.aborted` and `epic.aborted` are entered by the operator's abort, which no unit declares, so they count as reachable although nothing targets them.
+* *Implicit `step_out`*: a link state of a `subworkflow` unit has an exit no transition declares, so it counts as an exit of its own.
+* *Default `lost`*: a task state (`job llm`) that declares no `lost` transition leaves through the engine's default route, so it counts as an exit too.
+* *Workspace*: a `workspace` unit has no terminal state; its states must return to the start state.
+
+Reachability is graph reachability: the tree knows the configuration keys a guard depends on, not the values they take, so configuration combinations are not enumerated, and no guard is evaluated. The other verification rules of the specification, among them the existence of every transition target, the unique state identifiers across the files of a unit, the `job llm` and question outcomes, and the role and skill checks, are not checked yet (link:../specification/workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Workflow DSL Specification § Static AST Verification Rules]).
+
+[#fuzzer]
+== Transition Fuzzer
+_Requirements: link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
+
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/TransitionFuzzer.java[`TransitionFuzzer`] walks a unit that passed `WorkflowValidator` and reports every reached non-terminal state none of whose exits holds under a drawn assignment of the guard atoms: a dead state that reachability over the graph cannot see.
+
+* *Configuration*: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/FuzzConfiguration.java[`FuzzConfiguration`] holds the seed, the number of runs and the greatest number of steps of one run; a count that is not positive is refused with `IllegalArgumentException`.
+* *Seed*: the generator is created from the seed with the fixed algorithm `L64X128MixRandom` of the JDK, so the same configuration over the same unit gives the same report.
+* *Guard atoms*: each run draws one two-valued assignment over the atoms the guards of the unit name (`in_worktree`, `has_open_findings`, `all_tasks_completed`, and `predicate:<primitive_id>` for a predicate primitive), each once, in the order of their first occurrence: the states and their declared links in declaration order, each guard read from left to right. An atom no guard names is not drawn. The atoms of a guard come from one exhaustive switch over `GuardExpr` in `UnitGraph`, which the evaluation of a guard reads as well, so a new guard variant fails to compile there and what is drawn cannot diverge from what is looked up.
+* *The walk*: a run starts at the start state and takes at most the configured number of steps. A declared link holds when it has no guard or its guard is true under the assignment. The transitions the engine takes on its own (of `auto`, `job`, `composite_job`, `job llm`, `call` and the resolution of a question) always hold, and so do the implicit `step_out` and the default `lost` route, which leave the unit. At a state without a holding exit the run records the dead state and stops; otherwise it takes one holding exit and one of its targets at random. A terminal state ends the run, and so does a target that is not a state of the unit.
+* *The report*: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/FuzzReport.java[`FuzzReport`] holds the configuration, the number of runs executed and every dead state reached, each once with its first witness, in the order found; `foundDeadState()` tells whether there is one. A https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/verify/DeadState.java[`DeadState`] names the state, its location, the assignment of the run that reached it and the number of that run, counted from 1.
+
+The guards are evaluated two-valued over the drawn atoms; the engine's three-valued evaluation, the persisted sub-states, the condition overlays and the bound jobs are not modelled.
+
 [#pitfalls]
 == Pitfalls
 _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
@@ -80,11 +124,15 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]_
 * *The instance JSON is printed as read.* The header's digest must stay reproducible, so the printer writes `InstanceHeader.json()` verbatim and never re-serialises the parsed members. Code that builds a header must supply the canonical JSON itself.
 * *Keep the order.* A new map component of a record must keep declaration order like the others; `Map.copyOf` would make the printer's output depend on hashing.
 * *A new construct touches four places.* The record in `workflow.ast`, the parser, the printer, and a fixture with its expected tree; the round-trip tests fail until the printer writes what the parser reads.
-* *Reserved words in names.* A name that reads naturally can be refused because one of its segments is reserved: a unit called `question.something` or a primitive `link.check` does not parse.
+* *Reserved words in names.* A name that reads naturally can be refused because one of its segments is reserved: a unit called `question.something` or a primitive `link.check` does not parse, and neither does a state id with the segment `start`; the test units name their start state `verify.entry`.
+* *An exemption stays at its check.* The abort terminals are exempt from reachability, the implicit `step_out` and the default `lost` route count as exits, and a workspace unit returns to its start state; each exemption is written where its check runs, as a named constant or condition with its reason, never as a filter on the result, so a new check does not inherit an exemption it should not have.
+* *One vocabulary for the rules.* A new check is a new constant of `VerificationRule`; no message, test or document names a rule by a string of its own.
+* *Every check has a refusing fixture and a matched control.* A new check gets a fixture below `src/test/resources/verify/refused/` that plants exactly its defect and states it in a leading `# expect: <RULE> state <id> line <n>` comment, and the test is red before the check exists; the unit that uses every construct (`verify/passing/every-construct.pmwf`) must still pass, and every exemption has an inline control that passes with it and fails without it. The refusing fixtures are listed from the directory, never by hand.
+* *The fuzzer needs a verified unit.* It walks only what the verifier accepted: a target that is not a state ends a run instead of failing it, so feeding it an unverified unit hides defects rather than finding them.
 
 [#tests]
 == Tests
-_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16]_
+_Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requirements.adoc#PM-WF-16[PM-WF-16], link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]_
 
 * `AstNodeModelTest`: defensive copies, declaration order of the maps, closed hierarchies, the enum constants.
 * `WorkflowLexerTest`: comments, blank lines, columns, token kinds, the instance-line JSON token.
@@ -92,3 +140,6 @@ _Requirements: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5], link:../Requireme
 * `WorkflowParserRefusalTest`: every malformed fixture (`dsl/malformed/*.pmwf`) states its rule and line in a leading `# expect: <RULE> line <n>` comment and is refused with exactly that; inline units cover every further refusal, and the instance header reader is tested directly.
 * `WorkflowPrinterTest`: the round trip and the fixed point over every valid fixture, canonical source that prints to itself, guard precedence, and the explicit link form.
 * Helpers: `DslFixtures` reads and lists the fixtures; `AstWithoutLocations` strips the source locations so that two trees compare by structure.
+* `WorkflowValidatorTest`: every refusing fixture (`verify/refused/*.pmwf`, one per check and two for outcome coverage, a missing and an unknown outcome) is refused with exactly the rule, state and line its leading comment expects, and together they cover every constant of `VerificationRule`; `verify/passing/every-construct.pmwf` passes every check; inline units cover the variants of each check, the controls of every exemption, and a unit with several defects that reports all of them in order.
+* `TransitionFuzzerTest`: `verify/fuzz/planted-dead-state.pmwf` holds a link state whose only link is guarded by `in_worktree`; the fuzzer finds it with a fixed seed and names it with its location and an assignment with `in_worktree=false`. `verify/fuzz/control.pmwf` is the same unit without that guard, and the same seed reports nothing. Both pass the verifier and differ only in the planted guard, which the test asserts. Equal seeds give equal reports, other seeds find the planted state within the configured runs, only the atoms the guards name are drawn and in the order of their first occurrence, the witness run is counted from 1, a sub-workflow steps out of it, a run stops at the greatest number of steps, and an invalid configuration is refused.
+* Helpers: `VerifyFixtures` reads, lists and parses the `verify/` fixtures; `TestPrimitives` holds the primitives the fixtures name and the registry the tests pass.
