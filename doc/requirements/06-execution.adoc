@@ -3,9 +3,9 @@
 [#PM-EXEC-1]
 === PM-EXEC-1: Wrapper-First Execution & Enrolled Host Tools
 
-All project builds and external tool invocations must execute through git-tracked repository wrappers or cryptographically pinned host binaries.
+All project builds and external tool invocations must execute through enrolled repository wrappers, verified by their location, enrolled name, and SHA-256 digest, or cryptographically pinned host binaries.
 
-* The system must execute project builds using the repository's committed build wrapper (`mvnw`, `gradlew`, `pw`, or equivalent) located at the root of the plan's worktree.
+* The system must execute project builds using the enrolled build wrapper (`mvnw`, `gradlew`, `pw`, or equivalent) located at the root of the plan's worktree.
 * The system must require build systems that lack a wrapper concept (such as `npm`) to execute via an explicitly enrolled host tool pinned to its absolute filesystem path and SHA-256 binary digest.
 * The system must never search the `PATH` environment variable at job execution time, preventing writable `PATH` directories from shadowing enrolled binaries.
 * The system must reject any attempt to invoke an unenrolled toolchain executable.
@@ -15,6 +15,22 @@ All project builds and external tool invocations must execute through git-tracke
 * The system must run a model job (job kind `llm`, `PM-WF-5`) only through a harness command line the operator enrolled on the machine (`pm-operator enrol-harness <client>`: absolute path, version probe, and SHA-256 digest recorded in `<PM_MCP_BASE>/harnesses.json`, and nothing else: no credential and no environment value of the harness is captured, stored, or exported, so a harness that is not logged in by its own login simply fails its job; the only handling of a harness login is the copy of the harness's own login file into a worker's per-worker data directory where its client profile declares one, `PM-SEC-5`); because harnesses update themselves, a changed digest or version inside the supported version range of the harness's client profile is accepted and audited (the runtime rewrites the file and its sidecar with the new version and digest), and one outside that range is refused (`harness_version_unsupported`). `harnesses.json` carries its own HMAC sidecar (`PM-EXEC-2`): on a mismatch the runtime refuses the model job before spawn (reason `harness_tampered`) with the `security` audit record `enrolment_tampered`; the refusal counts as a start failure of the role on that harness (`PM-WORK-3`), and the operator surfaces name `pm-operator enrol-harness <client>`, which shows path, version, and digest and then rewrites the file and its sidecar with the named client only (every other client must be enrolled again); a tampered harness enrolment never pauses a scope and has no `accept-edit` form.
 
 See the link:specification/job-runtime.adoc[Job Runtime Specification] for implementation details.
+
+Implementation (the verify-not-resolve check of a job: the build wrapper by its location at the root of the tree, its enrolled name and its digest together with every pinned file, refused as `build_config_changed` naming every changed file; an enrolled host tool by its absolute path and digest, never through `PATH`; the refusal of an executable that is not enrolled; the arguments of a build job against the enrolled or the caller's default template and the forbidden free flags, of a project script against its argument schema; `pw` started through its enrolled interpreter; the enrolment-time requirement of `distributionSha256Sum`, the launch of the verified job, and model jobs with their harness enrolment are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/VerifyNotResolvePipeline.java[VerifyNotResolvePipeline],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/ExecutableCheck.java[ExecutableCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/WrapperVerification.java[WrapperVerification],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/FileDigest.java[FileDigest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/ArgumentCheck.java[ArgumentCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/ArgumentSchemaValidator.java[ArgumentSchemaValidator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/DefaultTemplates.java[DefaultTemplates]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ExecutableCheckTest.java[ExecutableCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/WrapperVerificationTest.java[WrapperVerificationTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ArgumentCheckTest.java[ArgumentCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ArgumentSchemaValidatorTest.java[ArgumentSchemaValidatorTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/VerifyNotResolveAdversarialTest.java[VerifyNotResolveAdversarialTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/doc/developer/runtime-job.adoc[Developer Guide § Job Verification (`runtime.job`)]
 
 Implementation watch: link:implementation-watch/model-work.adoc#PM-WATCH-DISP-33[PM-WATCH-DISP-33]
 
@@ -32,7 +48,7 @@ Project execution capabilities must be strictly opt-in via operator enrolment, a
 
 See the link:specification/job-runtime.adoc[Job Runtime Specification] and link:specification/store-schemas.adoc[Store Schemas Specification] for implementation details.
 
-Implementation (the enrolment file of a project as a closed, typed record with its strict reading and canonical bytes, the store under the project's own lock, the integrity sidecar record with the HMAC under the operator-lane key in the keyring or the key file, the enrolment check whose `enrolment_tampered` refusal is audited and blocks only its project, the runtime's `enrol` write, the `unenrol` refused with `scope_active` naming the live work and leaving the machine store untouched, and the re-baseline; the operator verbs and their endpoints, the check in the recovery and before verify-not-resolve, a live-work source, the sweep, the store root check, the harness enrolment, and verify-not-resolve are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ProjectEnrolment.java[ProjectEnrolment],
+Implementation (the enrolment file of a project as a closed, typed record with its strict reading and canonical bytes, the store under the project's own lock, the integrity sidecar record with the HMAC under the operator-lane key in the keyring or the key file, the enrolment check whose `enrolment_tampered` refusal is audited and blocks only its project, the runtime's `enrol` write, the `unenrol` refused with `scope_active` naming the live work and leaving the machine store untouched, and the re-baseline; the verify-not-resolve check of a build, host tool or project script job, which runs the enrolment check first and then verifies the working directory, the executable's absolute path and digest and the argument vector, each refusal a value with its closed reason; the operator verbs and their endpoints, the check in the recovery, a live-work source, the sweep, the store root check, the harness enrolment, the verify-not-resolve check of a model job, and the `refused` outcome of the job record are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/ProjectEnrolment.java[ProjectEnrolment],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentCodec.java[EnrolmentCodec],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentSidecar.java[EnrolmentSidecar],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/EnrolmentStore.java[EnrolmentStore],
@@ -42,7 +58,12 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentKey.java[EnrolmentKey],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentHmac.java[EnrolmentHmac],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/EnrolmentCheck.java[EnrolmentCheck],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/enrolment/Enrolments.java[Enrolments],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/JobRequest.java[JobRequest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/VerifyNotResolvePipeline.java[VerifyNotResolvePipeline],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/JobVerification.java[JobVerification],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/JobRefusal.java[JobRefusal],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/VerifiedJob.java[VerifiedJob]
 
 Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentCodecTest.java[EnrolmentCodecTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/EnrolmentStoreTest.java[EnrolmentStoreTest],
@@ -52,9 +73,13 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentKeyTest.java[EnrolmentKeyTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentHmacTest.java[EnrolmentHmacTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentCheckTest.java[EnrolmentCheckTest],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/enrolment/EnrolmentsTest.java[EnrolmentsTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/VerifyNotResolvePipelineTest.java[VerifyNotResolvePipelineTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ExecutableCheckTest.java[ExecutableCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ArgumentCheckTest.java[ArgumentCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/VerifyNotResolveAdversarialTest.java[VerifyNotResolveAdversarialTest]
 
-Documentation: link:concepts/enrolment.adoc[Concepts § Enrolment], link:developer/enrolment-store.adoc[Developer Guide § Enrolment Store]
+Documentation: link:concepts/enrolment.adoc[Concepts § Enrolment], link:developer/enrolment-store.adoc[Developer Guide § Enrolment Store], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/doc/developer/runtime-job.adoc[Developer Guide § Job Verification (`runtime.job`)]
 
 [#PM-EXEC-3]
 === PM-EXEC-3: Python Interpreter Pinning & Hash Verification
@@ -67,6 +92,14 @@ Jobs whose executable runs under a host interpreter (project scripts, `PM-EXT-5`
 * The system must refuse the job (`status: refused`) if an interpreter update or file modification causes a hash mismatch, requiring the operator to refresh the enrolment before execution can proceed.
 
 See the link:specification/job-runtime.adoc[Job Runtime Specification] for implementation details.
+
+Implementation (the start of a project script, of `pw` and of the script host tool `asciidoctor` through its enrolled interpreter with both digests verified, the project script allowlist with its binding and the validation of its arguments against its argument schema, and the refusal `executable_digest_mismatch` as a value; the `refused` outcome of the job record and the launch are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/ExecutableCheck.java[ExecutableCheck],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/job/ArgumentSchemaValidator.java[ArgumentSchemaValidator]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ExecutableCheckTest.java[ExecutableCheckTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/job/ArgumentSchemaValidatorTest.java[ArgumentSchemaValidatorTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/doc/developer/runtime-job.adoc[Developer Guide § Job Verification (`runtime.job`)]
 
 [#PM-EXEC-4]
 === PM-EXEC-4: Direct Host Subprocess Management & Process-Group Isolation

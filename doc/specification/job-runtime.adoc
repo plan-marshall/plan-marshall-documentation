@@ -44,7 +44,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 
-== Status: PLANNED
+== Status: IN PROGRESS
 
 == Modules
 
