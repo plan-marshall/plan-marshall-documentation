@@ -103,7 +103,7 @@ Beyond the sections each change names in its _Affects_:
 |the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
 
 |link:../use-cases/06-controlling-work.adoc#change-chat[Chatting with the Planning Role]
-|the unit section of `chat` and its states; the submit schemas of `replan` and `decompose` in a chat (an answer, a proposed change); the facts of a scope; where the transcript lives and how long; how a revision waits for the next task boundary of a running plan; the re-planning record of an operator's revision outside `replan_budget`; the inbox record `revised`; the representation of a chat for the clients.
+|the unit section of `chat` and its states; the submit schemas of `replan` and `decompose` in a chat (an answer, a proposed change); the facts of a scope; where the transcript lives and how long; how a revision waits for the next task boundary of a running plan; the re-planning record of an operator's revision outside `replan_budget`; the inbox record `revised`; the representation of a chat for the clients; in a decision: the routing to the role that asked, the proposed answer as own words, the closure `withdrawn` of a decision a revision removed, the decision record's mark of a chat; while starting: _chat_ at `start.sources` and `start-epic.sources`, the role `refine`'s chat task, the description as its one change, the entry's transcript and its move at `start.create`; ended work: the read-only facts of an archived plan or epic, the transcript beside the archived record, and the follow-up start with its description.
 
 |link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
 |the device's label; the closing of a revoked device's streams; the release's confirmation against the engine-owned abort; the closed list of holds, their acts and their arguments, and the end of `facts.operator_command`.
@@ -190,8 +190,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`decision-contract`
 |`pm-mcp-clients`
-|The Decision Structure, Own Words, Answers from the Terminal Client
-|`operator-interaction-contract`; `decision-engine`; UC-PLN-2 agreed
+|The Decision Structure, Own Words, Answers from the Terminal Client; a chat inside a decision
+|`operator-interaction-contract`; `decision-engine`; `chat`; UC-PLN-2 agreed
 
 |`onboarding-contract`
 |`pm-mcp-clients`
@@ -220,8 +220,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`chat`
 |`pm-mcp-core`
-|Chatting with the Planning Role: the sub-workflow `chat` and its states, its routing to `replan` for a plan and to `decompose` for an epic, the revision of a plan through the guards of a first plan at the next task boundary, the transcript kept with its subject
-|`operator-wait-and-machine-scope`; UC-CTL-1 to UC-CTL-3 agreed
+|Chatting with the Planning Role: the sub-workflow `chat` and its states, its routing to `replan` for a plan and to `decompose` for an epic, the revision of a plan through the guards of a first plan at the next task boundary, the transcript kept with its subject; the scopes of a decision (a proposed answer as own words, a decision withdrawn by a revision), of a start's entry (role `refine` or `decompose`, the description its one change), and of ended work (read-only over the archive, a follow-up plan's start)
+|`operator-wait-and-machine-scope`; `decision-engine`; `start-from-clients`; UC-CTL-1 to UC-CTL-3, UC-PLN-2, UC-PLN-4, UC-STA-1, and UC-STA-2 agreed
 
 |`plan-and-epic-control`
 |`pm-mcp-core`
@@ -240,13 +240,13 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, the epic resource
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource
 |`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
 
 |`start-contract`
 |`pm-mcp-clients`
-|the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files
-|`operator-interaction-contract`; `start-from-clients`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
+|the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files, a chat about the entry
+|`operator-interaction-contract`; `start-from-clients`; `chat`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
 |===
 
 The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`.

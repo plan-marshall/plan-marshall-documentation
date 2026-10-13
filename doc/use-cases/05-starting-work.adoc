@@ -23,7 +23,7 @@ Sources first, the rest when needed:: Starting asks only what the work comes fro
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: start a plan in a project from everything it should start from, in one guided run, and see it run.
-Trigger:: the operator chooses _Add a plan_ on a project (link:04-projects.adoc#UC-PRJ-2[UC-PRJ-2]), after a project's onboarding (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]), or in the terminal client in a checkout, whose project is the proposal.
+Trigger:: the operator chooses _Add a plan_ on a project (link:04-projects.adoc#UC-PRJ-2[UC-PRJ-2]), after a project's onboarding (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]), or in the terminal client in a checkout, whose project is the proposal; or accepts a follow-up plan in a chat about ended work (link:03-plans.adoc#change-ended-work[Ended Work]), which opens the start with its description stored.
 Preconditions:: the project is enrolled and ready; the machine is onboarded.
 Flow::
 +
@@ -42,11 +42,10 @@ Flow::
        ├── recipe ───────────► ↳ recipe (<<UC-STA-5>>)    
        ▼ sources
   [O] start.sources            the sources gathered so far, each with its
-       │                       state; add one, remove one, start
-       ├── description ──────► [S] start.store-description   the text as
-       │                            │                         description.md
-       │                            ▼
-       │                       start.sources
+       │                       state; add one, remove one, chat, start
+       ├── description ──────► [S] start.store-description ─► start.sources
+       ├── chat ─────────────► ↳ chat (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]) with the role refine, over the
+       │                         entry; an accepted description ─► start.store-description
        ├── documents ────────► ↳ source-documents (<<UC-STA-3>>) ─► start.sources
        ├── issue ────────────► ↳ source-issue (<<UC-STA-4>>) ─────► start.sources
        ├── lesson ───────────► ↳ source-lesson (<<UC-STA-8>>) ────► start.sources
@@ -68,11 +67,12 @@ Variations::
 * *A source that fails* (an issue not found, a document not readable) stays in the list with its cause, to be tried again or removed; the plan cannot start while a source is not stored, or an external one not screened or accepted.
 * *Leaving*: the entry keeps its sources while the operator is away, in either client; abandoning it deletes its source directory, and nothing of a plan exists before `start.create`.
 * *A lesson* is checked against the current checkout first; one whose premise no longer holds is shown with its evidence, to be used anyway or retired (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States]).
+* *A chat about the entry* is offered once a source is stored and every external one screened, never for a recipe, and disabled with its reason while the role `refine` does not qualify: what the model understood, what is unclear, what is out of scope. Its one change is a description, rewritten or added, stored after its read-back; it never touches another source, and starting never waits for it. Its transcript stays with the entry, becomes the plan's at `start.create` without being a source, and is deleted with an abandoned entry (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
 * *An epic's plan* is started by the epic itself, without the operator; its source is the epic's staged section, stored in the plan's source directory like any other.
 Outcome:: the plan exists, with every source it starts from in its source directory, and runs; the operator sees it in Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]).
 Changes::
 * *All interaction in the operator's clients* (<<change-clients-only>>).
-* *Starting from the clients* (<<change-start-from-clients>>).
+* *Starting from the clients* (<<change-start-from-clients>>), with a chat about the entry (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
 * *The source directory* (<<change-source-directory>>).
 * *Asked when needed* (<<change-options-when-needed>>).
 Requirements:: link:../Requirements.adoc#PM-WF-10[PM-WF-10], link:../Requirements.adoc#PM-WF-15[PM-WF-15]; the bootstrap is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States], the sources in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Plan Source Contracts).
@@ -90,13 +90,13 @@ Flow::
 +
 [source,text]
 ----
-  [S] start-epic.open          the entry of the project and its source
-       │                       directory, empty
+  [S] start-epic.open          the entry and its source directory, empty
        ▼
   [O] start-epic.sources       the sources gathered so far, as in UC-STA-1:
        │                       descriptions, documents, issues; add one,
-       │                       remove one, start
+       │                       remove one, chat, start
        ├── description ──────► [S] start-epic.store-description
+       ├── chat ─────────────► ↳ chat (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]) with the role decompose, as in UC-STA-1
        ├── documents ────────► ↳ source-documents (<<UC-STA-3>>)
        ├── issue ────────────► ↳ source-issue (<<UC-STA-4>>)
        ▼ start, every source stored and none unscreened
@@ -120,11 +120,11 @@ Variations::
 * *Documents are the usual source* of an epic: a concept, a specification, a directory of them. They are stored as they are; a directory keeps its tree.
 * *Adopting* an epic that exists in the ledger but not on this machine (another machine started it) is offered instead of a new one, as today (link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap-epic[Epic Bootstrap]).
 * *Its plans and the epic communicate through the server*: a plan sends to its epic's inbox, and the epic to a plan's mailbox (link:../specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Plan-Scope Outbox Link], link:../specification/model-work/08-epic-coordination.adoc#plan-mailbox[Plan Mailbox]); no text passes from one to the other through the operator.
-* A source that fails, leaving, and abandoning are as in <<UC-STA-1>>.
+* A source that fails, a chat about the entry (with the role `decompose`), leaving, and abandoning are as in <<UC-STA-1>>.
 Outcome:: the epic exists with its sources stored and listed in its ledger, its workstreams and plans drafted from them and agreed by the operator, and starts its plans as they become launchable.
 Changes::
 * *All interaction in the operator's clients* (<<change-clients-only>>).
-* *Starting from the clients* (<<change-start-from-clients>>).
+* *Starting from the clients* (<<change-start-from-clients>>), with a chat about the entry (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
 * *The source directory* (<<change-source-directory>>), including the epic's sources.
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
 * *Asked when needed* (<<change-options-when-needed>>).
@@ -435,7 +435,7 @@ Affects:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#sessio
 Gap:: a plan or an epic is started only by `pm-mcp enter` and the bootstrap a session drives; a pending entry without a session is invalid unless an epic starts its own plan; the choice `start.choose` takes exactly one source, and the description (`new_request`) is a link with no state of its own.
 Fix::
 * `POST /api/v1/projects/{project_id}/entries` with the kind `plan` or `epic` opens an entry; its states are operator waits served to both clients; the pending entry record needs no session.
-* `start.choose` offers a plan from sources or a recipe; `start.sources` and `start-epic.sources` hold a list of sources, to which every source sub-workflow adds and from which the operator removes; the description is stored by the main workflow itself (`start.store-description`), since it needs nothing gathered.
+* `start.choose` offers a plan from sources or a recipe; `start.sources` and `start-epic.sources` hold a list of sources, to which every source sub-workflow adds and from which the operator removes, and offer a chat about the entry whose one change is a description (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]); the description is stored by the main workflow itself (`start.store-description`), since it needs nothing gathered.
 * `start.ready` and `start-epic.ready` show the title and the id proposed from the sources; the other commit options of today (posture, outline review, base branch) leave the start (<<change-options-when-needed>>).
 * `epic_slug`, `title`, and `vision` of `start-epic.define` become the sources and the title of `start-epic.ready`; the vision is a description like any other.
 * The facts of `start.open` stay local listings (recipes, unclaimed lessons, local changes); issues and pull requests are named, never listed (link:../later-improvements.adoc[Later Improvements], L-6).
