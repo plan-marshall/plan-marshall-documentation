@@ -55,8 +55,13 @@ Flow::
        ▼
   [O] decision.answer          per part: choose an option, give a value, or
        │                       answer in the operator's own words, with an
-       │                       optional note; or for the whole decision: none
-       │                       fits ("think again"), or later
+       │                       optional note; or for the whole decision: chat,
+       │                       none fits ("think again"), or later
+       ├── chat ──────────────► ↳ chat (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]) over the decision, with
+       │                         the role of the task that asked, or the
+       │                         subject's planning role; it never answers:
+       │                         an answer it proposes is offered as own words
+       │                         ─► decision.interpret; else ─► decision.answer
        ├── own words ─────────► [M] decision.interpret   a role task maps the
        │                             │                   words onto the parts:
        │                             │                   an option, an option with
@@ -89,14 +94,16 @@ Variations::
 * *What the workflow decides, the channel carries.* Whether a decision reaches the operator at all, whether a quorum voted on it first, the threshold below which it escalates, whether it carries a recommendation, whether own words are allowed, which role interprets them and how often it may ask back: each is modelled in the plan's workflow units and decision declarations, and every client shows and answers every variant the units can produce, never adding a rule of its own.
 * *Parts depend on each other*: a part that depends on another is offered once that part is answered, and changing the earlier answer reopens it.
 * *The interpretation sees the operator's words, the question, and the options, never the recommendation or the votes*, so that it does not lean towards them; nothing is recorded before the operator confirmed the read-back, and words that fit no option are recorded as the operator's own option, in the operator's words.
-* *A waiver request* is announced the same way; it is answered by a waiver, which is an operator override and never a content answer, so it has no preselection and no interpretation.
+* *A waiver request* is announced the same way; it is answered by a waiver, which is an operator override and never a content answer, so it has no preselection, no interpretation, and no chat.
+* *A chat before answering* asks back ("what does option B mean for the open pull request?") with the role of the task that asked, or, for a decision a server rule raised or a quorum escalated, with the subject's planning role (`replan` for a plan, `decompose` for an epic); it may explain the recommendation and the votes, which the interpretation of an answer it proposes still never sees. A revision of the plan it proposes goes through the guards of a plan's chat; the decision stays open, or is closed _withdrawn_ with the reason when the revision removes what asked it. The plan waits during the chat as for any decision; an answer in another channel closes the decision and ends the chat (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
 * *No time limit*: either the quorum is confident and decides, as its declaration says, or the operator decides, and the plan waits until the operator has; no decision expires and none is taken by the passing of time (<<change-operator-wait>>). A client that was not open learns of the open decisions when it opens.
-Outcome:: the plan goes on with the operator's decision, in the operator's words where the operator used them, or with the decision of a confident quorum; the record names the channel, the device, and whether the answer was chosen, interpreted and confirmed, or delegated.
+Outcome:: the plan goes on with the operator's decision, in the operator's words where the operator used them, or with the decision of a confident quorum; the record names the channel, the device, whether the answer was chosen, interpreted and confirmed, or delegated, and whether it followed a chat.
 Changes::
 * *The decision structure* (<<change-decision-structure>>).
 * *Answers in the operator's own words* (<<change-own-words>>).
 * *Waiting for the operator* (<<change-operator-wait>>).
 * *Answers from the terminal client* (<<change-cli-answers>>).
+* *Chatting with the planning role* (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]), inside a decision.
 Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions], the quorum in link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question]; the web app's view is designed by its package `web-design`.; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/14-transcripts-decisions.adoc#t-decisions[Terminal Client, Decisions]
 
@@ -122,7 +129,7 @@ Flow::
 . *A project, by epic.* The project's active epics, each with whether it or one of its plans needs the operator, its title, since when it runs, how many of its plans run and how many are staged, and its plans below it as in the view by plan; the plans that belong to no epic follow as a group of their own, so that the two views show the same plans.
 . *Into a plan or an epic*: selecting one leads into <<UC-PLN-1>>; a decision that waits leads into <<UC-PLN-2>>.
 . *Where the operator left it*: the overview remembers the project, the view, and the selected plan or epic, and opens there the next time, per web browser and per terminal user; a selection that has ended falls back to its project.
-Variations:: _Ended work_ lists the plans and epics of a project that ended (completed, cancelled, abandoned, archived), newest first, each leading to its view as it ended (<<change-ended-work>>). The overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an epic are told apart by their icon, their colour, and a word, never by colour alone.
+Variations:: _Ended work_ lists the plans and epics of a project that ended (completed, cancelled, abandoned, archived), newest first, each leading to its view as it ended and to a read-only chat about it, from which a follow-up plan may start (<<change-ended-work>>). The overview follows the runtime as it changes: a plan that ends leaves it, a new one appears, an indicator changes when a decision arrives or is answered, without the operator asking for it. A plan and an epic are told apart by their icon, their colour, and a word, never by colour alone.
 Outcome:: the operator knows where work runs and what needs the operator, and has reached the plan or epic to act on.
 Changes::
 * *Running work* (<<change-running-work>>).
@@ -147,7 +154,7 @@ Flow::
 . *Its landings.* Each landed plan with its pull request and the epic's analysis of the landing.
 . *Its findings and watches.* The open items with their counts, leading into the reviews (link:06-controlling-work.adoc#UC-CTL-3[UC-CTL-3]).
 . *Its events.* What happened in the epic, newest first: plans started and ended, messages of its plans, acts of the operator, decompositions.
-Variations:: the view follows the epic as it runs. An epic that ended shows as it ended, from Ended Work. An epic waiting for the operator (a decomposition, a held item, a decision) shows that first, leading to it.
+Variations:: the view follows the epic as it runs. An epic that ended shows as it ended, from Ended Work, with a read-only chat about it (<<change-ended-work>>). An epic waiting for the operator (a decomposition, a held item, a decision) shows that first, leading to it.
 Outcome:: the operator knows where the epic stands, plan by plan, and has reached the part to act on.
 Changes::
 * *The epic as a resource* (<<change-epic-resource>>).
@@ -220,6 +227,7 @@ Fix::
 * The runtime checks the result before it is shown: the option exists, the quoted passages occur in the words. A result that fails the check is shown as unclear.
 * `decision.read-back` shows the result in one sentence beside the operator's words; nothing is recorded before the operator confirms it. Unclear leads to `decision.clarify`, one question, at most as often as the unit allows, then back to the choice of an option.
 * Words that fit no option are recorded as the operator's own option, in the operator's words; the interpretation never substitutes the closest option. A delegation is recorded as such, and only where the decision allows one.
+* An answer a chat proposed (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]) enters as the operator's own words once the operator takes it, and passes the interpretation and the read-back unchanged.
 * The operator's words are the operator's own and never screened (link:05-starting-work.adoc#change-local-trusted[What Is on This Machine Is Trusted]); a model that reads them later gets them as quoted data in its facts, never as instructions of the system.
 * The interpreting role is the shipped `read_only` role `interpret`, qualified like every role on its corpus topic `own_words`.
 Affects:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Questions] (answers), link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#question-states[Question States] (the states of the interpretation), link:../specification/model-work/01-roles-and-configuration.adoc#default-roles[Default Role Set] (the interpreting role), link:../specification/store-schemas/18-decision-records.adoc#decision-record[Decision Record] (chosen, interpreted, delegated).
@@ -315,5 +323,6 @@ Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#lo
 Gap:: Running Work shows only what runs (<<change-running-work>>); an ended plan or epic, in the project's archive or among its plans with phase `aborted`, has no listing and no way into its view.
 Fix::
 * `GET /api/v1/projects/{project_id}/ended` lists the project's ended plans and epics, newest first, with their outcome, reason, and end time, paged; each resolves to its process and history as it ended, read from the archive.
-Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives].
+* *A chat about ended work*: each ended plan or epic offers a read-only chat over its archived record (outcome, reason, history, decisions, re-planning records, events) with its planning role, `replan` for a plan and `decompose` for an epic, which never changes the archive; its one proposal is a follow-up plan, a description that opens the start of a new plan naming the ended one (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
+Affects:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], link:../specification/filesystem-layout/03-project-store.adoc#archives[Archives], link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap States] (a start opened with a description).
 
