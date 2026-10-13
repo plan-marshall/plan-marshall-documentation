@@ -72,6 +72,23 @@ The system must operate without transport-level session state, evaluating every 
 
 See the link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/filesystem-layout.adoc[Filesystem Layout Specification], link:specification/store-schemas.adoc[Store Schemas Specification], and link:specification/identifiers.adoc[Identifier Registry] for implementation details.
 
+Implementation (the workflow side of bullet 4, as far as the library modules carry it and not yet wired into the runtime `pm-mcpd`: the workflow engine reads the current state, call stack, bindings, counters and condition of a scope from its persisted status document alone and returns the next one for the caller's transaction, so a killed run resumes at the same state with the same next step; the workflow state store reads and writes that document; the ports through which the engine starts jobs, creates queue tasks, reads question records and reads the clock. Not implemented yet: the request handling of the first three and the last two bullets): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/WorkflowEngine.java[WorkflowEngine],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/RestingWait.java[RestingWait],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/WorkflowStatusStore.java[WorkflowStatusStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/RetryCounters.java[RetryCounters],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/JobStarter.java[JobStarter],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/QueueTaskCreator.java[QueueTaskCreator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/QuestionRecordReader.java[QuestionRecordReader],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/WorkflowClock.java[WorkflowClock]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineResumeTest.java[EngineResumeTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineEventTest.java[EngineEventTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/WorkflowStatusStoreTest.java[WorkflowStatusStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/EnginePortsTest.java[EnginePortsTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Workflow State Store and Engine Ports Developer Guide]
+
 Implementation watch: link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-1[PM-WATCH-STORE-1], link:implementation-watch/hypermedia-format.adoc#PM-WATCH-HYP-9[PM-WATCH-HYP-9]
 
 [#PM-ARCH-5]
@@ -104,6 +121,20 @@ All durable workflow and coordinator data must reside in structured filesystem s
 * The system must validate the `format_version` of every store it reads and accept exactly the binary's current version, refusing any other with a named reason (`format_outdated`, `format_newer`) and never migrating a store on runtime start; the git-tracked team configuration and workflow units are never rewritten by the runtime, and a new binary's default changes reach them only through the project setup workflow (`PM-EXT-7`).
 
 See the link:specification/store-schemas.adoc[Store Schemas Specification] and link:specification/filesystem-layout.adoc[Filesystem Layout Specification] for implementation details.
+
+Implementation (bullets 1, 2, 4 and 5 for the workflow state store `mcp/status.json` of a plan, an epic and the workspace, as far as the library modules carry it: the document with its `format_version` checked first, the members the engine owns typed and every other member of the closed schema kept verbatim, the retry counts of `retry_counters`, written only as a target of the caller's `ScopeTransaction`; the workflow engine, which keeps no state between two advances): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/WorkflowStatus.java[WorkflowStatus],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/WorkflowStatusCodec.java[WorkflowStatusCodec],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/WorkflowStatusStore.java[WorkflowStatusStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/store/RetryCounters.java[RetryCounters],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/WorkflowEngine.java[WorkflowEngine]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/WorkflowStatusCodecTest.java[WorkflowStatusCodecTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/WorkflowStatusStoreTest.java[WorkflowStatusStoreTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/RetryCountersTest.java[RetryCountersTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineResumeTest.java[EngineResumeTest]
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Workflow State Store and Engine Ports Developer Guide],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide]
 
 Implementation watch: link:implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-56[PM-WATCH-GEN-56], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-39[PM-WATCH-PHASE-39]
 

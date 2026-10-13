@@ -150,20 +150,6 @@ are one transaction (a crash between them leaves neither); a counter is never de
 Matched control: a scope without a record of a kind allocates `1`.
 Source:: design review.
 
-[#PM-WATCH-STORE-57]
-=== PM-WATCH-STORE-57: Open: retry counters that a runtime restart resets
-
-Anchor:: link:../specification/store-schemas/02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Store Schemas § Workflow State Store]
-Hazard:: Undecided: compiled condition budgets kept outside a condition, the server-rule retries (`sync_failed`, merge-barrier
-`indeterminate`, `re_enter`, `push_failed`), and the conservative "retry once" have no persisted count; a runtime
-restart resets them, so a plan that crashes the runtime or meets a drain retries beyond its budget on every restart.
-Options: (1) persist them in the status store next to `counters`; (2) derive them from the audit and step records;
-(3) accept bounded extra retries per restart. Recommendation: 1, one persisted place for every budget.
-Guard:: The plan implementing this anchor decides the point (with the operator where it changes scope), records
-the result in the specification and the requirement it touches, and deletes this item.
-Source:: `state-catalogue/04-plan-finalize-terminal.adoc:34`, `state-catalogue/07-plan-finalize-merge-post-run.adoc:64-226`,
-`state-catalogue/08-remediation-units.adoc:83`.
-
 == Findings Ledger Record (`findings.jsonl`)
 
 [#PM-WATCH-STORE-4]
