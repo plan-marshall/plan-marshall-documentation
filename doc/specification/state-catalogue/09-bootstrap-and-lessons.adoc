@@ -32,7 +32,7 @@ Every scope is created by the bootstrap of its kind; there is no creation tool. 
 |`start.resolve` (`setup_required`).
 |`facts`: the setup state and what is missing, with the operator command where the item is operator-owned (integration variant, credentials); for dirty configuration after a stepped-out setup commit it names `setup.commit-changes`, whose `land` commits again. The model drives the workspace setup through `pm_state(NO_PLAN)` in the same session. Links `recheck` (rel `next`, `noop`), `abandon` (rel `alt`, `noop`).
 |`recheck` -> `start.resolve`; `abandon` -> `start.abandoned`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]
 
 |[[state-start.choose]]`start.choose`
 |inherit (`workspace`)
@@ -213,7 +213,7 @@ _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-
 |`start-epic.resolve` (`setup_required`).
 |As `start.setup-required`.
 |`recheck` -> `start-epic.resolve`; `abandon` -> `start-epic.abandoned`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]
 
 |[[state-start-epic.define]]`start-epic.define`
 |inherit (`workspace`)

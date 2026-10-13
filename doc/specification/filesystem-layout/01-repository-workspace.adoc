@@ -12,7 +12,7 @@ link:../../Specification.adoc[Specification] » link:../filesystem-layout.adoc[F
 == Repository Workspace Layout (`.marshall/`)
 _Implementation watch: link:../../implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-1[PM-WATCH-FS-1]_
 
-Every repository checkout of an enrolled project contains a `.marshall/` directory structured into two distinct regions: git-tracked shared documents and the git-ignored technical directory `.marshall/local/`. It is created by the first run of the project setup workflow in the project's workspace scope (link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]) and is disjoint from the `.plan/` tree of `plan-marshall`, which may exist beside it and is never read or written by `PM-MCP`.
+Every repository checkout of an enrolled project contains a `.marshall/` directory structured into two distinct regions: git-tracked shared documents and the git-ignored technical directory `.marshall/local/`. It is created by the first run of the project setup workflow in the project's workspace scope (link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]) and is disjoint from the `.plan/` tree of `plan-marshall`, which may exist beside it and is never read or written by `PM-MCP`.
 
 [source,text]
 ----

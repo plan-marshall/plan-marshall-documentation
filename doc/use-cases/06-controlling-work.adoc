@@ -118,7 +118,7 @@ Changes::
 * *The epic is told* (<<change-epic-informed>>).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the operator abort is specified in link:../specification/phase-workflows/01-planning-phases-1-2.adoc[Planning Phases 1–2] (Operator Abort), the terminal states in link:../specification/state-catalogue/04-plan-finalize-terminal.adoc#state-catalogue-terminal[Terminal States], the revision of a running plan in link:../specification/phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Dynamic Re-Planning].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-CTL-2]
 == UC-CTL-2: Control an Epic
@@ -208,7 +208,7 @@ Changes::
 * *The decomposition is reviewed* (link:05-starting-work.adoc#change-decomposition-review[The Decomposition Is Reviewed]).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its states in link:../specification/state-catalogue/06-setup-epic-other.adoc[Epic States].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#epic-actions[Actions on Plans and Epics, An Epic's Actions], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic[Terminal Client, An Epic]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#epic-actions[Actions on Plans and Epics, An Epic's Actions], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic[Terminal Client, An Epic]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-CTL-3]
 == UC-CTL-3: Review an Epic's Findings or Watches
@@ -297,7 +297,7 @@ Changes::
 * *The review* (<<change-epic-review>>).
 * *Chatting with the planning role* (<<change-chat>>).
 Requirements:: the epic's coordination is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#review[Actions on Plans and Epics, Reviewing]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#review[Terminal Client, A Review]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-CTL-4]
 == UC-CTL-4: Resolve What Holds a Plan
@@ -331,15 +331,17 @@ Flow::
   [O] hold.resolve             the operator's act, confirmed where it cannot
        │                       be undone
        ▼
-  [S] hold.apply               the act applied; the plan, the epic, or the
-                               landing goes on, or what still holds is shown
+  [S] hold.apply               the act applied
+       ├── still held ───────► hold.show   what still holds, with its cause
+       ▼ released
+  hold.released                the plan, the epic, or the landing goes on
 ----
 Variations:: an act the operator needs a terminal for today (`pm-operator grant-access`, `accept-edit`) is offered in both clients; a hold that clears by itself (a provider back) disappears without an act.
 Outcome:: what held is resolved, or the plan or the epic is ended; nothing waits without the operator knowing why.
 Changes::
 * *Holds and their acts* (<<change-holds>>).
 Requirements:: the conditions are specified in link:../specification/state-catalogue/01-conventions-generic-conditions.adoc[Generic Conditions], stalled plans in link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Stalled Plans].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#holds[Terminal Client, What Holds a Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#holds[Actions on Plans and Epics, Holds]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#holds[Terminal Client, What Holds a Plan]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-CTL-5]
 == UC-CTL-5: Change a Plan's Settings
@@ -378,6 +380,8 @@ Flow::
        │                       needs it
        ├── too late ──► the reason: the version would not contain the
        │                plan's position ─► plan-settings.aspect
+       ├── changed meanwhile ──► conflict: the current value
+       │                          ─► plan-settings.value
        ▼
   [S] plan.inform-epic         where an epic started the plan, its inbox
                                is told: settings changed, with the aspect
@@ -386,13 +390,15 @@ Variations::
 * *Set where first needed*: a value the plan asks where it first needs it (link:05-starting-work.adoc#change-options-when-needed[Asked When Needed]) is the same plan value; this use case changes it later, or sets it before it is asked, so that it is not asked.
 * *A running plan* goes on while its settings change; what runs keeps the value it started with, and the new value applies from where the plan next reads it (a task started after it, the call site of an axis not yet reached).
 * *Too late*: a change whose new version would not contain the plan's current state and its call stack (the landing variant while the plan lands, for example) is refused with the reason; what has already run is not run again.
+* *Changed in two clients at once*: the first change wins; a later one made against an older value is refused with `conflict`, the current value shown, and the operator may apply theirs again on top of it (link:01-onboarding.adoc#concurrent-changes[Concurrent Changes of a Setting]).
 * *Refused values*: a landing variant that cannot run for the project (`landing.pull-request` without a provider, `landing.main` on a protected base branch) or for the plan (`landing.files` for a plan from local changes, link:05-starting-work.adoc#UC-STA-9[UC-STA-9]) is refused with the reason; so is a harness, model, or provider the machine does not allow.
 Outcome:: the plan has its own value of the aspect, a new instance version shows it, the change is audited, and its epic knows.
 Changes::
 * *Plan overrides* (link:01-onboarding.adoc#change-plan-overrides[Plan Overrides]).
+* *Concurrent changes of a setting* (link:01-onboarding.adoc#concurrent-changes[Operator Choices in the Web App and the Terminal]).
 * *The epic is told* (<<change-epic-informed>>).
 Requirements:: the plan instance and its composition events are specified in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], the harness of a role in link:../specification/model-work/04-worker-launch.adoc#harness-selection[Harness Selection].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[Web App, designed by the package `web-design`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/work-actions.adoc#plan-actions[Actions on Plans and Epics, A Plan's Actions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#plan[Terminal Client, A Plan]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#changes]
 == Changes to the Specification

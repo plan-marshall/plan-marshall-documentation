@@ -64,7 +64,7 @@ Docker, Docker Compose, and Testcontainers hand their work to the container daem
 === Session Bus
 _Implementation watch: link:../../implementation-watch/job-runtime.adoc#PM-WATCH-JOB-36[PM-WATCH-JOB-36]_
 
-The Linux Secret Service has no per-application access control: every process of the user that reaches the session bus can read an unlocked collection, and with it the Token Lane secrets (link:../cli-and-security/02-credentials-and-operator.adoc#_os_keyring_backends_fallback_file_store[CLI, Coordination & Security Specification, OS Keyring Backends]). Every job is therefore cut off from the user's session bus:
+The Linux Secret Service has no per-application access control: every process of the user that reaches the session bus can read an unlocked collection, and with it the Token Lane secrets (link:../cli-and-security/02-credentials-and-operator.adoc#os-keyring-backends[CLI, Coordination & Security Specification, OS Keyring Backends]). Every job is therefore cut off from the user's session bus:
 
 * No job receives `DBUS_SESSION_BUS_ADDRESS` or `XDG_RUNTIME_DIR` (<<_job_environment_pm_sec_5,Job Environment>>), so no D-Bus client library of a job finds the bus.
 * The read set leaves out the bus socket `$XDG_RUNTIME_DIR/bus` of the runtime's user (`/run/user/<uid>/bus`); from Landlock ABI 9 that refuses a deliberate `connect(2)`, below it the withheld variables are the only guard (<<pathname-sockets>>).
