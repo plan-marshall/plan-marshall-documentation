@@ -5,7 +5,7 @@
 
 xref:../Requirements.adoc[Requirements] » xref:README.adoc[Discussions] » Specification Changes for the Clients
 
-What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work], link:../use-cases/06-controlling-work.adoc#changes[Controlling Work]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
+What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work], link:../use-cases/06-controlling-work.adoc#changes[Controlling Work], link:../use-cases/07-system.adoc#changes[System]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
 
 [#decided]
 == Decided
@@ -113,6 +113,12 @@ Beyond the sections each change names in its _Affects_:
 
 |link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
 |the device's label; the closing of a revoked device's streams; revoking all others; turning the LAN listener off with the loopback listener left open; the release's confirmation against the engine-owned abort, every plan ending with the outcome `released` and every epic with the `terminal_reason` `released`; the closed list of holds (`stalled`, `condition`, `integrity_pause`, `held`, `landing_failed`), their acts and their arguments, and the end of `facts.operator_command`.
+
+|link:../use-cases/07-system.adoc#change-runtime-lifecycle[The Runtime's Lifecycle]
+|the operator endpoints of the stop (`when`, `then`), its withdrawal, and the upgrade, privileged in Operator Channel Isolation; the lifecycle state, the version, the newest version known, and an upgrade's result in the runtime status and in the machine state records; the events `runtime.draining`, `runtime.drain_withdrawn`, `runtime.stopping`, `runtime.upgrading`, `runtime.upgraded`, `runtime.upgrade_failed` in the event catalogue; the successor's start after a restart and under the service unit; the consent kind `check_updates`; the release's form in the organisation's registry and the credential that reads it (open); the installation root beside `<PM_MCP_HOME>` in `PM-ARCH-2`; how a client of the operator says that its version differs from the runtime's.
+
+|link:../use-cases/07-system.adoc#change-runtime-metrics[The Runtime's Metrics]
+|the new requirement in `PM-ARCH`, the next free id (the ninth); the closed metric catalogue with names, units, labels, and one writer each; the endpoints `GET /api/v1/system` and `GET /api/v1/system/metrics` and the event `system.metrics` in the event catalogue; the models' hourly figures filled from the metrics stores at the start; the disk use in the periodic sweep; `unavailable` as a value of every figure; the library of the registry, a dependency decision of the operator (open); the OpenMetrics text as an option on the socket only.
 
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
@@ -268,6 +274,21 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`pm-mcp-clients`
 |the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files, a chat about the entry
 |`operator-interaction-contract`; `start-from-clients`; `chat`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
+
+|`runtime-control`
+|`pm-mcp-core`
+|The Runtime's Lifecycle: the stop by drain or now and its withdrawal, the restart with its successor's start, the update check under `check_updates`, the upgrade with its way back, the lifecycle state and events; builds on the done packages `runtime-lifecycle` and `service-unit`
+|`operator-wait-and-machine-scope`; `machine-onboarding-unit`; UC-SYS-1 agreed
+
+|`runtime-metrics`
+|`pm-mcp-core`
+|The Runtime's Metrics: the new requirement, the registry and its catalogue, the figures kept where things happen and filled at the start, the snapshot, the metrics endpoint, and the event `system.metrics`
+|UC-SYS-2 agreed; the operator's decision on the registry's library
+
+|`system-contract`
+|`pm-mcp-clients`
+|the client side of the System area: the runtime's lifecycle acts and their states, the version and the newer one, the system view and its live figures, the events of the runtime's lifecycle and of its metrics
+|`operator-interaction-contract`; `runtime-control`; `runtime-metrics`; UC-SYS agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`, `cli-system` and `web-system` on `system-contract`.

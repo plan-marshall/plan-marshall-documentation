@@ -43,6 +43,7 @@ The closed list of the consent kinds, for every use case that asks one (<<change
 |`inspect_checkout` |read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the host tools' version probes from the absolute directories of the login `PATH`; changes nothing |`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |stays
 |`run_checkout_scripts` |run the named scripts of a project's checkout, each with its arguments, confined like a job |`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project and the digest of each script, in `consents.json` (never in the enrolment) |goes on, what needs the scripts unknown
 |`model_cost` |a role task whose expected cost is shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
+|`check_updates` |ask the organisation's registry, over the network, for a release newer than the installed one |`runtime.update-consent` (link:07-system.adoc#UC-SYS-1[UC-SYS-1]) |yes, for the machine |goes on: no newer version is known
 |===
 
 A grant is not a consent: reading the issues of another repository (link:05-starting-work.adoc#UC-STA-4[UC-STA-4]) is a cross-repository read grant, kept with the grants.
