@@ -181,7 +181,7 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`project-onboarding-unit`
 |`pm-mcp-core`
 |Onboarding a Project as One Process, Project Values over Machine Values: the project onboarding unit in a scope of its own per project (checkout, consent, detection, identity, enrolment, then the setup), the setup's choices as operator waits, the project's values over the machine's
-|`operator-wait-and-machine-scope`; `enrolment-store`; UC-PRJ agreed
+|`operator-wait-and-machine-scope`; `enrolment-store`; `machine-onboarding-unit`; UC-PRJ-1 and UC-PRJ-2 agreed
 
 |`project-contract`
 |`pm-mcp-clients`
@@ -205,8 +205,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`start-from-clients`
 |`pm-mcp-core`
-|All Interaction in the Operator's Clients, Starting from the Clients, The Source Directory, Documents as a Source, What Is on This Machine Is Trusted, Screened Once Stored, Issues by Number or URL, Asked When Needed: the bootstraps as units of operator waits, the source units, the source directory, the end of the session-driven units
-|`operator-wait-and-machine-scope`; `entity-addressing`; UC-STA-1 to UC-STA-4 and UC-STA-7 to UC-STA-9 agreed
+|All Interaction in the Operator's Clients, Starting from the Clients, The Source Directory, Documents as a Source, What Is on This Machine Is Trusted, Screened Once Stored, Issues by Number or URL, Asked When Needed, A Claimed Lesson Ends with the Landing: the bootstraps as units of operator waits, the source units, the source directory, the end of the session-driven units
+|`operator-wait-and-machine-scope`; `entity-addressing`; `machine-onboarding-unit`; UC-STA-1 to UC-STA-4 and UC-STA-7 to UC-STA-9 agreed
 
 |`forgejo-provider`
 |`pm-mcp-core`
@@ -216,17 +216,17 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |`recipe-workflows`
 |`pm-mcp-core`
 |A Recipe Is a Workflow
-|`phase-sub-workflows`; UC-STA-5 agreed
+|`phase-sub-workflows`; `start-from-clients`; UC-STA-5 agreed
 
 |`chat`
 |`pm-mcp-core`
 |Chatting with the Planning Role: the sub-workflow `chat` and its states, its routing to `replan` for a plan and to `decompose` for an epic, the revision of a plan through the guards of a first plan at the next task boundary, the transcript kept with its subject; the scopes of a decision (a proposed answer as own words, a decision withdrawn by a revision), of a start's entry (role `refine` or `decompose`, the description its one change), and of ended work (read-only over the archive, a follow-up plan's start)
-|`operator-wait-and-machine-scope`; `decision-engine`; `start-from-clients`; UC-CTL-1 to UC-CTL-3, UC-PLN-2, UC-PLN-4, UC-STA-1, and UC-STA-2 agreed
+|`operator-wait-and-machine-scope`; `decision-engine`; `start-from-clients`; `phase-sub-workflows`; UC-CTL-1 to UC-CTL-3, UC-PLN-2, UC-PLN-4, UC-STA-1, and UC-STA-2 agreed
 
 |`plan-and-epic-control`
 |`pm-mcp-core`
-|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts; _chat_ among the actions of a plan and an epic; a plan's settings changed while it runs (UC-CTL-5)
-|`operator-wait-and-machine-scope`; `chat`; UC-CTL-1, UC-CTL-2, UC-CTL-4, UC-CTL-5, and UC-PLN-5 agreed
+|Pausing and Starting a Plan, Cancelling and Abandoning Archive, The Epic Is Told, An Epic's Actions, The Epic as a Resource, Holds and Their Acts, Releasing Ends Work as the Operator Ends It; _chat_ among the actions of a plan and an epic; a plan's settings changed while it runs (UC-CTL-5); the release of a project ending its plans and epics (UC-PRJ-3)
+|`operator-wait-and-machine-scope`; `chat`; `machine-onboarding-unit`; `project-onboarding-unit`; UC-CTL-1, UC-CTL-2, UC-CTL-4, UC-CTL-5, UC-PLN-5, and UC-PRJ-3 agreed
 
 |`epic-findings-review`
 |`pm-mcp-core`
