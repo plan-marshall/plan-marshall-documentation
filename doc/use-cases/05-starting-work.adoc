@@ -144,7 +144,7 @@ Changes::
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
 * *Asked when needed* (<<change-options-when-needed>>).
 * *An epic runs by itself* (link:06-controlling-work.adoc#change-epic-auto[An Epic Runs by Itself]), for the mode shown at the ready step.
-Requirements:: the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-15[PM-WF-15] (the epic bootstrap, the decomposition, and the plans the epic starts); the epic workflow is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-header[Epic Header].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc[Starting Work]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc[Terminal Client, Starting Work]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#UC-STA-3]
@@ -302,7 +302,7 @@ Variations::
 Outcome:: a plan runs the recipe's workflow with the parameters given.
 Changes::
 * *A recipe is a workflow* (<<change-recipe-workflow>>).
-Requirements:: the recipes are specified in link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points].
+Requirements:: link:../requirements/15-extensions-and-recipes.adoc#PM-EXT-4[PM-EXT-4] (the recipe model), link:../requirements/02-workflow.adoc#PM-WF-10[PM-WF-10] (the source `recipe` of the plan bootstrap); the recipes are specified in link:../specification/domain-extensions/05-recipes-and-extension-points.adoc[Recipes & Extension Points].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#recipe[Starting Work, A Recipe]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#recipe[Terminal Client, Running a Recipe]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#UC-STA-6]
@@ -364,7 +364,7 @@ Variations::
 Outcome:: the epic's workstreams and staged plans are in its ledger as the operator agreed them; the epic starts its plans from them by itself with automatic on, and with it off on the operator's _next plan_ (link:06-controlling-work.adoc#UC-CTL-2[UC-CTL-2]).
 Changes::
 * *The decomposition is reviewed* (<<change-decomposition-review>>).
-Requirements:: the decomposition is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`, `epic.recut`) and link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness].
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-15[PM-WF-15] (the decomposition and the surface disjointness of staged plans); the decomposition is specified in link:../specification/model-work/08-epic-coordination.adoc#epic-workflow[Epic Workflow] (`epic.decompose`, `epic.recut`) and link:../specification/model-work/08-epic-coordination.adoc#epic-surface-disjointness[Staging-Time Surface Disjointness].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#decomposition[Starting Work, The Decomposition]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#decomposition[Terminal Client, The Decomposition]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#UC-STA-7]
@@ -411,7 +411,7 @@ Outcome:: the pull request is a source; the plan, once started, works on its bra
 Changes::
 * *Screened once stored* (<<change-screen-stored>>); *issues by number or URL*, which holds for pull requests too (<<change-issues>>).
 * *What is on this machine is trusted*, and a pull request's changed files are not (<<change-local-trusted>>).
-Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-pr`).
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-10[PM-WF-10] (the source `pr` and the `adopt` lane), link:../requirements/08-security.adoc#PM-SEC-1[PM-SEC-1] (what is trusted); the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-pr`).
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#pull-request[Starting Work, A Pull Request]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#pull-request[Terminal Client, A Pull Request]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#UC-STA-8]
@@ -454,7 +454,7 @@ Outcome:: the lesson is a source, claimed by the plan once it exists. The lesson
 Changes::
 * *The source directory* (<<change-source-directory>>).
 * *A claimed lesson ends with the landing* (<<change-lesson-claim>>).
-Requirements:: the lesson source and the claim are specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] and link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-lessons[Lessons].
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-10[PM-WF-10] (the source `lesson`: its premise checked, the lesson claimed); the lesson source and the claim are specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] and link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-lessons[Lessons].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#lesson[Starting Work, A Lesson]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#lesson[Terminal Client, A Lesson]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#UC-STA-9]
@@ -492,7 +492,7 @@ Outcome:: the local changes are a source; the plan, once created, holds them as 
 Changes::
 * *The source directory* (<<change-source-directory>>).
 * *Plan behaviour axes*, the landing axis and its validation (link:01-onboarding.adoc#change-plan-axes[Plan Behaviour Axes]).
-Requirements:: the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-local-changes`).
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-10[PM-WF-10] (the source `local_changes` and the `land` lane); the source is specified in link:../specification/state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[Source States] (`source-local-changes`).
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/starting-work.adoc#local-changes[Starting Work, Local Changes]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/18-starting.adoc#local-changes[Terminal Client, Local Changes]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-start.adoc[`web-start`]
 
 [#changes]

@@ -16,6 +16,7 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 * *One module per area*: `use-cases/NN-<area>.adoc`, listed in <<index>>.
 * *Client-neutral*: a use case is cut by subject, never by client; it names a client at most as where the operator acts ("in the web app or in the terminal client"), never its screens, commands, or keys. The two exceptions are bound to one client by their nature: link:use-cases/02-entry.adoc#UC-ENT-1[UC-ENT-1], whose first command after installing is typed in a terminal, so it is bound to the terminal client and names its steps; and link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3], designing a process, which needs a unit's text beside its structure and is offered by the web app only.
 * *Status*: each use case states one of `DRAFT` (not yet agreed by the operator; its open points named where there are any), `AGREED` (the operator agreed to it; requirements and design may be derived from it).
+* *Flow form*: the form of a flow follows what the use case is. A use case whose process the server runs has a state diagram (*Processes*, below). A use case that only shows something, a view the operator reads with no process of the server behind it, has numbered steps, one per part of the view as the operator reads it (link:use-cases/03-plans.adoc#UC-PLN-1[UC-PLN-1], link:use-cases/03-plans.adoc#UC-PLN-4[UC-PLN-4], link:use-cases/03-plans.adoc#UC-PLN-5[UC-PLN-5], link:use-cases/04-projects.adoc#UC-PRJ-2[UC-PRJ-2]).
 * *Processes*: a use case whose process the server runs is modelled as a workflow, and a step of it that is a process of its own as a sub-workflow with a use case of its own. Its flow is drawn as an ASCII state diagram in a `[source,text]` block: one line per state, named as the state would be named in the workflow unit; the arrows carry the outcomes. The diagram shows the process, never a screen. One legend holds for every diagram, and no diagram repeats it:
 ** `[S]` the server acts.
 ** `[O]` the operator chooses; every choice offered to the operator is `[O]`.
@@ -24,8 +25,9 @@ The use cases describe what a person does with `PM-MCP` and what they get out of
 ** `↳` a call of a sub-workflow.
 ** `[O]⇄[M]` an exchange between the operator and a model.
 ** `←` after an option: the option preselected.
-** `done`: the process of the use case ends; a sub-workflow returns to its caller.
+** `done`, or `<unit>.done` where the unit names its end state (`language.done`, `harness.done`): the process ends; a sub-workflow returns to its caller.
 * *No macros in diagrams*: a `[source,text]` block renders no cross reference (`&lt;&lt;…&gt;&gt;`) and no `link:`; a diagram names a use case or a state by its plain id (`UC-STA-5`), and where a link helps, the prose below the diagram carries it.
+* *Requirements*: the part names first the requirements that serve the use case, each linked to its anchor in its domain file with what it serves, and after them where the parts are specified; where no requirement serves the use case, or a part of it, it says "none yet", and where a change of the use case drafts the requirement, "drafted in" that change. A requirement is never named that does not exist.
 * *Design*: the part lists, in this order, the shared design (what both clients show) where there is one, the terminal client's, and the web app's; where the web app has no design document yet, the line says so in one phrase, "the web app: no design document yet; designed by its package", and links the package of `pm-mcp-clients` that designs it.
 * *Shape*: each use case has the parts of the template below; a part that does not apply is left out, never filled with filler.
 
@@ -39,7 +41,7 @@ Actor:: who does it (the operator, a reviewer, ...).
 Goal:: what they want to achieve, in one sentence.
 Trigger:: what makes them start.
 Preconditions:: what holds before.
-Flow:: the steps, numbered, as the actor experiences them.
+Flow:: the state diagram of the process the server runs; for a view, the steps, numbered, as the actor experiences them.
 Variations:: other ways through, and what happens when something fails.
 Outcome:: what holds afterwards.
 Open points:: what is not decided yet.
@@ -88,6 +90,11 @@ Design:: the design documents that show it, per client (link:https://github.com/
 [#open-points]
 == Open Points
 
-What the use cases do not cover yet is decided before a use case is written for it; at present nothing is open.
+An open point lives where it arises: in the _Open points_ part of a use case, or as an _Open point_ bullet in the fix of a change. This section lists every one of them; it holds no open point of its own. What the use cases do not cover yet is decided before a use case is written for it.
+
+* `UC-ONB`: whether a maker's icon may be shown at all, and which icons may be bundled, a legal question (link:use-cases/01-onboarding.adoc#change-harness-icons[Harness Icons], _Open points_).
+* `UC-PLN`: designing a unit for one plan only and promoting it to the project, and a model's help in designing, are not offered now (link:use-cases/03-plans.adoc#UC-PLN-3[UC-PLN-3], _Open points_).
+* `UC-SYS`: which credential the runtime presents to the organisation's registry, and the form of a release in it (link:use-cases/07-system.adoc#change-runtime-lifecycle[The Runtime's Lifecycle], _Open point_); which library implements the registry of the runtime's metrics, a dependency decision of the operator (link:use-cases/07-system.adoc#change-runtime-metrics[The Runtime's Metrics], _Open point_).
+* `UC-ENT`, `UC-PRJ`, `UC-STA`, `UC-CTL`: nothing open.
 
 Not offered, by the operator's decision: pausing an epic as a whole. Its plans are paused one by one (link:use-cases/06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]).
