@@ -81,13 +81,18 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/QuestionRecordReader.java[QuestionRecordReader],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/WorkflowClock.java[WorkflowClock]
 
-Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineResumeTest.java[EngineResumeTest],
+Verified by (the workflow side of bullet 4): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineResumeTest.java[EngineResumeTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EngineEventTest.java[EngineEventTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/store/WorkflowStatusStoreTest.java[WorkflowStatusStoreTest],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/EnginePortsTest.java[EnginePortsTest]
 
+Implementation (the scope identifier a primitive is handed with every execution, empty for the workspace scope; part of the second statement of this requirement): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/WorkflowExecutionContext.java[WorkflowExecutionContext]
+
+Verified by (the scope identifier of a primitive): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/PrimitiveContractTest.java[PrimitiveContractTest]
+
 Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Workflow State Store and Engine Ports Developer Guide]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Workflow State Store and Engine Ports Developer Guide],
+link:developer/primitive-spi.adoc#spi-contract[Developer Guide § The Contract of a Primitive]
 
 Implementation watch: link:implementation-watch/store-schemas.adoc#PM-WATCH-STORE-1[PM-WATCH-STORE-1], link:implementation-watch/hypermedia-format.adoc#PM-WATCH-HYP-9[PM-WATCH-HYP-9]
 
