@@ -23,7 +23,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |Creation of the workspace scope by `pm-operator enrol` (the unit's single start state); `setup.completed` (`reconcile`).
 |Records `setup_run` from server facts, never from a model choice: no `.marshall/config/` in the primary checkout is `first_run`, otherwise `reconcile`; a legacy `.plan/marshal.json` is never read (`PM-MIG-2`). An interrupted first run keeps its recorded `setup_run`.
 |`first_run` -> `setup.prepare-workspace`; `reconcile` -> `setup.reconcile-config`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]
 
 |[[state-setup.prepare-workspace]]`setup.prepare-workspace`
 |`workspace`
@@ -31,7 +31,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`setup.entry` (`first_run`).
 |Writes the `.marshall/` partition into `.gitignore`; creates `.marshall/config/` with copies of the binary's default project-owned units (the phase units, `git-commit-and-push.pmwf`, `remediation-*.pmwf`, `replan.pmwf`, and `adjudicate-decisions.pmwf`, each with its `derived_from` default revision, link:../workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL Specification, Project-Owned Units]); writes no JSON defaults (the team files are sparse).
 |`setup.check-operator-files`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]
 
 |[[state-setup.check-operator-files]]`setup.check-operator-files`
 |`workspace`
@@ -87,7 +87,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`setup.detect-domains`; `setup.needs-repair` (`retry`).
 |Descriptor parsers and enrolled discovery templates; on the reconcile path rediscovery plus the `pm://architecture/drift` regression report. A per-descriptor parse failure is a finding of a succeeded discovery, never a job failure.
 |`succeeded` -> `setup.route-setup-run`; `failed`, `failed_unparsed`, `refused`, `cancelled`, `timed_out`, `killed`, `indeterminate` -> `setup.needs-repair`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]
 
 |[[state-setup.route-setup-run]]`setup.route-setup-run`
 |`workspace`
@@ -95,7 +95,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`setup.discover-modules` (`succeeded`).
 |Router: `auto setup.route-setup-run` reads the recorded `setup_run` and whether `build-map.json` exists.
 |`seed` (`first_run`, or `reconcile` without `build-map.json`) -> `setup.seed-build-map`; `probe` (`reconcile` with `build-map.json`) -> `setup.probe-build-map`.
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Project Setup State Machine]; link:../workflow-dsl/03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Workflow DSL Specification, Routing by Fact]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]; link:../workflow-dsl/03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Workflow DSL Specification, Routing by Fact]
 
 |[[state-setup.seed-build-map]]`setup.seed-build-map`
 |`workspace`
@@ -215,7 +215,7 @@ Declared in `project-setup.pmwf` (`scope workspace`), hosted by the project's wo
 |`setup.probe-enrichment` (`enrich`).
 |`job llm enrich-module role enrich each setup.enrichment-modules`: a fan-out over the server-computed list of the modules to enrich (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Model Job States]), one task per module, served within the role's count and the model slots, each with its own entity `enrich-<module_id>` closed by the kind's single `submit` link (`responsibility`, `purpose`, `key_packages`, reasoning fields). The state completes when every entity has its submission: the return evaluation reports `all_enriched` once every module of the set has a `responsibility`.
 |`all_enriched` -> `setup.commit-changes`; `unenriched` (a module's task ended `infeasible` or closed `lost` after its re-offers; the modules are named in `facts`) -> `setup.needs-repair`; `lost` (a role reason after the probe, the role found qualified there) -> `setup.needs-repair` (every module named unenriched): failures of the qualified role go to repair, so setup completes only with every discovered module enriched, or listed unenriched while `enrich` is unqualified (`PM-EXT-3`). The re-offers cover only the unfinished modules (xref:01-conventions-generic-conditions.adoc#condition-job_incomplete[Condition job incomplete]).
-|link:../domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[Domain Extensions Specification, Enrichment Parameters]
+|link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Enrichment Parameters]
 
 |[[state-setup.commit-changes]]`setup.commit-changes`
 |`workspace`

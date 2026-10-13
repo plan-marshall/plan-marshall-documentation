@@ -27,16 +27,16 @@ Changes::
 * *The plan's process as a structure* (<<change-process-resource>>).
 * *The plan's history* (<<change-plan-history>>).
 * *Events of the process* (<<change-process-events>>).
-Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan); the composed plan is specified in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], its sub-workflows in link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-view.adoc[Plan View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/16-plan-view.adoc[Terminal Client, The Plan View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc#structure[Web App, Structure], designed by its package `web-design`.
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan); the composed plan is specified in link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], its sub-workflows in link:../specification/workflow-dsl/06-reusable-sub-workflows.adoc[Reusable Sub-Workflows].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-view.adoc[Plan View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/16-plan-view.adoc[Terminal Client, The Plan View]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-PLN-2]
 == UC-PLN-2: Decide What a Plan Asks
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client (link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]).
-Goal:: learn at once that a plan or an epic waits for a decision, understand what is asked and why, decide it with what the plan offers, or in the operator's own words, and never decide by accident.
-Trigger:: a decision of a plan or an epic is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it because its confidence stayed below the threshold the decision declaration sets (link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
+Goal:: learn at once that a plan, an epic, or a project's setup waits for a decision, understand what is asked and why, decide it with what is offered, or in the operator's own words, and never decide by accident.
+Trigger:: a decision of a plan, an epic, or a project's workspace scope (a question of its setup) is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it because its confidence stayed below the threshold the decision declaration sets (link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
 Preconditions:: the operator has a client open, or is reached by a notification of one: the terminal client's notification while it runs (`console.notify`), the web app's browser notification once the operator allowed it.
 Flow::
 +
@@ -49,7 +49,8 @@ Flow::
        │                       recommendation, the votes and dissent of a quorum
        ▼
   [S] decision.announce        every open client of the operator shows that it
-       │                       waits, with its plan and what it blocks; none
+       │                       waits, with its subject (the plan, the epic, or
+       │                       the project's setup) and what it blocks; none
        │                       takes the operator's focus, and nothing typed
        │                       before it was shown answers it
        ▼
@@ -84,7 +85,7 @@ Flow::
        │                        decision.open, the decision asked anew
        ├── later ─────────────► decision.announce   the decision stays open;
        │                                            the client leaves it, and
-       │                                            the plan waits
+       │                                            its subject waits
        ├── answered in another channel ──► decision.closed   every client says
        │                                                     where and how
        ▼ every required part answered
@@ -93,8 +94,8 @@ Flow::
        │                       parts or is not reversible
        ▼
   [S] decision.record          validated and recorded with its channel; the
-       │                       first valid answer wins; until then the plan
-       │                       waits, without a time limit
+       │                       first valid answer wins; until then its
+       │                       subject waits, without a time limit
        ▼
   decision.closed
 ----
@@ -105,26 +106,27 @@ Variations::
 * *None fits, or later.* _None fits_ closes the decision withdrawn, with the operator's note: the role that asked thinks again and asks anew, as a new decision. _Later_ answers nothing: the decision stays open and announced, the client leaves it, and the plan waits.
 * *A waiver request* is announced the same way; it is answered by `waive` or by `decline`, which records the outcome `declined` and lets the remediation unit go on (<<change-operator-wait>>). Both are operator overrides and never a content answer, so a waiver request has no preselection, no interpretation, and no chat.
 * *A chat before answering* asks back ("what does option B mean for the open pull request?") with the role of the task that asked, or, for a decision a server rule raised or a quorum escalated, with the subject's planning role (`replan` for a plan, `decompose` for an epic); it may explain the recommendation and the votes, which the interpretation of an answer it proposes still never sees. A revision of the plan it proposes goes through the guards of a plan's chat; the decision stays open, or is closed _withdrawn_ with the reason when the revision removes what asked it. The plan waits during the chat as for any decision; an answer in another channel closes the decision and ends the chat (link:06-controlling-work.adoc#UC-CTL-1[UC-CTL-1]; link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]).
+* *A project's setup asks*: a decision of the workspace scope (a question of the project's setup, link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) is announced with its project, shown in the project's running work (<<change-running-work>>), and answered the same way; it holds the setup only, never a plan. A chat over it is with the role of the task that asked; a question the setup's workflow raised has no planning role, and its chat is offered disabled with that reason.
 * *No time limit*: either the quorum is confident and decides, as its declaration says, or the operator decides, and the plan waits until the operator has; no decision expires and none is taken by the passing of time (<<change-operator-wait>>). A client that was not open learns of the open decisions when it opens.
-Outcome:: the plan goes on with the operator's decision, in the operator's words where the operator used them, or with the decision of a confident quorum; the record names the channel, the device, whether the answer was chosen, interpreted and confirmed, or delegated, and whether it followed a chat.
+Outcome:: the plan, the epic, or the setup goes on with the operator's decision, in the operator's words where the operator used them, or with the decision of a confident quorum; the record names the channel, the device, whether the answer was chosen, interpreted and confirmed, or delegated, and whether it followed a chat.
 Changes::
 * *The decision structure* (<<change-decision-structure>>).
 * *Answers in the operator's own words* (<<change-own-words>>).
 * *Waiting for the operator* (<<change-operator-wait>>).
 * *Answers from the terminal client* (<<change-cli-answers>>).
 * *Chatting with the planning role* (link:06-controlling-work.adoc#change-chat[Chatting with the Planning Role]), inside a decision.
-Requirements:: link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../Requirements.adoc#PM-SEC-7[PM-SEC-7], link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions], the quorum in link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/14-transcripts-decisions.adoc#t-decisions[Terminal Client, Decisions]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc#structure[Web App, Structure], designed by its package `web-design`.
+Requirements:: link:../requirements/02-workflow.adoc#PM-WF-12[PM-WF-12], link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7], link:../requirements/08-security.adoc#PM-SEC-3[PM-SEC-3]; the question channels are specified in link:../specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Questions], the quorum in link:../specification/model-work/10-decision-quorum.adoc[Decision Quorum].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/decisions.adoc[Decisions] (what both clients show, for every variant); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/04-console.adoc#answering[Terminal Client, Answering a Question], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/14-transcripts-decisions.adoc#t-decisions[Terminal Client, Decisions]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-PLN-3]
 == UC-PLN-3: Design a Plan's Process
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client (whether the terminal client offers it is one of the open points).
 Goal:: shape the process a plan runs, for example add a step to finalize, by arranging the building blocks the project declares, and see before it is applied whether the server accepts it.
 Open points:: this use case is a stub: its building blocks are open points. Where a design lives (in the project's workflow units, in one plan, or in one plan with promotion to the project); whether a plan can be designed before it starts; which building blocks are offered; whether the terminal client offers it at all.
 Requirements:: none yet: no requirement lets the operator change the process of a plan.
-Design:: none yet; the web app's first views of it are part of its package `web-design` (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc#structure[Web App, Structure]).
+Design:: the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`], which holds its first views of it.
 
 [#UC-PLN-4]
 == UC-PLN-4: See What Runs, Across Projects
@@ -147,8 +149,8 @@ Changes::
 * *The start of the current phase* (<<change-phase-start>>).
 * *What needs the operator, at a glance* (<<change-needs-operator>>).
 * *The overview resource and its events* (<<change-overview-resource>>).
-Requirements:: link:../Requirements.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan and epic); the runtime status is specified in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], epics in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-overview.adoc[Plan Overview] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/15-overview.adoc[Terminal Client, The Overview]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc#structure[Web App, Structure], designed by its package `web-design`.
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan and epic); the runtime status is specified in link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API], epics in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination].
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/plan-overview.adoc[Plan Overview] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/15-overview.adoc[Terminal Client, The Overview]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#UC-PLN-5]
 == UC-PLN-5: Follow an Epic
@@ -172,7 +174,7 @@ Changes::
 * *The source directory* (link:05-starting-work.adoc#change-source-directory[The Source Directory]), for its sources.
 * *An epic's findings and watches* (link:06-controlling-work.adoc#change-findings-watches[An Epic's Findings and Watches]).
 Requirements:: the epic is specified in link:../specification/model-work/08-epic-coordination.adoc[Epic Coordination], its ledger in link:../specification/store-schemas/04-epic-and-change-ledger.adoc[Epic & Change Ledger].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic-view[Terminal Client, An Epic's View]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/README.adoc#structure[Web App, Structure], designed by its package `web-design`.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/epic-view.adoc[Epic View] (what both clients show); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/19-actions.adoc#epic-view[Terminal Client, An Epic's View]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-design.adoc[`web-design`]
 
 [#changes]
 == Changes to the Specification
