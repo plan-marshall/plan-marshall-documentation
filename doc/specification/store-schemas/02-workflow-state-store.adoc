@@ -568,7 +568,7 @@ The plan's `merge_outcome` (this store) and the landing's `merge_state` (link:..
 |`handed_back`
 |`open`
 
-|`open`, not merged, marked ready for review and left open by the ready form of `finalize.hand-back` (the pre-merge barrier passed while the plan's asking axis leaves the merge to the operator, link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]; plan fact: gap `cause: auto_merge_off`)
+|`open`, not merged, marked ready for review and left open by the ready form of `finalize.hand-back` (the pre-merge barrier passed while the plan's asking axis leaves the merge to the operator, link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]; plan fact: gap `cause: merge_by_operator`)
 |`awaiting_human_merge`
 |`open`
 
@@ -576,7 +576,7 @@ The plan's `merge_outcome` (this store) and the landing's `merge_state` (link:..
 |`merged`
 |`landed`
 
-|No pull request, the plan's changes left uncommitted in the working tree by the landing variant `landing.files` (the plan ends `handed_back`)
+|No pull request, the plan's changes written uncommitted into the main checkout's working tree by the landing variant `landing.files` (the plan ends `handed_back`)
 |`no_pr`
 |`not_applicable`
 

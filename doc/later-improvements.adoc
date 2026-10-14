@@ -64,9 +64,9 @@ _Accepted limitation:_ Repositories that need hooks, commit signing, filters inc
 
 === L-5: Team Overrides of Templates and Composition Rules
 
-_Deferred because:_ the phase units and the sub-workflow units `git-commit-and-push.pmwf`, the remediation policy units, `replan.pmwf`, and `adjudicate-decisions.pmwf` are project-owned copies already; overriding the composition rules and the compiled-only units needs a validation against the compiled invariants first.
+_Deferred because:_ the phase units and the sub-workflow units `git-commit-and-push.pmwf`, the remediation policy units, `replan.pmwf`, and `adjudicate-decisions.pmwf` are designable already, placed by the operator at the machine or the project level; overriding the composition rules and the compiled-only units needs a validation against the compiled invariants first.
 
-_Accepted limitation:_ Plan instances are composed from the project-owned units (`.marshall/config/*.pmwf`, copied from the defaults) and the shipped default composition rule file only. Teams cannot override or add composition rules, and cannot override the units that stay compiled only (the workspace unit `project-setup.pmwf` with the lesson maintenance unit `lessons.pmwf`, the epic unit `epic.pmwf`, the entity units with the task envelope, the task protocol unit `worker-task.pmwf`, and the plan and epic bootstraps with their source units `source-*.pmwf`; link:specification/workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL Specification, Project-Owned Workflow Units]).
+_Accepted limitation:_ Plan instances are composed from the designable units of the level in force (the project's `.marshall/config/*.pmwf`, else the machine's, else the shipped default) and the shipped default composition rule file only. Teams cannot override or add composition rules, and cannot override the units that stay compiled only (the machine onboarding, the project onboarding with the workspace unit `project-setup.pmwf`, the epic units, the units `decision` and `chat`, the entity units with the task envelope, the task protocol unit `worker-task.pmwf`, and the plan and epic bootstraps with their source units `source-*.pmwf`; link:specification/workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL Specification, Project-Owned Workflow Units]).
 
 * [ ] Team-authored composition rules (for example lane or posture prunes) in the project-owned configuration
 * [ ] Team overrides of the compiled-only units where a team need is shown
@@ -79,7 +79,7 @@ _Accepted limitation:_ Plan instances are composed from the project-owned units 
 
 _Deferred because:_ listing remote candidates costs provider calls and screening on every bootstrap, while a named number serves the same purpose.
 
-_Accepted limitation:_ The bootstrap's choice state lists only local candidates (live plans, active unclaimed lessons, recipes, local changes). Issues and pull requests are not listed; the user names a number, which the bootstrap's `issue` or `pr` source then fetches.
+_Accepted limitation:_ The bootstrap's choice state lists only local candidates (active unclaimed lessons, recipes, local changes). Issues and pull requests are not listed; the operator names a number, which the bootstrap's `issue` or `pr` source then fetches.
 
 * [ ] List open issues and pull requests through the provider module as bootstrap candidates, within the provider's rate limits and with the same model-facing bound as the local listings
 * [ ] Screen the listed titles through the guard for external text before they reach the model
@@ -104,17 +104,6 @@ _Deferred because:_ proxy credentials need a place in the credential store and a
 _Accepted limitation:_ Outbound connections (`cui-http` and the git transport of the native variant) use only an unauthenticated HTTPS proxy, set by the operator in the `proxy` object of `machine-config.json` (`https_proxy` as a URL without embedded credentials, `no_proxy`). A proxy that requires authentication is not supported.
 
 * [ ] Proxy credentials through the credential store, never in `machine-config.json`
-
-== Host Bundles
-
-=== L-9: Plain Entry Command Names
-
-_Deferred because:_ the `plan-marshall` plugin owns the plain names and may be installed side by side.
-
-_Accepted limitation:_ The entry commands are `/mcp-plan-marshall`, `/mcp-plan-orchestrator` and `/mcp-marshall-steward` (`$mcp-…` skills on Codex) while the `plan-marshall` plugin, which owns the plain names, may be installed side by side. The prefix keeps the two command sets apart and lets the three commands complete together in the harness.
-
-* [ ] Rename the entry commands to `/plan-marshall`, `/plan-orchestrator` and `/marshall-steward` once the `plan-marshall` plugin is withdrawn
-* [ ] Have the bundle update remove the prefixed artifacts in the same install that places the plain ones
 
 == Review Bots
 
@@ -164,7 +153,7 @@ _Accepted limitation:_ a profile an operator verified for a harness or a harness
 [#L-17]
 === L-17: A Model Watching a Worker
 
-_Deferred because:_ the signals of a worker off track are computed from its activity without a model (link:use-cases/03-plans.adoc#change-worker-off-track[A Worker Off Track]); whether a model's judgment adds to them can be told only once real activity is recorded, and a watching model reads untrusted text and costs a model call per check.
+_Deferred because:_ the signals of a worker off track are computed from its activity without a model (link:specification/model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work Specification, A Worker Off Track]); whether a model's judgment adds to them can be told only once real activity is recorded, and a watching model reads untrusted text and costs a model call per check.
 
 _Accepted limitation:_ a worker that makes no progress in a way no signal catches (it works busily on the wrong thing) runs until its budget, its plan task's submission, or a later review shows it.
 

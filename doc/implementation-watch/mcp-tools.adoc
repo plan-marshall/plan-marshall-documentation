@@ -109,17 +109,18 @@ Source:: design review.
 [#PM-WATCH-TOOL-22]
 === PM-WATCH-TOOL-22: Open: what `pm_state` and `pm_do` answer for an unreadable pending entry record
 
-Anchor:: link:../specification/mcp-tools/01-core-workflow-tools.adoc#bootstrap-entries[MCP Tools § Bootstrap Entries],
+Anchor:: link:../specification/mcp-tools/01-core-workflow-tools.adoc#bootstrap-entries[MCP Tools § Starting a Scope Without a Creation Tool],
 link:../specification/mcp-tools/04-errors-and-testing.adoc#protocol-errors-vs-domain-workflow-failure-states[§ Protocol Errors & Domain Workflow Failure States]
 Hazard:: Undecided: the engine refuses an `entry_id` whose pending entry record exists but cannot be read, or names
 neither `plan` nor `epic`, with its own reason `entry_unreadable`: never a live bootstrap, and never `scope_not_found`,
 which it keeps for a record that is gone (a consumer fails closed on `unreadable`,
 link:../specification/store-schemas/01-format-and-session-log.adoc#format-versioning[Store Schemas § Format Versioning],
 rule 4). The closed `error_code` set of the tools names no code for this case. A binding that answers it
-`scope_not_found` tells the entry session that the entry ended while its record still exists, so the session opens a
-second entry; one that answers `internal_fault` hides a damaged store behind a generic fault. Options: (1) a new
+`scope_not_found` tells the worker of the entry's task (the screener of a source, a chat task) that the entry ended
+while its record still exists, so its task closes as if the operator had abandoned the entry; one that answers
+`internal_fault` hides a damaged store behind a generic fault. Options: (1) a new
 `error_code` `entry_unreadable` of class `server_fault` with `audit_id`, like `file_unreadable`; (2) `internal_fault`
-with `audit_id`. Recommendation: 1, so that the entry session can relay the damaged entry to the operator by its id.
+with `audit_id`. Recommendation: 1, so that the damaged entry reaches the operator's clients by its id.
 Guard:: The plan binding `pm_state` and `pm_do` decides the point (with the operator, because it extends the closed
 error codes), records the result in this specification and in the `entry_id` row of the Identifier Registry, and
 deletes this item. Its test drives an unreadable record through both tools and asserts the decided code; matched
@@ -195,14 +196,16 @@ credential, a credential the upstream rejects, and an upstream JSON-RPC error ea
 Source:: design review.
 
 [#PM-WATCH-TOOL-20]
-=== PM-WATCH-TOOL-20: The entry session reads code through `pm_lsp` and never edits it
+=== PM-WATCH-TOOL-20: A worker of a machine-scope task reaches no project
 
-Anchor:: link:../specification/mcp-tools/01-core-workflow-tools.adoc#session-and-worker-surfaces[MCP Tools § Session and Worker Surfaces]
-Hazard:: An entry session that may `rename` edits a plan's worktree beside the plan's writer worker, so the change
-lands outside every task, footprint, and review.
-Guard:: Test with an entry session connection: `pm_lsp` `rename` is refused `invalid_arguments` for a real `plan_id`
-and for `NO_PLAN`, and the worktree is unchanged; its read operations on both scopes succeed; matched control: a
-`writer` worker's `rename` on its leased task's scope is applied.
+Anchor:: link:../specification/mcp-tools/01-core-workflow-tools.adoc#session-and-worker-surfaces[MCP Tools § Worker Surfaces]
+Hazard:: A task of the machine scope (the steward) has no project; a worker whose surface is computed like a project
+worker's could build, read code, or read the resources of an enrolled project it was never given.
+Guard:: Test with a worker of a machine-scope task: `tools/list` holds at most `pm_state`, `pm_do`, `pm_wait`, and the
+skill tools; a call of `pm_build` or `pm_lsp` is the JSON-RPC error `-32602`; `pm_state` with `plan_id: "NO_PLAN"`
+resolves to the machine scope from the job record, never to a workspace scope; a read of a project resource is
+refused and a read of `skill://pm/…` served; matched control: a worker of a workspace task with the same tools
+resolves `NO_PLAN` to its project's workspace scope.
 Source:: design review.
 
 == Skill Architecture & Retrieval Tool Schemas
@@ -326,15 +329,17 @@ Source:: plan-marshall defect truthful-signals PLAN-TRUTH-153.
 Anchor:: link:../specification/mcp-tools/04-errors-and-testing.adoc#rejection-reasons[MCP Tools § Closed Rejection Reasons],
 link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-records[Model Work § Question Records],
 link:../Requirements.adoc#PM-WF-12[PM-WF-12]
-Hazard:: A relayed answer with an unknown `branch_key`, for a closed or expired record, or one that arrives on two
-channels at once is applied in part, applied twice, or silently coerced, so the plan continues on an answer the user
-never gave.
-Guard:: Table test over `answer:<question_id>` and the web, elicitation, and quorum channels: an unknown
-`branch_key` is `invalid_link_args`, an answer for an answered or cancelled record `already_answered`, an answer
-after the deadline `question_expired`; every channel, a quorum's agreed option included, passes the
-same validator; the same record answered on the web and through the entry session at once closes once, with the
-first valid answer and its `channel` recorded, and the other is refused `already_answered`; matched control: a valid
-answer closes the record in one transaction with `channel` recorded and offers no further `answer:` link for it.
+Hazard:: An answer with an unknown option, for an older revision or a closed decision, or one that arrives from both
+clients at once is applied in part, applied twice, or silently coerced, so the plan continues on an answer the
+operator never gave.
+Guard:: Table test over the answer endpoint of the local API for the channels `web` and `cli` and over a quorum's
+agreed option: an unknown option or a value failing the part's `value_schema` is `invalid_answer`, an answer to an
+older revision `conflict` with the current revision, an answer to a part whose dependency is unanswered
+`dependency_unanswered`, an answer for an answered or closed decision `already_answered`; every channel passes the
+same validator; the same decision answered from the web app and the terminal client at once closes once, with the
+first valid answer and its `channel` (and `device_id` for `web`) recorded, and the other is refused
+`already_answered`; a worker's vote over MCP with an unknown option is `invalid_link_args`; matched control: a valid
+answer closes the decision in one transaction with `channel` recorded and offers no further answer for it.
 Source:: design review.
 
 [#PM-WATCH-TOOL-17]

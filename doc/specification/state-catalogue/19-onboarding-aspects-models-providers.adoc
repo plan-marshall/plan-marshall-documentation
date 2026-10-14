@@ -295,7 +295,7 @@ Entries: `start` (`onboard.providers`) and `verify` (`settings.verify-providers`
 |`machine`
 |`operator_wait`
 |`defaults.load`; `defaults.validate` (`invalid`).
-|One line per axis with what each variant means: landing (`landing.pull-request`, `landing.main`, `landing.files`), method (`method.test-first`, `method.tests-after`), asking (`ask.every-phase`, `ask.key-points`, `ask.questions-only`); after a refused validation the axis and why. `accept`; `change`.
+|One line per axis with what each variant means: landing (`landing.pull-request`, `landing.main`, `landing.files`), method (`method.test-first`, `method.tests-after`), asking (`ask.every-phase`, `ask.key-points`, `ask.questions-only`); after a refused validation the axis and why. In a run from the machine's settings, never in the onboarding's first run, also the optional posture (`plan_defaults.posture`: `minimal`, `standard`, `full`), unset by default, so that a plan asks it while no level sets it. `accept`; `change`.
 |`accept` -> `defaults.validate`; `change` -> this state.
 |link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]
 

@@ -75,10 +75,10 @@ The decision points are closed; a state that takes a decision of the table write
 |The top domain's share of the detection scores; a unique top score
 |the domain set, or `ask`
 
-|`init.posture` (where the plan's lane is chosen, link:../phase-workflows/01-planning-phases-1-2.adoc[Phase Workflows Specification, Planning Phases 1–2])
-|`server_rule` posture projection, where the plan's axes, the project, or the machine set the posture, else `operator` (the operator wait that asks it, with the projection's proposal)
+|`init.posture` (`init.classify`; asked in the operator wait `init.options`, link:../state-catalogue/02-plan-phases-1-3.adoc#state-init.options[State Catalogue, `init.options`])
+|`server_rule` posture projection, where the plan's own setting or `plan_defaults.posture` of the project or the machine sets the posture, else `operator` (`init.options`, with the projection's proposal preselected)
 |`assurance`
-|The values the projection read; the setting in force (`local_config`, `team_config`, or the plan's axis); no threshold
+|The values the projection read; the setting in force (the plan's own setting, or `local_config` of the project or the machine); no threshold
 |`minimal`, `standard`, `full`
 
 |`lane.budget` (`init.light-gate`, `outline.light-regate`, link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#light-gate[Light Gate])

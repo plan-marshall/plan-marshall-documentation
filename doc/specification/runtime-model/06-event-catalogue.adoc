@@ -23,7 +23,7 @@ Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project
 |Event |Streams |Payload
 
 |`reset` |all |none: the events after the client's `Last-Event-ID` are no longer held, or the runtime started since; the client reads the scope's resources again
-|`stream.closed` |all |`reason` (`device_revoked`, `listener_closed`, `runtime_stopping`, `scope_ended`): the stream ends after it; `scope_ended` names the scope's successor stream where there is one (an entry's started scope, a project onboarding's workspace scope)
+|`stream.closed` |all |`reason` (`device_revoked`, `device_expired` (the device's idle expiry, link:../cli-and-security/03-web-server.adoc#devices[CLI, Coordination & Security Specification, Devices in Both Clients]), `listener_closed`, `runtime_stopping`, `scope_ended`): the stream ends after it; `scope_ended` names the scope's successor stream where there is one (an entry's started scope, a project onboarding's workspace scope)
 |===
 
 === Runtime, System & Cleanup

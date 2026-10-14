@@ -109,16 +109,20 @@ A parameter of type `schema[<schema_name>]` takes a JSON object as its value; th
 |===
 |`schema_name` |Content |Used by
 
+|`decision-envelope`
+|The model-supplied part of a decision (link:../model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work Specification, The Decision Structure]), without the server-owned `question_id`, revision, class, origin, and source entity: `title`, `header`, `description`, its `evidence[]` (`pm://` URIs of files, diffs, findings, and records), `blocks` (`plan`, `task`, `nothing`), `reversibility` (`reversible`, `costly`, `irreversible`), the optional `revisits` (the `decision_id` of the standing decision it reopens), and `parts[]` (one to six), each of the schema `question-envelope`
+|`ask` and `ask:TASK-NNN` (`decision:schema[decision-envelope]`); the optional `decision:schema[decision-envelope]?` parameter of the `submit` link of a refine or outline task entity
+
 |`question-envelope`
-|The model-supplied part of a decision (link:../model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work Specification, The Decision Structure]), without the server-owned `question_id`, revision, class, origin, and source entity: `title`, `header`, `description` with its `evidence[]` (files, diffs, findings, links), `blocks` (`plan`, `task`, `nothing`), `reversibility` (`reversible`, `costly`, `irreversible`), `decision_kind`, the optional `revisits` (a `decision_id` the decision reopens), and `parts[]`, each with its `question_text`, `answer_type` (`one`, `several`, `value`), `options` as objects `{branch_key, label, trade_off, consequences, preview?}`, the optional `depends_on` (options of another part), `own_words` and `notes` (each `allowed` or `not_allowed`), and its `recommendation` `{branch_key, rationale, confidence}`, never part of an option's label
-|`ask` and `ask:TASK-NNN` (`question:schema[question-envelope]`); the `questions:list<schema[question-envelope]>?` parameter of the `submit` link of a refine or outline task entity
+|One part of a decision: the optional `part_key` (named by another part's dependency), its `question_text`, `decision_kind`, `answer_type` (`one`, `several`, `value`) with the `value_schema` of a value, `options` as objects `{branch_key, label, description, consequences, preview?}` (the description states the option's trade-off), the optional `depends_on` (options of another part), its `recommendation` `{branch_key, confidence, rationale}`, never part of an option's label, and whether own words, a note, and a delegation are allowed (`own_words`, `note`, `delegation`); definition in link:../model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Model Work Specification, The Model-Supplied Schema]
+|The `parts[]` of `decision-envelope`
 
 |`question-answer`
 |The operator's answer to one decision: the `revision` it answers and per part the chosen `branch_key` values or the `value`, the operator's own words, and a note, or for the whole decision `none_fits` (where offered) or `later`; the channel and device are taken from the request, never from the body; definition in link:../model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work Specification, The Decision Structure]
 |The body of the answer endpoint of the local API, from either client (link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime & Interaction Model Specification, Local API]); never a model-facing link
 
 |`vote-answer`
-|One listed role's vote on one part of an adjudicated decision: `question_id`, the chosen `branch_key` values (one, or several for a part that takes several) or the `value`, `confidence` (integer `0..100`), and `rationale` (`10..500` characters), with the dissent from an option it rejects named in the rationale; definition in link:../model-work/10-decision-quorum.adoc#blind-input[Model Work Specification, Blind Input]
+|One listed role's vote on one part of an adjudicated decision: `question_id`, `choice` (one `branch_key` for a part of the answer type `one`, a set of `branch_key` values for `several`, a value of the part's `value_schema` for `value`), `confidence` (integer `0..100`), and `rationale` (`10..500` characters), with the dissent from an option it rejects named in the rationale; definition in link:../model-work/10-decision-quorum.adoc#blind-input[Model Work Specification, Blind Input]
 |`submit:vote` of a vote task (`answers:list<schema[vote-answer]>`, one item per question of the task's entity)
 
 |`triage-groups`
@@ -130,7 +134,7 @@ A parameter of type `schema[<schema_name>]` takes a JSON object as its value; th
 |`submit:simplify` of the simplify task (`proposals:list<schema[simplify-proposal]>`)
 |===
 
-NOTE: Boolean parameters are prohibited in workflow transitions and operator links to preserve explicit closed-enum intent (e.g., `decision:enum[approve|reject]` rather than `approved:bool`). A trailing `?` marks an optional parameter (such as `paths:list<text>?` or `questions:list<schema[question-envelope]>?`).
+NOTE: Boolean parameters are prohibited in workflow transitions and operator links to preserve explicit closed-enum intent (e.g., `decision:enum[approve|reject]` rather than `approved:bool`). A trailing `?` marks an optional parameter (such as `paths:list<text>?` or `decision:schema[decision-envelope]?`).
 
 [#decision-confidence-parameter]
 ==== Decision Confidence Parameter

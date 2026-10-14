@@ -8,9 +8,9 @@
 
 == Overview
 
-This document defines the normative functional and non-functional requirements for *plan-marshall-mcp* (`PM-MCP`): an always-on local Model Context Protocol (MCP) runtime (`pm-mcpd`) with two native command-line binaries (the host-facing relay binary `pm-mcp` and the operator CLI `pm-operator`), reached by coding agent hosts through a native `stdio` relay (`pm-mcp serve`), that replaces prose-enforced workflow instructions and shell-invoked Python scripts with a server-owned hypermedia state machine (HATEOAS) that drives plans and epics through supervised headless workers, warm platform services, and verified native execution.
+This document defines the normative functional and non-functional requirements for *plan-marshall-mcp* (`PM-MCP`): an always-on local Model Context Protocol (MCP) runtime (`pm-mcpd`) with two native command-line binaries (the worker-facing relay binary `pm-mcp` and the operator's terminal client `pm-operator`), operated by the operator only through two clients, the web app and the terminal client, and reached by the headless workers it supervises through a native `stdio` job relay (`pm-mcp serve --job`), that replaces prose-enforced workflow instructions and shell-invoked Python scripts with a server-owned hypermedia state machine (HATEOAS) that drives plans and epics through supervised headless workers, warm platform services, and verified native execution.
 
-PM-MCP is built out in parallel to plan-marshall and never shares state with it: it keeps its own repository tree (`.marshall/`) and machine root (`~/.plan-marshall-mcp/`), and never reads plan-marshall's `.plan/` and `~/.plan-marshall/` trees: it imports nothing from plan-marshall, and every project starts from a clean slate. Both systems may be installed on one machine and used in the same repository, where PM-MCP's `mcp-` prefixed entry commands stand beside the plan-marshall plugin's commands (`PM-CLIENT-1`); an enrolled project is offered the PM-MCP plan lifecycle once the lifecycle gate has opened (`PM-MIG-1`, `PM-MIG-2`, `PM-MIG-4`).
+PM-MCP is built out in parallel to plan-marshall and never shares state with it: it keeps its own repository tree (`.marshall/`) and machine root (`~/.plan-marshall-mcp/`), and never reads plan-marshall's `.plan/` and `~/.plan-marshall/` trees: it imports nothing from plan-marshall, and every project starts from a clean slate. Both systems may be installed on one machine and used in the same repository, where PM-MCP installs no entry command into a host and its client bundles leave the plan-marshall plugin's files untouched (`PM-CLIENT-1`, `PM-MIG-2`); an enrolled project is offered the PM-MCP plan lifecycle once the lifecycle gate has opened (`PM-MIG-1`, `PM-MIG-2`, `PM-MIG-4`).
 
 For technical implementation blueprints, wire protocols, data schemas, and formal grammars, see the link:Specification.adoc[Technical Specification]. For delivery staging, see the link:roadmap.adoc[Roadmap]. Research notes and open proposals are held in link:discussions/README.adoc[Discussions]. Defect archetypes and verification hints that guard individual requirements during implementation are held in the link:ImplementationWatch.adoc[Implementation Watch]; each guarded requirement names its watch items in an _Implementation watch_ line. What is implemented is documented by audience: why the system works as it does in the link:Concepts.adoc[Concepts], how it is built, extended and tested in the link:DeveloperGuide.adoc[Developer Guide], and how it is installed, configured and operated in the link:UserGuide.adoc[User Guide]; an implemented requirement names its documentation in a _Documentation_ line.
 
@@ -20,7 +20,7 @@ All requirements in this document set follow the SMART criteria:
 
 * *Specific*: Each requirement uses unambiguous normative statements ("The system must...") defining exact behavior, inputs, outputs, and constraints.
 * *Measurable*: Acceptance criteria specify observable, testable outcomes (latency bounds, closed outcome enumerations, digest checks, and `McpAssured` integration assertions).
-* *Achievable*: Grounded in the selected technology stack (Java 25+, Quarkus MCP server `quarkus-mcp-server-http` behind the native `pm-mcp serve` STDIO relay, GraalVM native image, OS credential stores, MCP `2026-07-28` specification).
+* *Achievable*: Grounded in the selected technology stack (Java 25+, Quarkus MCP server `quarkus-mcp-server-http` behind the native `pm-mcp serve --job` STDIO relay, GraalVM native image, OS credential stores, MCP `2026-07-28` specification).
 * *Relevant*: Directly addresses identified cost, reliability, or security limitations of the script-and-prose architecture.
 * *Traceable*: Identified by a stable hierarchical anchor `[#PM-<DOMAIN>-<NUM>]` with bidirectional links to technical specifications in `doc/specification/`; the milestones of `doc/roadmap.adoc` link to the requirements they deliver.
 
@@ -35,12 +35,12 @@ Project umbrella prefix: `PM-`
 |`PM-ARCH`
 |Core Architecture
 |link:requirements/01-architecture.adoc[01-architecture.adoc]
-|link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/identifiers.adoc[identifiers.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc]
+|link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/identifiers.adoc[identifiers.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/hypermedia-format.adoc[hypermedia-format.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/state-catalogue.adoc[state-catalogue.adoc]
 
 |`PM-WF`
 |Hypermedia Workflow Engine
 |link:requirements/02-workflow.adoc[02-workflow.adoc]
-|link:specification/hypermedia-format.adoc[hypermedia-format.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/phase-workflows.adoc[phase-workflows.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/identifiers.adoc[identifiers.adoc], link:specification/state-catalogue.adoc[state-catalogue.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc]
+|link:specification/hypermedia-format.adoc[hypermedia-format.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/phase-workflows.adoc[phase-workflows.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/identifiers.adoc[identifiers.adoc], link:specification/state-catalogue.adoc[state-catalogue.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/runtime-model.adoc[runtime-model.adoc]
 
 |`PM-SKILL`
 |Skill Generation & Delivery
@@ -60,7 +60,7 @@ Project umbrella prefix: `PM-`
 |`PM-EXEC`
 |Build & Subprocess Execution
 |link:requirements/06-execution.adoc[06-execution.adoc]
-|link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/module-structure.adoc[module-structure.adoc]
+|link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/client-profiles.adoc[client-profiles.adoc]
 
 |`PM-CRED`
 |Credential Management
@@ -80,7 +80,7 @@ Project umbrella prefix: `PM-`
 |`PM-DIST`
 |Distribution & Client Packaging
 |link:requirements/10-distribution.adoc[10-distribution.adoc]
-|link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/module-structure.adoc[module-structure.adoc]
+|link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc]
 
 |`PM-MIG`
 |Migration & Project Lifecycle Gate
@@ -90,12 +90,12 @@ Project umbrella prefix: `PM-`
 |`PM-TEST`
 |Quality Assurance & Testing Strategy
 |link:requirements/12-testing.adoc[12-testing.adoc]
-|link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/runtime-model.adoc[runtime-model.adoc]
+|link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/model-work.adoc[model-work.adoc]
 
 |`PM-CLIENT`
 |Client Profiles & Dynamic Translation
 |link:requirements/13-client-profiles.adoc[13-client-profiles.adoc]
-|link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/runtime-model.adoc[runtime-model.adoc]
+|link:specification/client-profiles.adoc[client-profiles.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/runtime-model.adoc[runtime-model.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc]
 
 |`PM-IMPL`
 |Implementation Architecture & Core Subsystems
@@ -105,7 +105,7 @@ Project umbrella prefix: `PM-`
 |`PM-EXT`
 |Domain Extensions, Architecture & Recipes
 |link:requirements/15-extensions-and-recipes.adoc[15-extensions-and-recipes.adoc]
-|link:specification/domain-extensions.adoc[domain-extensions.adoc], link:specification/phase-workflows.adoc[phase-workflows.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/model-work.adoc[model-work.adoc]
+|link:specification/domain-extensions.adoc[domain-extensions.adoc], link:specification/phase-workflows.adoc[phase-workflows.adoc], link:specification/mcp-tools.adoc[mcp-tools.adoc], link:specification/job-runtime.adoc[job-runtime.adoc], link:specification/store-schemas.adoc[store-schemas.adoc], link:specification/model-work.adoc[model-work.adoc], link:specification/cli-and-security.adoc[cli-and-security.adoc], link:specification/filesystem-layout.adoc[filesystem-layout.adoc], link:specification/module-structure.adoc[module-structure.adoc], link:specification/state-catalogue.adoc[state-catalogue.adoc], link:specification/timeouts.adoc[timeouts.adoc], link:specification/workflow-dsl.adoc[workflow-dsl.adoc]
 
 |`PM-WORK`
 |Model Work: Roles, Tasks & Workers
@@ -153,13 +153,13 @@ Today, plan-marshall ships as a marketplace of Markdown skills and Python script
 |Only the active state's representation and targeted vocabulary skill enter model context (`PM-SKILL-1`).
 
 |Bash as transport
-|All plan-marshall operations execute as typed MCP tool calls over native `stdio`, relayed to the always-on runtime (`PM-ARCH-3`, `PM-TOOL-1`); only the initial entry bootstrap (`pm-mcp enter`) runs in the host shell.
+|Every operation of a worker executes as a typed MCP tool call over native `stdio`, relayed to the always-on runtime (`PM-ARCH-3`, `PM-TOOL-1`); the operator acts through the web app and the terminal client over the local API (`PM-ARCH-11`), and nothing runs in a host's shell.
 
 |Skill/script drift
 |Skills, state transitions, and tool schemas are served from a single versioned binary (`PM-DIST-1`).
 
 |Cold LSP startups
-|The always-on runtime maintains a warm language server pool shared by all host connections (`PM-SVC-2`).
+|The always-on runtime maintains a warm language server pool shared by all workers (`PM-SVC-2`).
 
 |Static runtime translation
 |The server translates tool names, the headless launch conventions of model jobs, and skill references on the fly using data-driven client profiles (`PM-CLIENT-2`) across `claude`, `opencode`, `antigravity`, and `codex`.
@@ -168,7 +168,7 @@ Today, plan-marshall ships as a marketplace of Markdown skills and Python script
 |The server detects changed premises of a running plan at fixed checkpoints and re-plans it through one bounded mechanism, a task of the re-planning role with closed actions, guarded like a first plan, never asking the operator (`PM-WF-17`).
 
 |A plan lives only as long as the session that drives it
-|The server continues every plan and epic on its own; workers are supervised, recycled, and replaced, every task is delivered exactly once, and the interactive session is entry and viewer (`PM-ARCH-8`, `PM-WORK-3`, `PM-WORK-5`).
+|The server continues every plan and epic on its own; workers are supervised, recycled, and replaced, every task is delivered exactly once, and the operator starts, follows, and steers the work from either of two clients, the web app and the terminal client (`PM-ARCH-8`, `PM-WORK-3`, `PM-ARCH-11`).
 
 |Migration off a running system
 |PM-MCP keeps separate state trees (`.marshall/`, `~/.plan-marshall-mcp/`) and never converts, shares, or writes plan-marshall stores (`PM-MIG-2`); its services are usable alongside plan-marshall from their stage on, and an enrolled project is offered the PM-MCP plan lifecycle from the release that meets the Stage 4 exit criteria and therefore ships with the lifecycle gate open (before that only a project enrolled as a pilot), switched off per project by operator release (`PM-MIG-1`, `PM-MIG-4`, `PM-MIG-5`).
@@ -182,34 +182,31 @@ Judgment remains strictly with the model: refining requests, authoring solution 
 ----
  Machine (the developer's computer)
  ┌─────────────────────────────────────────────────────────────────────────────────┐
- │ Host: Claude Code    Host: OpenCode       Host: Antigravity    Host: Codex      │
- │ ┌────────────────┐   ┌────────────────┐   ┌────────────────┐   ┌──────────────┐ │
- │ │ conversation   │   │ conversation   │   │ conversation   │   │ conversation │ │
- │ └───────┬────────┘   └───────┬────────┘   └───────┬────────┘   └──────┬───────┘ │
- │         │ stdio              │ stdio              │ stdio             │ stdio   │
- │ ┌───────▼────────┐   ┌───────▼────────┐   ┌───────▼────────┐   ┌──────▼───────┐ │
- │ │ pm-mcp serve   │   │ pm-mcp serve   │   │ pm-mcp serve   │   │ pm-mcp serve │ │
- │ │ (relay)        │   │ (relay)        │   │ (relay)        │   │ (relay)      │ │
- │ └───────┬────────┘   └───────┬────────┘   └───────┬────────┘   └──────┬───────┘ │
- │         └──────────────┬─────┴── Unix domain socket (0600) ───┬───────┘         │
- │ ┌──────────────────────▼──────────────────────────────────────▼───────────────┐ │
- │ │ pm-mcpd runtime (always on, one per PM_MCP_BASE)                            │ │
- │ │ workflow engine · skill generator + client profiles · warm LSP pool         │ │
- │ │ job runner · supervisor · task queue · build and model slots · MCP proxy    │ │
- │ │ audit · optional web access                                                 │ │
- │ └──────────────────────────────────────┬──────────────────────────────────────┘ │
- │                                        │ atomic stores, FileChannel locks & jobs│
- │                 ┌──────────────────────▼──────────────────────┐                 │
- │                 │ PM-MCP Filesystem State & Host Subprocesses │                 │
- │                 │ .marshall/ · ~/.plan-marshall-mcp/ (state)  │                 │
- │                 │ builds (./mvnw, ./gradlew, ./pw …), git,    │                 │
- │                 │ project scripts, language servers,          │                 │
- │                 │ headless workers (harness + job relay)      │                 │
- │                 └──────────────────────┬──────────────────────┘                 │
+ │ Operator's clients                                                              │
+ │ ┌───────────────────────────────┐          ┌───────────────────────────────┐    │
+ │ │ terminal client (pm-operator) │          │ web app (paired browser)      │    │
+ │ └───────────────┬───────────────┘          └───────────────┬───────────────┘    │
+ │                 │ local API, Unix domain socket (0600)     │ local API, web     │
+ │                 │                                          │ listeners          │
+ │ ┌───────────────▼──────────────────────────────────────────▼────────────────┐   │
+ │ │ pm-mcpd runtime (always on, one per PM_MCP_BASE)                          │   │
+ │ │ workflow engine · skill generator + client profiles · warm LSP pool       │   │
+ │ │ job runner · supervisor · task queue · build and model slots · MCP proxy  │   │
+ │ │ audit · local API · web app on the optional web listeners                 │   │
+ │ └──────────────────────────────────────┬──────────────────────▲─────────────┘   │
+ │              atomic stores, FileChannel│locks & jobs          │ MCP over the    │
+ │ ┌──────────────────────────────────────▼───────────────┐      │ socket          │
+ │ │ PM-MCP Filesystem State & Host Subprocesses          │      │                 │
+ │ │ .marshall/ · ~/.plan-marshall-mcp/ (state)           │      │                 │
+ │ │ builds (./mvnw, ./gradlew, ./pw …), git,             │      │                 │
+ │ │ project scripts, language servers,                   │      │                 │
+ │ │ headless workers: harness (Claude Code, OpenCode,    │      │                 │
+ │ │ Antigravity, Codex) + job relay pm-mcp serve --job ──┼──────┘                 │
+ │ └──────────────────────────────────────┬───────────────┘                        │
  │                                        ▼                                        │
  │                              worktrees of enrolled projects                     │
  └─────────────────────────────────────────────────────────────────────────────────┘
- Operator: enrols and releases projects, sets waivers, takes operator-only actions
+ Operator: onboards the machine and its projects, answers operator waits, acts on plans and epics
 ----
 
 [cols="1,3"]
@@ -220,22 +217,25 @@ Judgment remains strictly with the model: refining requests, authoring solution 
 |The developer's workstation running the `PM-MCP` native processes and any number of coding agent hosts.
 
 |Host
-|A frontier coding agent runtime connecting to MCP servers over `stdio` and hosting the model (`claude` for Claude Code, `opencode` for OpenCode, `antigravity` for Antigravity, `codex` for Codex).
+|A frontier coding agent (`claude` for Claude Code, `opencode` for OpenCode, `antigravity` for Antigravity, `codex` for Codex, or a harness the operator added) whose headless command line the runtime launches as a worker's harness, connected back over `stdio`; a host is never a channel of the operator (`PM-CLIENT-1`).
 
-|Host session (entry session)
-|A single interactive conversation instance within a host. It spawns a `pm-mcp serve` relay over `stdin`/`stdout`, carries no workflow state, turns the user's words into a plan or an epic through an entry command, drives the bootstraps and the project setup, shows the scope and its questions, and may take a task as an optional worker (`PM-WORK-5`).
+|Operator's clients
+|The web app and the terminal client (`pm-operator`), the only places of interaction with the operator: every operator wait, operator act, and view is offered to both over the runtime's local API with the same state, and the first valid answer wins (`PM-ARCH-11`, `PM-WF-20`).
+
+|Operator wait
+|A state that waits for the operator (a decision, a waiver request, the review of an outline, a start's choices, an onboarding step), shown in both clients with its operator links and never ended by time (`PM-WF-20`).
 
 |Plan and epic continuation
-|A plan or epic is identified solely by its ID, carried solely by the scope's persisted files, and continued by the server; any host connection views it with `pm_state` (`PM-ARCH-8`).
+|A plan or epic is identified solely by its ID, carried solely by the scope's persisted files, and continued by the server; the operator views it in either client (`PM-ARCH-8`, `PM-ARCH-11`).
 
 |Workspace scope
-|The one plan-less scope of an enrolled project, addressed as `plan_id: "NO_PLAN"` and resolved from the relay's `PM-MCP-Workspace` header (`PM-ARCH-4`). It hosts the `project-setup` workflow, the pending plan and epic bootstraps, the lesson maintenance, and the ledger rows, findings, and logs of plan-less service calls, in its home `<PM_MCP_BASE>/projects/<project_id>/workspace/` of the per-project machine store.
+|The one plan-less scope of an enrolled project, addressed by a worker as `plan_id: "NO_PLAN"`, resolved from its job record (`PM-ARCH-4`). It hosts the `project-setup` workflow, the pending entries of plan and epic starts, and the ledger rows, findings, and logs of plan-less service calls, in its home `<PM_MCP_BASE>/projects/<project_id>/workspace/` of the per-project machine store.
 
 |Per-project machine store
-|The machine-local home of all server-owned state of one enrolled project, `<PM_MCP_BASE>/projects/<project_id>/`, keyed by the project's enrolment identifier: plan directories (never moved), archived plans, the lesson store, the workspace home, the epics' non-tracked state, pending entry records, and the scope locks (`PM-ARCH-5`). The repository keeps only worktrees and temporary files in its git-ignored `.marshall/local/`.
+|The machine-local home of all server-owned state of one enrolled project, `<PM_MCP_BASE>/projects/<project_id>/`, keyed by the project's enrolment identifier: plan directories (never moved), archived plans, the lesson store, the workspace home, the epics' non-tracked state, pending entries, and the scope locks (`PM-ARCH-5`). The repository keeps only worktrees and temporary files in its git-ignored `.marshall/local/`.
 
 |Bootstrap
-|The sub-workflow (`bootstrap-plan`, `bootstrap-epic`) that gathers everything a new plan or epic needs before it exists (what to work on, its source and the source's verification), run as an entity of the workspace scope addressed by its `entry_id`; the scope is created atomically when the bootstrap completes, so an abandoned start leaves no scope behind (`PM-TOOL-1`).
+|The start sub-workflow (`bootstrap-plan`, `bootstrap-epic`) that gathers everything a new plan or epic needs before it exists (what to work on, its sources and their verification), run on an entry of the workspace scope that a client of the operator opens (or the server, for an epic's row), addressed by its `entry_id`, whose states are operator waits; the scope is created atomically when the operator confirms the start, so an abandoned start leaves no scope behind (`PM-TOOL-1`, `PM-WF-10`).
 
 |Role
 |A configuration artifact that defines one kind of model work: class and exact tool set, harness, model, effort, form (`warm` or `fresh`), count, skills, and recycling. The roles that exist are the artifacts present; workflows name them freely, and one model caller acts on the artifact (`PM-WORK-1`).
@@ -247,40 +247,37 @@ Judgment remains strictly with the model: refining requests, authoring solution 
 |A headless harness process of a role that the runtime launches as a job of kind `llm`, with a server-composed launch prompt and a job-bound connection back to PM-MCP; it receives tasks through `pm_wait` (a fresh worker its one task in its launch prompt), works along each task's links, and submits results. A _fresh_ worker serves one task, a _warm_ worker serves tasks while its role has work. The runtime supervises, recycles, and replaces it and observes its end and usage itself; the host never dispatches a sub-agent (`PM-WF-5`, `PM-WORK-3`).
 
 |Generation
-|The identity of one worker or session start, issued with its job token (or at session entry) and carried by its relay; tasks are leased to a generation, and a fenced generation's calls are refused (`PM-WORK-2`).
+|The identity of one worker start, issued with its job token and carried by its relay; tasks are leased to a generation, and a fenced generation's calls are refused (`PM-WORK-2`).
 
 |Screener
 |The fresh zero-tool worker that judges external text the deterministic validator has already cleaned, the second level of the guard for external text; it can only withhold text, never admit it (`PM-SEC-1`).
 
 |PM
-|A model participant: the model of the entry session or of a worker.
+|A model participant: the model of a worker.
 
 |Operator
-|The human developer responsible for the machine and its repositories. Enrols and releases projects, sets waivers, aborts plans and epics, resolves integrity breaches, and performs privileged actions exclusively via the operator CLI (`pm-operator`) or a paired web device (answering the operator-configuration choices of the project setup also through MCP elicitation), always on the operator's own initiative: no plan waits for an operator decision (`PM-WF-1`, `PM-SEC-3`). Content questions are answered by the user through the question mechanism, never as operator overrides.
+|The human developer responsible for the machine and its repositories. Onboards the machine and its projects, answers the operator waits (decisions, waiver requests, the review of an outline), pauses, starts, cancels, and abandons plans and epics, resolves integrity breaches, releases projects, and performs privileged actions, only through the operator's two clients, the web app and the terminal client (`PM-ARCH-11`, `PM-WF-20`, `PM-WF-23`, `PM-SEC-3`); no harness and no model acts for the operator, and a content answer is never taken as an operator override.
 
 |`pm-mcp`
-|The relay binary, one of the four native executables of a release (`PM-DIST-1`, `PM-TECH-3`, `PM-IMPL-1`) and the only one hosts and models invoke; it holds no store logic and starts `pm-mcpd` on demand by path. Its verbs are the harness- and model-facing ones only: `pm-mcp serve` (the per-connection STDIO relay; `serve --job` for a worker) and `pm-mcp enter` (link:specification/cli-and-security/01-cli-and-installer.adoc#command-tree[CLI, Coordination & Security Specification, Command Tree]).
+|The relay binary, one of the four native executables of a release (`PM-DIST-1`, `PM-TECH-3`, `PM-IMPL-1`) and the only one a worker's harness invokes; it holds no store logic and never starts `pm-mcpd`. Its one verb is `pm-mcp serve --job`, the STDIO relay of a worker's MCP connection, which the runtime composes into the worker's launch (link:specification/cli-and-security/01-cli-and-installer.adoc#command-tree[CLI, Coordination & Security Specification, Command Tree]).
 
 |`pm-operator`
-|The operator CLI, the binary a human runs at a terminal; it holds no store logic, sends every state change as a request to the runtime's local API, and starts `pm-mcpd` on demand by path. Its verbs stand at its top level without an `operator` sub-level: the operator verbs (`enrol`, `unenrol`, `enrol-harness`, `roles`, `credentials`, `waive` / `unwaive` / `waivers`, `accept-edit`, `abort`, `config`, `sweep`, `upstream`, `release-project`, and the others of the command tree) and `status`, `drain`, `runtime` (on-demand start and service registration of `pm-mcpd`), `client`, and `web`. The client bundles deny the whole binary to the model (`PM-SEC-3`).
+|The terminal client, one of the operator's two clients, and the operator's command line; it holds no store logic, sends every state change as a request to the runtime's local API, and starts `pm-mcpd` on demand by path. Without a verb it is the operator's entry and console; its verbs stand at its top level without an `operator` sub-level: the operator verbs (`config`, `project add|setup|release|unenrol`, `plan`, `epic`, `recipe run`, `reports`, `cleanup`, `roles`, `enrol`, `enrol-harness`, `credentials`, `waive`, `accept-edit`, `sweep`, `upstream`, and the others of the command tree) and `status`, `system`, `drain`, `runtime` (on-demand start, service registration, and the lifecycle acts of `pm-mcpd`), `client`, and `web`. The client bundles deny the whole binary to the model (`PM-SEC-3`).
 
 |`pm-mcpd`
-|The runtime binary (daemon), started on demand by `pm-mcp` or `pm-operator`; it also serves the optional web access (`PM-SEC-7`), and beside it the release ships the job launcher `pm-exec` (`PM-DIST-1`).
+|The runtime binary (daemon), started on demand by `pm-operator` and never by a worker's relay; it also serves the web app on its optional web listeners (`PM-SEC-7`), and beside it the release ships the job launcher `pm-exec` (`PM-DIST-1`).
 
 |Runtime / Daemon
 |The always-on `pm-mcpd` process (one per machine and `PM_MCP_BASE`) executing the workflow engine, state stores, jobs, build slot scheduler, warm LSP pool, MCP proxy, audit log, and, when the operator enabled it, the web access, independent of any host conversation (`PM-ARCH-1`, link:specification/runtime-model.adoc[Runtime & Interaction Model Specification]).
 
 |Relay
-|The `pm-mcp serve` process a host spawns over `stdio`; it forwards MCP messages to and from the runtime without interpreting them beyond the closed relay rules (`PM-SEC-4`, `PM-ARCH-3`).
-
-|Entry point & Entry call
-|A user-invoked command in the client bundle (`/mcp-plan-marshall`, `/mcp-plan-orchestrator`, `/mcp-marshall-steward`; `$mcp-…` skills on Codex, `PM-CLIENT-1`) that executes `pm-mcp enter --client <client>` to append the session's entry row (client, host build, model, project, entry origin) to the plan, epic, or workspace session log, or to open a bootstrap entry for a plan or epic that does not exist yet.
+|The `pm-mcp serve --job` process a worker's harness spawns over `stdio`; it forwards MCP messages to and from the runtime without interpreting them beyond the closed relay rules (`PM-SEC-4`, `PM-ARCH-3`).
 
 |Representation
 |The TOON-formatted state payload returned by the server describing the current state of a plan or epic, relevant domain facts, and valid hypermedia links.
 
 |Link & Link ID
-|A valid state transition offered in a representation (`rel`, `link` identifier such as `submit:TASK-003`, and free parameter names), invoked via `pm_do`; links are offered on task entities to workers and on bootstrap and setup states to the entry session.
+|A valid state transition offered in a representation (`rel`, `link` identifier such as `submit:TASK-003`, and free parameter names), invoked via `pm_do`; links are offered on task entities to workers, and a state that waits for the operator offers its operator links over the local API to the two clients, never to a model (`PM-WF-20`).
 
 |Job
 |A build, git, CI, project script, or worker (`llm`) subprocess run by the runtime on the host, independent of any host connection, verified against project enrolment, and awaited by the engine.
@@ -289,34 +286,34 @@ Judgment remains strictly with the model: refining requests, authoring solution 
 |The operator-authorized registration of a project root, its pinned build wrappers/tools, SHA-256 digests, command templates, and project scripts, held in one file per project, `<PM_MCP_BASE>/enrolments/<project_id>.json`, under its own operator HMAC.
 
 |Plan outcome
-|How a plan ends: `merged` (terminal `completed`), `handed_back`, `returned`, or `no_change` (terminal `completed`, an empty recipe harvest), each reached only through `finalize.archive-plan` after the post-run band, or `aborted` by the operator. Every blocking condition ends in a bounded self-remedy and then the defined fallback of its phase (`PM-WF-1`).
+|How a plan ends: `merged` (terminal `completed`; also a plan landed on its base branch by `landing.main`), `handed_back` (also a plan whose changes `landing.files` left in the main checkout), `returned`, or `no_change` (terminal `completed`, an empty recipe harvest), each reached only through `finalize.archive-plan` after the post-run band; or `cancelled` or `abandoned` by the operator, `released` by the release of its project, or `aborted` by the integrity abort. Every blocking condition ends in a bounded self-remedy and then the defined fallback of its phase (`PM-WF-1`).
 
 |Hand-back
-|The fallback from Phase 5 until the merge (`finalize.hand-back`): the work is delivered as an open pull request (a new one opened as a draft, an existing one left as it is, a ready one under `merge.auto_merge: false`), or as a branch where no pull request can exist, with the gaps documented in a pull-request comment and the label `pm-mcp:handed-back`. The fallback of Phases 1–4 is the return (`plan.return`, outcome `returned`): the planning result only, nothing implemented; a plan whose branch already has commits beyond the base is forwarded from the return to the hand-back.
+|The fallback from Phase 5 until the merge (`finalize.hand-back`): the work is delivered as an open pull request (a new one opened as a draft, an existing one left as it is, a ready one where the asking axis leaves the merge to the operator), or as a branch where no pull request can exist, with the gaps documented in a pull-request comment and the label `pm-mcp:handed-back`. The fallback of Phases 1–4 is the return (`plan.return`, outcome `returned`): the planning result only, nothing implemented; a plan whose branch already has commits beyond the base is forwarded from the return to the hand-back.
 
 |Remediation policy
-|A project-owned DSL sub-workflow unit per failure class (`remediation.qgate-findings`, `.build-failure`, `.ci-failure`, `.analysis`, `.review-findings`, `.merge-conflict`, `.spend`): the server gathers the evidence, and every policy with an action set has a decision step: a task of the policy's role chooses `retry`, `fix`, `loop_back` (the form of `fix` that runs as Phase 5 remediation tasks, bounded by the fix budget), or `request_waiver` within budgets capped by compiled limits (the server itself where only one action is bound); `.spend` is the gather plus the bound waiver wait; the unit returns `resolved`, `waived`, `exhausted`, or `fix_requested`, or `stepped_out` (`PM-WF-7`).
+|A project-owned DSL sub-workflow unit per failure class (`remediation.qgate-findings`, `.build-failure`, `.ci-failure`, `.analysis`, `.review-findings`, `.merge-conflict`): the server gathers the evidence, and every policy with an action set has a decision step: a task of the policy's role chooses `retry`, `fix`, `loop_back` (the form of `fix` that runs as Phase 5 remediation tasks, bounded by the fix budget), or `request_waiver` (an operator wait) within budgets capped by compiled limits (the server itself where only one action is bound); the unit returns `resolved`, `waived`, `exhausted`, or `fix_requested`, or `stepped_out` (`PM-WF-7`).
 
 |Waiver
-|An operator override of a closed list of process gates and budgets (`pm-operator waive`, `--raise`), plan-scoped, with a mandatory reason, recorded append-only in the plan's waiver record and listed in the pull request and the landing record; the only operator influence on a running plan. A *waiver request* is filed by a worker's `request_waiver` (rel `escalate`) and is answered only by a waiver (`PM-WF-12`).
+|An operator override of a closed list of process gates and budgets, granted in either client (`pm-operator waive` its terminal form, `--raise`), plan-scoped, with a mandatory reason, recorded append-only in the plan's waiver record and listed in the pull request and the landing record. A *waiver request* is filed by a worker's `request_waiver` (rel `escalate`) as an operator wait and ended by the operator's waiver or decline (`PM-WF-12`).
 
-|Question record
-|A server-owned content question (options with `branch_key`, a recommended option with its confidence, rationale, and decision kind, an optional default assumption) created by a worker's `ask` link, an envelope task's `ask:TASK-NNN` link, the `questions` list of a refine or outline authoring task's `submit`, or a server classifier (among them the team-configuration choices of the workspace setup), adjudicated by the decision declarations of its kinds in mode `quorum`, delivered to the user through the web app and the entry session per `questions.mode`, validated and recorded with its channel, and ended by its class fallback when an `auto` question expires. It replaces every in-run operator decision about content (`PM-WF-12`).
+|Decision (question record)
+|A server-owned decision (its id and revision, its parts with their options, each with its support, and a recommendation) created by a worker's `ask` link, an envelope task's `ask:TASK-NNN` link, the `decision` of a refine or outline authoring task's `submit`, or a server classifier, adjudicated by the decision declarations of its kinds and otherwise asked as an operator wait in both clients, where the first valid answer wins: the operator chooses an option, answers in own words (interpreted by the `interpret` role and read back before it counts), or leaves the choice to the recommendation; it is recorded with its channel (`web`, `cli`, or `quorum`) and never decided by time. It replaces every in-run operator decision about content (`PM-WF-12`, `PM-WF-20`).
 
 |Decision quorum
-|The declaration `decide <kind> -> quorum(<role>, ..., <score>)` of the project-owned adjudication unit, the alternative to `ask` (the user decides, the default of every kind): in the question mode `quorum` the listed roles, on pairwise different models, answer a question of that kind blind, without the asker's recommendation (the asking role votes with its recommendation only when it is listed); a question set is answered with the channel `quorum` only when every question's listed roles all choose the same option at or above the score and the declaration is calibrated on the corpus, otherwise it is delivered to the user with every vote (`PM-WF-18`).
+|The declaration `decide <kind> -> quorum(<role>, ..., <score>)` of the project-owned adjudication unit, the alternative to `ask` (the operator decides, the default of every kind): the listed roles, on pairwise different models, answer a question of that kind blind, without the asker's recommendation (the asking role votes with its recommendation only when it is listed); a question set is answered with the channel `quorum` only when every question's listed roles all choose the same option at or above the score and the declaration is calibrated on the corpus, otherwise it is asked of the operator with every vote (`PM-WF-18`).
 
 |Decision record
-|The append-only record of one decision taken at a closed decision point, whoever takes it (a server rule, a role's task, a decision quorum, or the user): its decider, the evidence and facts the decider saw, the options, the confidence or the measured values against their thresholds with their sources, the choice, and the rationale; a later departure appends a correction and never rewrites it. Judgment decisions are exported by the operator as draft items of the model verification corpus (`PM-WF-19`).
+|The append-only record of one decision taken at a closed decision point, whoever takes it (a server rule, a role's task, a decision quorum, or the operator): its decider, the evidence and facts the decider saw, the options, the confidence or the measured values against their thresholds with their sources, the choice, and the rationale; a later departure appends a correction and never rewrites it. Judgment decisions are exported by the operator as draft items of the model verification corpus (`PM-WF-19`).
 
 |Plan instance
-|The composed, immutable, versioned DSL unit each plan executes, built from the workflow templates and the plan's facts with the provenance of every prune, bound budget, and waiver; it carries the step lists and the configuration snapshot, and its diagram shows the process in force (`PM-IMPL-5`).
+|The composed, immutable, versioned DSL units each plan executes (its plan unit and the phase sub-workflows and variants composed into it, one unit per file), built from the workflow templates and the plan's facts with the provenance of every prune, bound budget, and waiver; it carries the step lists and the configuration snapshot, and its diagram shows the process in force (`PM-IMPL-5`).
 
 |Integrity breach
-|A tampered plan, epic, or workspace store, a tampered lesson, or a tampered enrolment: the only condition that pauses a scope, ended only by the operator's `accept-edit` or, for a plan or epic, `abort` (`PM-WF-3`). No decision registry exists; every other engine-raised condition ends through its bounded self-remedy or the fallback.
+|A tampered plan, epic, or workspace store, a tampered lesson, or a tampered enrolment: the only condition for which the server pauses a scope, shown with the tampered file's recorded and current size and digest and ended only by the operator's accept-edit or, the other way out, a cancel, whose integrity abort ends a plan `aborted` and an epic `cancelled` (`PM-WF-3`). No decision registry exists; every other engine-raised condition ends through its bounded self-remedy or the fallback, and one that needs the operator is shown as a hold with its acts.
 
 |Lifecycle Gate
-|The compiled constant of a release that decides whether an enrolled project is offered the PM-MCP plan lifecycle: closed in every release before the Stage 4 exit criteria are met and open from the release that meets them. While it is closed, plans and epics are created only in a project enrolled as a pilot (`pm-operator enrol --pilot`); once it is open, the lifecycle is offered in every enrolled project until the operator releases the project (`pm-operator release-project`). A project becomes usable by enrolment followed by the project setup workflow, which creates `.marshall/` and a fresh configuration; nothing is imported from plan-marshall, and plans and epics open in plan-marshall stay there (`PM-MIG-1`, `PM-MIG-4`, `PM-MIG-5`).
+|The compiled constant of a release that decides whether an enrolled project is offered the PM-MCP plan lifecycle: closed in every release before the Stage 4 exit criteria are met and open from the release that meets them. While it is closed, plans and epics are created only in a project enrolled as a pilot (`pm-operator enrol --pilot`); once it is open, the lifecycle is offered in every enrolled project until the operator releases the project (`pm-operator project release`). A project becomes usable by its onboarding, the enrolment followed by the project setup (`PM-EXT-8`), which creates `.marshall/` and a fresh configuration; nothing is imported from plan-marshall, and plans and epics open in plan-marshall stay there (`PM-MIG-1`, `PM-MIG-4`, `PM-MIG-5`).
 |===
 
 include::requirements/01-architecture.adoc[]
@@ -360,19 +357,19 @@ Each item names a technique the implementation rests on and how it is settled. A
 1. *Native Image Dependency Set*: Confirmed on macOS and Linux: `io.quarkiverse.mcp:quarkus-mcp-server-http` and the local API run in the native `pm-mcpd` on a Unix domain socket with the runtime-token authentication mechanism and Server-Sent Events, together with `cui-http` and `org.commonmark:commonmark`; the picocli binaries `pm-mcp` and `pm-operator` run as plain native images with the shared HTTP/1.1 and SSE client of `pm-api` over the JDK Unix domain socket channel (`PM-TECH-1`, `PM-TECH-3`, `PM-SEC-4`). The Quarkus domain-socket listener is the listener of the local adapter, and no fallback is in use. The confirmation rests on three conditions, each a requirement: `quarkus-security` is a runtime dependency (without it no request is authenticated), the runtime offers the Netty `kqueue` and `epoll` transports itself with the transport library beside `pm-mcpd` (`PM-DIST-1`), and the runtime restricts the socket to `0600` before it announces it. _Fallback for the socket binding_, for a platform not yet run or a later Quarkus, Vert.x, or platform version that breaks it, in this order: a loopback `127.0.0.1` listener with the runtime token and `Host`/`Origin` validation, then a runtime-side listener on JDK `UnixDomainSocketAddress` channels bridging to the Quarkus router. _Rule for a new dependency_: supply explicit native-image reachability metadata or replace the component; native compilation of all four binaries is non-negotiable.
 2. *LSP4J under GraalVM Native Image*: Confirmed on macOS and Linux: the LSP4J JSON-RPC proxies work in the native `pm-mcpd` with reachability metadata that registers the `[interface, Endpoint]` proxies (`PM-SVC-2`, `PM-TECH-3`). No replacement client is needed.
 3. *Linux Landlock Confinement against Real Builds*: Confirmed on Linux (`x86_64`, Landlock ABI 8): the ruleset of the `pm-exec` launcher (via FFM under native image) confines jobs while real builds with wrapper caches, the Gradle daemon, `mvnd`, Testcontainers, and Docker Compose succeed with the declared write set and no further path (`PM-SEC-5`, `PM-TECH-4`). What Landlock does not cover is answered by rules of their own: a per-project build daemon store, the container engine as an enrolment opt-in, every job kept off the session bus, and pathname sockets refused by the ruleset from ABI 9 (`PM-EXEC-4`, `PM-SEC-5`). Landlock availability on WSL2 is not yet run. _Fallback for a kernel or build not yet run_: enrol additional explicit write paths in the project enrolment; never disable confinement where Landlock is available.
-4. *macOS Keychain Access from Native Binary*: Confirmed on macOS: the native `pm-mcpd` stores, reads, and deletes items in the login keychain through `Security.framework` via Java FFM, and the default access control trusts exactly the creating binary (`PM-CRED-2`). Trust that survives an upgrade requires the Developer ID signature of the release; the file credential store serves only where no keychain is available (`PM-CRED-3`).
-5. *Linux Secret Service via D-Bus Unix Socket*: Confirmed on Linux: the native `pm-mcpd` uses `org.freedesktop.secrets` over the JDK `UnixDomainSocketAddress` channel (`PM-CRED-2`). Where the session bus is not reachable or the default collection is locked at runtime start, the file credential store `<PM_MCP_BASE>/credentials/` with `0600` files serves, without a prompt (`PM-CRED-3`); that is the standing store selection, not a replacement of the technique. A job is kept off the session bus by its environment alone on a kernel below Landlock ABI 9 (`PM-SEC-5`): confirmed on ABI 8 that a client without `DBUS_SESSION_BUS_ADDRESS` and `XDG_RUNTIME_DIR` does not find the bus and that a connect naming the socket path still succeeds; the refusal from ABI 9 is not yet verified.
-6. *McpAssured STDIO Integration Harness (`McpStdioTestClient`)*: Confirmed on macOS and Linux, in the JVM and the native layout: `io.quarkiverse.mcp:quarkus-mcp-server-test` under `maven-failsafe-plugin` drives the three MCP integration test layers of `PM-TEST-3` (the fourth layer, the operator verbs in `pm-operator`, serves no MCP): the packaged daemon over MCP/HTTP on its Unix socket (`pm-mcp-server`), the `pm-mcp serve` relay over real `stdio` (`McpAssured.newStdioClient()`) against a reactor-built `pm-mcpd` staged into a temporary `PM_MCP_HOME/bin` (`pm-relay`), and all four binaries staged in the release layout (`pm-e2e`) (`PM-TECH-2`, `PM-TEST-3`, `PM-TEST-4`). The client waits at most 10 s for a response, so a test starts the daemon before the relay. _Verified by_ the `*IT` tests of these layers; a failure after a dependency upgrade is a defect of the test setup to fix, with no fallback.
+4. *macOS Keychain Access from Native Binary*: Confirmed on macOS: the native `pm-mcpd` stores, reads, and deletes items in the login keychain through `Security.framework` via Java FFM, and the default access control trusts exactly the creating binary (`PM-CRED-2`). Trust that survives an upgrade requires the Developer ID signature of the release; the file credential store serves where the operator chose it (`PM-CRED-3`).
+5. *Linux Secret Service via D-Bus Unix Socket*: Confirmed on Linux: the native `pm-mcpd` uses `org.freedesktop.secrets` over the JDK `UnixDomainSocketAddress` channel (`PM-CRED-2`). Where the session bus is not reachable or the default collection is locked, the recorded OS store is unavailable and so are the credentials, with the reason, never replaced by another store; the file credential store `<PM_MCP_BASE>/credentials/` with `0600` files serves only where the operator chose it (`PM-CRED-2`, `PM-CRED-3`). A job is kept off the session bus by its environment alone on a kernel below Landlock ABI 9 (`PM-SEC-5`): confirmed on ABI 8 that a client without `DBUS_SESSION_BUS_ADDRESS` and `XDG_RUNTIME_DIR` does not find the bus and that a connect naming the socket path still succeeds; the refusal from ABI 9 is not yet verified.
+6. *McpAssured STDIO Integration Harness (`McpStdioTestClient`)*: Confirmed on macOS and Linux, in the JVM and the native layout: `io.quarkiverse.mcp:quarkus-mcp-server-test` under `maven-failsafe-plugin` drives the three MCP integration test layers of `PM-TEST-3` (the fourth layer, the operator verbs in `pm-operator`, serves no MCP): the packaged daemon over MCP/HTTP on its Unix socket (`pm-mcp-server`), the `pm-mcp serve --job` relay over real `stdio` (`McpAssured.newStdioClient()`) against a reactor-built `pm-mcpd` staged into a temporary `PM_MCP_HOME/bin` (`pm-relay`), and all four binaries staged in the release layout (`pm-e2e`) (`PM-TECH-2`, `PM-TEST-3`, `PM-TEST-4`). The client waits at most 10 s for a response, so a test starts the daemon before the relay. _Verified by_ the `*IT` tests of these layers; a failure after a dependency upgrade is a defect of the test setup to fix, with no fallback.
 7. *Embedded Classpath Client Bundle Installation*: Verify `pm-operator client install <client>` extraction and atomic configuration merge across Claude Code (`claude`), OpenCode (`opencode`), Antigravity (`antigravity`), and Codex (`codex`), with element-level ownership of permission rules (install appends missing elements, update replaces recorded ones, remove deletes recorded ones only, a user-authored identical element survives) and the drift checks `bundle_outdated` and `bundle_modified` (`PM-DIST-2`, `PM-DIST-4`). _Verified by_ the installer `*IT` tests of `pm-operator`: Milestone 7 for `claude`, Milestone 14 for the remaining hosts; no fallback, a failure is an installer defect.
-8. *Detached Runtime Start*: Confirmed on macOS (`arm64`) and Linux (`x86_64`): `pm-mcp` and `pm-operator` start `pm-mcpd` on demand via FFM `posix_spawn` with `POSIX_SPAWN_SETSID`, and a termination of the relay never reaches the runtime (`PM-ARCH-7`). _Fallback for a platform not yet run_ (macOS `x86_64`, Linux `aarch64`, WSL2): where the detached start fails, the starting binary reports it with the `pm-operator runtime install` command and the per-user OS service start (`launchd` / `systemd --user`) serves that platform; on-demand start stays the default everywhere it works.
+8. *Detached Runtime Start*: Confirmed on macOS (`arm64`) and Linux (`x86_64`): `pm-operator` starts `pm-mcpd` on demand via FFM `posix_spawn` with `POSIX_SPAWN_SETSID`, and a termination of the starting command never reaches the runtime (`PM-ARCH-7`). _Fallback for a platform not yet run_ (macOS `x86_64`, Linux `aarch64`, WSL2): where the detached start fails, the starting binary reports it with the `pm-operator runtime install` command and the per-user OS service start (`launchd` / `systemd --user`) serves that platform; on-demand start stays the default everywhere it works.
 9. *MCP Call Idle Timeouts & Progress Reset*: Measured for Claude Code, OpenCode, and Antigravity, with relay start and termination confirmed on the three (link:specification/evaluation.adoc[Evaluation Reference]); Codex and every host version change are measured before the profile values ship (`PM-IMPL-4`, `PM-CLIENT-2`). A host whose values are not measured keeps provisional profile values and is no worker host.
-10. *Sessionless Streamable HTTP*: Confirmed on the pinned MCP version with `quarkus-mcp-server` 2.0.2: Streamable HTTP is served without MCP sessions, the host's protocol data and the per-request `PM-MCP-*` headers reach the tool handler through the request's security identity, progress arrives on the call's own response stream, and elicitation is an `input_required` result answered by a retry of the call with `inputResponses` (`PM-ARCH-3`, `PM-ARCH-4`). The confirmation rests on one filter of the runtime, because the library has no setting for it: the `Mcp-Session-Id` of an `initialize` response is removed. The library's handling of `subscriptions/listen` is kept: it acknowledges the listen at once and holds the stream open, and the runtime sends nothing on it (link:specification/runtime-model/03-relay.adoc#_host_protocol_forms[Runtime & Interaction Model Specification, Host Protocol Forms]). _Verified by_ the tests that pin the filter and the silent listen stream, re-run before every upgrade of `quarkus-mcp-server`; no session-holding runtime stands in. _Not yet run_: host behaviour when a runtime restart ends an open listen stream (Claude Code, Antigravity), verified in Milestone 2. _Fallback for a host that fails on it_: the relay answers the listen locally and keeps it open across runtime restarts.
+10. *Sessionless Streamable HTTP*: Confirmed on the pinned MCP version with `quarkus-mcp-server` 2.0.2: Streamable HTTP is served without MCP sessions, the host's protocol data and the per-request `PM-MCP-*` headers reach the tool handler through the request's security identity, and progress arrives on the call's own response stream (`PM-ARCH-3`, `PM-ARCH-4`). The confirmation rests on one filter of the runtime, because the library has no setting for it: the `Mcp-Session-Id` of an `initialize` response is removed. The library's handling of `subscriptions/listen` is kept: it acknowledges the listen at once and holds the stream open, and the runtime sends nothing on it (link:specification/runtime-model/03-relay.adoc#_host_protocol_forms[Runtime & Interaction Model Specification, Host Protocol Forms]). _Verified by_ the tests that pin the filter and the silent listen stream, re-run before every upgrade of `quarkus-mcp-server`; no session-holding runtime stands in. _Not yet run_: host behaviour when a runtime restart ends an open listen stream (Claude Code, Antigravity), verified in Milestone 2. _Fallback for a host that fails on it_: the relay answers the listen locally and keeps it open across runtime restarts.
 11. *Host-Portable Flat Tool Schemas*: Confirmed on Claude Code, OpenCode, and Antigravity: the final flat schemas of the ten core tools are registered and called without a rejected schema (`PM-TOOL-5`). Codex is not yet run. _Fallback for a host not yet run or a later host version that rejects a schema_: a per-host reduced schema rendered by the client profile, with the server's argument validation unchanged.
 12. *TOON Specification Pin*: The encoder is pinned to the official TOON specification version 4.1, release v4.1.3, and passes every encode conformance fixture of it with the canonical options; before a newer official version is pinned, every encode conformance fixture of it must pass the same way (`PM-IMPL-3`). _Fallback_: keep the previously pinned version until the conformance fixtures pass.
 13. *Headless Harness Command Lines*: Confirmed for Claude Code on macOS and Linux: the headless launch template, the per-call MCP connection back through `pm-mcp serve --job` under Landlock (socket connect and environment passing), structured output, the usage and cost fields, the exit on `SIGTERM`, and session residue (`PM-WF-5`, `PM-CLIENT-2`). Confirmed for OpenCode up to its tool-result limit, under two conditions its profile declares: no tool result above that limit reaches a worker, and every worker has its own data home. Codex is not yet run, and the resource tools of a worker are verified with the worker surface. _Rule_: a harness that fails a capability runs no worker of the roles needing it, and the operator assigns those roles to another eligible harness (`PM-WORK-1`).
 14. *Provisional Host Integration Values*: Confirmed against live hosts for Claude Code, OpenCode, and the configuration locations and version probe of Antigravity; every Codex value, the Antigravity values that only a live session shows, and the process-id marker of Claude Code stay marked provisional in the link:specification/client-profiles/02-placeholders-and-detection.adoc#host-integration-table[Host Integration Table] until verified against a live host (`PM-CLIENT-2`, `PM-DIST-3`). _Fallback for a value found wrong_: the corrected value ships in the compiled profile of the next release; the operator override of `PM-CLIENT-5` covers only the connection values.
 15. *Web Listener inside the Runtime*: Confirmed on macOS and Linux: a second Vert.x HTTP server beside the Unix-socket listener in the native `pm-mcpd` is opened and closed while the runtime runs (`pm-operator web enable|disable`) without touching plans, jobs, or open streams of the socket listener, routes only the web app and `/api/v1/`, and accepts only its own token kind (`PM-SEC-4`, `PM-SEC-7`). The setting takes effect immediately; no start-time activation stands in. The second server reaches the shared router and security chain through an internal Quarkus API, so the listener tests are re-run before every Quarkus upgrade.
-16. *Worker Supervision*: Confirmed for Claude Code, and for OpenCode with its per-worker data home, against the real relay `pm-mcp serve` with confined writer workers: every task is submitted exactly once under the faults of `PM-TEST-4`, detection holds within the profile's deadlines, and every call of a fenced generation is refused (`PM-WORK-2`, `PM-WORK-3`). A harness limitation of OpenCode stands: a process stopped while a model request is open may never continue after it is resumed, and is then replaced by silence at its silence limit. Codex and Antigravity are not yet run. _Rule_: a harness is a worker host only after it passed.
+16. *Worker Supervision*: Confirmed for Claude Code, and for OpenCode with its per-worker data home, against the real relay `pm-mcp serve --job` with confined writer workers: every task is submitted exactly once under the faults of `PM-TEST-4`, detection holds within the profile's deadlines, and every call of a fenced generation is refused (`PM-WORK-2`, `PM-WORK-3`). A harness limitation of OpenCode stands: a process stopped while a model request is open may never continue after it is resumed, and is then replaced by silence at its silence limit. Codex and Antigravity are not yet run. _Rule_: a harness is a worker host only after it passed.
 
 === Tracked Architectural Risks & Mitigations
 
@@ -385,8 +382,8 @@ Each item names a technique the implementation rests on and how it is settled. A
 |Target exclusively the frontier MCP `2026-07-28` specification over `quarkus-mcp-server-http` behind a `stdio` relay (`PM-ARCH-3`, `PM-TECH-1`), own job scheduling (`PM-SVC-1`) and standard tool/resource skill delivery (`PM-SKILL-3`), and verify protocol behavior continuously with `McpAssured` (`PM-TEST-3`).
 
 |Host Capability Variance
-|Progress notifications, elicitation support, and the capabilities of the headless command lines (per-call MCP, tool allowlists, zero-tool runs, structured output) vary across Claude Code, OpenCode, Antigravity, and Codex.
-|Baseline interaction uses standard MCP tools (`PM-TOOL-1`) over `stdio`, bounded waits (`pm_wait`, `pm_build`, `PM-IMPL-4`), and operator CLI fallback (`PM-SEC-3`); a role runs only on an eligible harness that declares every capability its class needs, otherwise its artifact is invalid and the operator assigns it to another harness (`PM-WORK-1`, `PM-CLIENT-2`).
+|Progress notifications and the capabilities of the headless command lines (per-call MCP, tool allowlists, zero-tool runs, structured output) vary across Claude Code, OpenCode, Antigravity, and Codex.
+|Baseline interaction uses standard MCP tools (`PM-TOOL-1`) over `stdio`, bounded waits (`pm_wait`, `pm_build`, `PM-IMPL-4`), and the operator's two clients for every operator act (`PM-ARCH-11`, `PM-SEC-3`); a role runs only on an eligible harness that declares every capability its class needs, otherwise its artifact is invalid and the operator assigns it to another harness (`PM-WORK-1`, `PM-CLIENT-2`).
 
 |Model Out-of-Sequence Calls or Invalid Arguments
 |Because `pm_do` accepts free parameters in an `args` map, the host cannot pre-validate link-specific arguments via static JSON Schema.
@@ -397,7 +394,7 @@ Each item names a technique the implementation rests on and how it is settled. A
 |Pair every judgment state with a focused static vocabulary skill (`PM-SKILL-1`), measure outline/triage quality in parallel runs against plan-marshall before the lifecycle gate opens (`PM-MIG-4`), verify the model-facing content per client profile against live models in an out-of-band pre-release gate (`PM-TEST-6`), and run every role only on a configuration qualified against the model verification corpus, with a conservative server fallback until one qualifies (`PM-WORK-6`).
 
 |Host Disconnect or Runtime Crash
-|A host closing its relay interrupts only that connection; a runtime crash interrupts running jobs and in-flight transitions.
+|A worker's harness closing its relay interrupts only that worker's connection; a runtime crash interrupts running jobs and in-flight transitions.
 |Decouple jobs from host connections and persist every transition before responding (`PM-ARCH-8`), persist all workflow and job state in the filesystem (`PM-ARCH-6`), and recover interrupted transaction journals and orphaned jobs on runtime start (`PM-ARCH-7`).
 
 |Operator Channel Reachable from a Model Shell
@@ -406,11 +403,11 @@ Each item names a technique the implementation rests on and how it is settled. A
 
 |Parallel Operation of plan-marshall and PM-MCP on One Repository
 |During the overlap both systems may run plans in the same repository; they use separate trees (`.plan/`, `.marshall/`) and share no locks, so the cross-plan merge mutex and review-bot rate windows do not coordinate across the two systems.
-|Accepted residual risk (`PM-MIG-2`); the entry commands of the two systems are kept apart by the `mcp-` prefix (`PM-CLIENT-1`), the plan lifecycle is offered per enrolled project only after the lifecycle gate opens (before that only in projects enrolled as pilots), plans open in plan-marshall finish there, and the operator avoids concurrent merges from both systems in the same repository.
+|Accepted residual risk (`PM-MIG-2`); PM-MCP installs no entry command into a host and its client bundles leave the plugin's files untouched (`PM-CLIENT-1`), the plan lifecycle is offered per enrolled project only after the lifecycle gate opens (before that only in projects enrolled as pilots), plans open in plan-marshall finish there, and the operator avoids concurrent merges from both systems in the same repository.
 
 |Browser-Facing Listener inside the Runtime
 |With web access enabled, browser-facing HTTP, TLS, and static serving run in the process that holds the credential store and the workflow engine; no separate web server process stands between a browser and the runtime.
-|Accepted consequence (`PM-SEC-7`); web access is off by default and enabled only by an operator verb, the listener is loopback-only by default and on the LAN only over TLS, every request passes the `Host` validation and needs a device secret that the runtime checks without a cache, and the listener routes only the web app and `/api/v1/`, never `/mcp`, and never accepts the runtime token (`PM-SEC-4`).
+|Accepted consequence (`PM-SEC-7`); web access is off by default and enabled only by an operator verb, the loopback listener serves this machine only and the LAN listener beside it serves only over TLS, every request passes the `Host` validation and needs a device secret that the runtime checks without a cache, and the listener routes only the web app and `/api/v1/`, never `/mcp`, and never accepts the runtime token (`PM-SEC-4`).
 
 |Enrolment Store Tampering
 |A process running as the operator's user could rewrite an enrolment file to widen enrolled tools or arguments.

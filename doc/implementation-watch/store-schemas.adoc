@@ -22,17 +22,17 @@ sections mirror the specification. Item format and lifecycle: link:../Implementa
 Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#transaction-journal[Store Schemas § Transaction Journal] (Writes outside the scope),
 link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7]
 Hazard:: A transition that writes outside its scope (a plan creation that also starts an epic row, claims a lesson,
-and deletes the pending record; a job state whose binding and job record lie in different stores) cannot be one
+and deletes the pending entry; a job state whose binding and job record lie in different stores) cannot be one
 journaled transaction; a crash between its writes leaves a row `staged` beside a running plan, a lesson unclaimed by
-the plan created from it, a pending record that resumes a created scope, or a binding that names a job nobody runs,
+the plan created from it, a pending entry that resumes a created scope, or a binding that names a job nobody runs,
 and a recovery that re-applies a write it cannot see as done applies it twice.
 Guard:: Crash-injection test over the fixed write order of `start.create-scope`: a crash after the plan scope,
 after the capture ref of a `local_changes` plan, after the epic queue row, after the lesson claim, and after the
-pending-record deletion; after each restart the startup recovery leaves exactly one plan, its capture ref at
+pending-entry deletion; after each restart the startup recovery leaves exactly one plan, its capture ref at
 `snapshot_sha`, the row `running` with the plan's creation instant as `started_at`, the lesson claimed once by that
-plan, and no pending record, and each reconciliation it applied has one audit record; a crash before the plan scope
-leaves only the pending record. The same for an epic bootstrap: a crash after the new epic's scope and before the
-pending-record deletion leaves exactly one epic and no pending record after recovery. The same for a job state: a crash after `active_job` and before
+plan, and no pending entry, and each reconciliation it applied has one audit record; a crash before the plan scope
+leaves only the pending entry. The same for an epic bootstrap: a crash after the new epic's scope and before the
+pending-entry deletion leaves exactly one epic and no pending entry after recovery. The same for a job state: a crash after `active_job` and before
 the job record leaves the job settled `killed` by recovery (it never started), and the state routes that outcome once; a crash after the job record leaves the job
 bound and running. The same for a worker's end: a crash after its job record (fate, fence, revoked token) and
 before the queue task record releases the held task's lease at recovery and queues the task again once. Matched control: a recovery run on a consistent store changes nothing and writes no audit record.
@@ -51,40 +51,39 @@ destination holds at most a duplicate notice and never none. Matched control: a 
 leaves the finding uncarried and the resumed carry-out carries it once.
 Source:: design review.
 
-== Scope Session Log (`sessions.jsonl`)
+== Persisted Paths & the Pending Entry
 
 [#PM-WATCH-STORE-1]
 === PM-WATCH-STORE-1: Stored path strings bypass any resolver redirect
 
-Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#scope-session-log[Store Schemas § Scope Session Log],
-link:../specification/filesystem-layout/03-project-store.adoc#plan-worktree-resolution[Filesystem Layout § Plan & Worktree Resolution] (Project Resolution Rule),
+Anchor:: link:../specification/filesystem-layout/03-project-store.adoc#plan-worktree-resolution[Filesystem Layout § Plan & Worktree Resolution] (Project Resolution Rule),
 link:../Requirements.adoc#PM-ARCH-4[PM-ARCH-4]
 Hazard:: A store move redirected the shared path resolver, but sites that matched a path-shaped string captured
 elsewhere (an epic spec path captured as `source_id` in a plan's request) never passed through it.
-Guard:: Cross-scope references are persisted as ids, never paths; no session row or scope record stores a path of
-the checkout (the main checkout is always the enrolled `project_root`, a worktree only its name `worktree_of`). A
+Guard:: Cross-scope references are persisted as ids, never paths; no scope record or pending entry stores a path
+of the checkout (the main checkout is always the enrolled `project_root`, a worktree only its name `worktree_of`). A
 test re-enrols a relocated checkout and asserts that every scope resolves through the new `project_root`, never a
-stale path, and that `pm-mcp enter` and the `PM-MCP-Workspace` header resolve through the same one rule. Present in
-`pm-mcp-core`: the schema test that no session-row field holds a path (`ScopeSessionRowSchemaParityTest`); the
-relocation test stays for the project resolution and `pm-mcp enter`.
+stale path, and that a checkout path a client of the operator names (the terminal client's working directory, a
+checkout at its onboarding) and a worker's job record resolve through the same one rule.
 Source:: plan-marshall orchestrator-refactor PLAN-03 D3.
 
 [#PM-WATCH-STORE-42]
-=== PM-WATCH-STORE-42: A bootstrap entry leaves no residue
+=== PM-WATCH-STORE-42: A start entry leaves no residue
 
-Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Store Schemas § Pending Entry Record],
-link:../Requirements.adoc#PM-CLIENT-1[PM-CLIENT-1]
-Hazard:: An abandoned or interrupted bootstrap leaves a pending record, a claim, or screened text behind, so a later
-entry resumes stale state or a lesson stays claimed by a plan that never existed.
-Guard:: Scenario per bootstrap terminal (`committed`, `resumed`, `handed_over`, `abandoned`) and per crash point: the
-pending record is deleted by the terminal, for `committed` in the fixed write order after the new plan scope, the
+Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#pending-entry-record[Store Schemas § Pending Entry],
+link:../Requirements.adoc#PM-WF-10[PM-WF-10]
+Hazard:: An abandoned or interrupted start leaves a pending entry, a claim, a source, or screened text behind, so a
+later start resumes stale state or a lesson stays claimed by a plan that never existed.
+Guard:: Scenario per way an entry ends (the scope created, the entry abandoned, the project released) and per crash
+point: the entry's directory (`pending/<entry_id>/` with its record, sources, decisions, and chat) is deleted by that
+end, for a created scope in the fixed write order after the new plan scope, the
 epic queue row, and the lesson claim; no lesson claim, queue-row change, or capture ref exists before the plan scope
 is written, and the capture ref of a `local_changes` plan is set right after it; a crash between these writes is
 completed by the startup recovery (<<PM-WATCH-STORE-44>>; a missing capture ref is re-created at `snapshot_sha`), and a crash
-before the plan scope leaves only the pending record; a record whose digest mismatches pauses only its own entry.
-Present in `pm-mcp-core`: a record older than the pending entry maximum age is removed by the periodic sweep with an
-audit record (`PendingEntryRecordsSweepTest`), and two concurrent entries never share a record
-(`PendingEntryStoreTest`); the terminal and crash-point scenarios stay for the bootstrap.
+before the plan scope leaves only the pending record; a record whose digest mismatches pauses only its own entry; an entry is never removed by time (an aged entry
+fixture is still offered in both clients after any number of runtime restarts and periodic sweeps). Present in
+`pm-mcp-core`: two concurrent entries never share a record (`PendingEntryStoreTest`); the directory form, the ends,
+and the crash-point scenarios stay for the start.
 Source:: design review.
 
 == Workflow State Store (`mcp/status.json`)
@@ -97,10 +96,10 @@ link:../Requirements.adoc#PM-ARCH-8[PM-ARCH-8]
 Hazard:: `plan-marshall` init wrote files one by one; a failure between writes left a plan directory with `request.md` but no
 status or references, reported as a created plan.
 Guard:: The `start.create-scope` transaction of the plan bootstrap builds the complete plan directory (`request.md`,
-`references.json`, `mcp/status.json`, `sessions.jsonl` with the entry's row or empty for a plan the server starts
-for an epic, `mcp/digests.json`) in a sibling temporary
+`references.json`, `mcp/status.json`, `mcp/digests.json`, and the copies of the entry's source directory,
+transcript, and decision stores) in a sibling temporary
 directory and publishes it with one atomic directory rename; startup recovery deletes orphaned temporary init directories; a plan directory without `mcp/status.json`
-is never listed. Test: inject a fault after each file write → no plan visible, the pending entry record not
+is never listed. Test: inject a fault after each file write → no plan visible, the pending entry not
 consumed.
 Fixture:: `plans/<id>/` containing only `request.md`.
 Source:: plan-marshall process-compliance inbox opencode-bootstrap-executor-fix-001 § Violations item 3 (adjacent PLAN-10 D5).
@@ -298,7 +297,7 @@ Source:: `store-schemas/04-epic-and-change-ledger.adoc:129`, `model-work/08-epic
 
 Anchor:: link:../specification/store-schemas/04-epic-and-change-ledger.adoc#epic-queue-row[Store Schemas § Queue Row] (`held`)
 Hazard:: Undecided: `held` clears only on a change of the effective role set or when the operator acts on the epic, but no
-operator verb other than abort acts on it; the bootstrap refusals of a start (`setup_required`, `plan_id_taken`,
+operator act of the epic clears it; the refusals of a start (`setup_required`, `plan_id_taken`,
 `lifecycle_closed`, `config_invalid`) are not among the listed held reasons. A row held for a cause that has since
 gone stays skipped by `epic.next-work`, and a row refused by the bootstrap is retried or stalls without a recorded
 reason. Options: (1) an operator verb plus per-reason clearing events; (2) `epic.next-work` re-checks held launch
@@ -432,23 +431,22 @@ Hazard:: A counter reset by re-entering a unit, a new `HEAD`, a loop-back, or a 
 without bound; a raise above the compiled hard cap, or a binding above it in a project unit, removes the bound.
 Guard:: Scenario tests: spend two fixes, loop back, re-compose the instance (a waiver event), move `HEAD`, and
 re-enter the unit: the counter reads `2` throughout; `waive --raise fix_budget:<policy>=N` lifts only the effective
-ceiling (the counter unchanged) and is refused with `raise_out_of_range` above the hard cap (retry `5`, fix `5`,
-waiver wait `86400` s); a project unit binding above the cap fails `INV-REM-5`; a step-out consumes no budget.
+ceiling (the counter unchanged) and is refused with `raise_out_of_range` above the hard cap (retry `5`, fix `5`); a project unit binding above the cap fails `INV-REM-5`; a step-out consumes no budget.
 Source:: design review.
 
 [#PM-WATCH-STORE-40]
-=== PM-WATCH-STORE-40: A deadline is set once and settles exactly once
+=== PM-WATCH-STORE-40: An operator wait never ends by time and settles exactly once
 
 Anchor:: link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#waiver-request-record[Store Schemas § Waiver Request Record],
 link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas § Question Record],
-link:../specification/timeouts/01-job-budgets-and-waits.adoc#waiver-wait[Timeouts & Budgets § Waiver Wait]
-Hazard:: A deadline recomputed on re-entry or restart never expires; an answer and the expiry racing in one instant
-both apply; a runtime restart loses the timer, or fires a deadline that lapsed during an integrity pause.
-Guard:: Tests on a test clock: the deadline of a question record or waiver request is written once at delivery and
-never moved by re-entry; an answer and the expiry in the same instant settle exactly one of them (the first
-committed transaction), the other refused (`question_expired`, `already_answered`); after a restart an overdue
-deadline fires once in recovery; a deadline that passed during an integrity pause fires once, right after the pause
-ends, and `expires_at` is unchanged.
+link:../specification/timeouts/01-job-budgets-and-waits.adoc#waiver-wait[Timeouts & Budgets § Waiver Request]
+Hazard:: A timer left on a decision or a waiver request decides it on the operator's behalf after a restart or a
+pause; two answers racing in one instant (from both clients, or an answer and a withdrawal) both apply.
+Guard:: Tests on a test clock: a decision and a waiver request advanced by any span, across a runtime restart and an
+integrity pause, stay open with no record field that names an expiry and no default applied; two answers in the
+same instant (web and terminal client) settle exactly one of them (the first committed transaction), the other
+refused `already_answered`; an answer after the request was closed (`cancelled` by a plan end) is refused and
+changes nothing.
 Source:: design review.
 
 [#PM-WATCH-STORE-41]
@@ -774,16 +772,18 @@ lock-order checker rejects any acquisition outside the total order; no update is
 Source:: design review.
 
 [#PM-WATCH-STORE-46]
-=== PM-WATCH-STORE-46: A retention sweep never removes a row something still references
+=== PM-WATCH-STORE-46: A sweep never removes a row something still references, nor work history
 
 Anchor:: link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Store Schemas § Evidence-Based Removal Sweeps] (Retention purges)
 Hazard:: The workspace scope has no archive, so its rows grow for the life of the enrolment; a purge by age alone
 removes a decision whose facts snapshot a later record still cites, or a sweep that rewrites an append-only store
 loses rows appended meanwhile.
-Guard:: Sweep test with a clock fixture: `pm-operator sweep` lists and `--apply` removes the workspace rows older than
-`retention.workspace_rows_days` (closed findings, metrics rows, answered questions, ended sessions, screen verdicts,
-decisions whose facts are no longer referenced, with their facts snapshots), each store replaced in one journaled
-transaction of the workspace scope; a decision whose facts snapshot is still referenced is kept with that keep-rule
-named; an archived epic's `epics/<epic_id>/` is removed only after `retention.archived_plans_days`. Matched
-controls: a row one day younger than the key is kept, and an open finding of any age is kept.
+Guard:: Sweep test with a clock fixture: the periodic sweep removes, and `pm-operator sweep` lists and `--apply`
+removes at once, the workspace scope's technical rows older than `retention.workspace_rows_days` (closed findings,
+answered questions, screen verdicts, decisions whose facts are no longer referenced, with their facts snapshots),
+each store replaced in one journaled transaction of the workspace scope; a decision whose facts snapshot is still
+referenced is kept with that keep-rule named; a plan's metrics rows are never swept. Work history (archived plans,
+an archived epic's `epics/<epic_id>/`, the logs of ended work, read reports) of any age is never a sweep candidate
+and goes only by the operator's cleanup. Matched controls: a row one day younger than the key is kept, and an open
+finding of any age is kept.
 Source:: design review.

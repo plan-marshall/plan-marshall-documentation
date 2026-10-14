@@ -74,7 +74,7 @@ Work history is the operator's and goes only on the operator's word, through one
 * *The journal*: one append-only journal of the machine scope, `<PM_MCP_BASE>/state/cleanup.jsonl` (link:../filesystem-layout/02-machine-runtime.adoc#machine-layout[Filesystem Layout, Machine-Wide Runtime Layout]), with its own leaf lock like `state/reports.jsonl`. Its events: `job` (the job with its items: kind, id, project, title, outcome, ended at, size, the duration and its source), `decided` (`delete` with the unchecked items, `remind` with when it comes back, or `ignore`; the channel, the device, and when), `deleted` and `delete_failed` per item (with the reason), and `kept` and `released` per item. A job's state (`open`, `postponed`, `deleting`, `done`) and the kept list are the fold of its events. A job is identified by its `job_id`, store-assigned `cln-NNNN` and never reused (link:../identifiers/02-registry-stores-to-web.adoc#id-cleanup-job-id[Identifier Registry, Cleanup Job Identifier]); it is no job of the job runtime: it starts no process and has no job record.
 * *The decisions*, operator acts of either client: _delete_ deletes the checked items and keeps the unchecked ones for good; _remind_ deletes nothing and, after the reminder, opens a new job of the same items with a new report; _ignore_ deletes nothing and keeps every item for good. The first decision of a job is the one taken; a later one on a decided job is answered with the decision taken, unchanged. A released kept item is due again at the next check.
 * *Deleting*: item by item, each in its own journaled transaction with one audit record `cleanup_deleted` (category `store`; the kind, the id, the project, `job_id`, the channel, the size, link:../store-schemas/12-machine-stores.adoc#audit-log[Store Schemas, Audit Log]). An archived plan's directory `archive/<plan_id>/` is replaced by a tombstone `archive/<plan_id>/deleted.json` (its `plan_id`, title, outcome, when it ended, `deleted_at`, `job_id`), so its id is never allocated again, ended work leaves it out, and its reports' detail resolves to "deleted" with the date; an archived epic's `epics/<epic_id>/` likewise by `epics/<epic_id>/deleted.json` (link:../filesystem-layout/03-project-store.adoc#archives[Filesystem Layout, Archives]). Read reports leave `state/reports.jsonl` by a journaled rewrite under its lock; their ids are never reused. An unenrolled project's store goes as a whole; enrolling the project again starts a new store. Before a plan's metrics rows go, what it used is added to the machine's usage aggregate `<PM_MCP_BASE>/state/usage-aggregate.jsonl` (per day, project, model, and role, in tokens with their coverage), from which the system view's figures are filled at the start beside the metrics stores, so no figure goes down (link:../runtime-model/01-processes-and-transport.adoc#runtime-metrics[Runtime Model, The Runtime's Metrics]). An item no longer due (a project enrolled again) is skipped and named; a failure keeps the item with its reason for the next job. A deletion cut by a stop goes on after the next start from the journal.
-* *Unenrolment*: `pm-operator unenrol` records `unenrolled_at` in the store's `store.json` (link:../store-schemas/11-enrolment-store.adoc#project-store-identity[Store Schemas, Project Store Identity]); enrolling again removes it. The store is a cleanup item from then on, never residue.
+* *Unenrolment*: `pm-operator project unenrol <project_id>` (or the same act of the web app) records `unenrolled_at` in the store's `store.json` (link:../store-schemas/11-enrolment-store.adoc#project-store-identity[Store Schemas, Project Store Identity]); enrolling again removes it. The store is a cleanup item from then on, never residue.
 * *Local API*: `GET /api/v1/system/cleanup` answers the open or postponed job (its summary with the counts per kind and the space it frees, its items by project, each linked read-only to its ended view), the durations with their sources, the count of kept items, and what the automatic pass of the periodic sweep removed and when; `POST /api/v1/system/cleanup/{job_id}/delete` with the unchecked items, `…/remind`, and `…/ignore` decide the job; `GET /api/v1/system/cleanup/kept` lists the kept items and `PUT /api/v1/system/cleanup/kept` writes the list, an item left out being released. Each write is privileged (link:../cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[CLI & Security, Operator Channel Isolation]), accepted from `pm-operator` (`pm-operator cleanup [--delete|--remind|--ignore] [--yes]`) and from a paired device, and audited with its channel. The runtime-wide stream announces `cleanup.job_opened`, `cleanup.decided`, `cleanup.progress`, and `cleanup.done` (link:../runtime-model/06-event-catalogue.adoc[Runtime Model, Event Catalogue]).
 * *Recurring waivers* are counted over the `waiver_waived` records of the audit log of the last 90 days, whatever has been deleted since (link:../phase-workflows/02-planning-lanes-phases-3-4.adoc[Phase Workflows, Planning Lanes & Phases 3–4], Recurring Waivers).
 
@@ -190,6 +190,40 @@ Two compiled size bounds and one per-harness limit shape what a worker receives 
 |Every tool result the server returns to a worker of that harness: the offer answering `pm_wait`, entity representations, skills, and resource reads
 |The result carries its identifiers and links first and names the remaining content as parts, each below the limit, which the worker reads as resources; nothing is cut and no task is refused for size.
 |link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]; link:../client-profiles/01-profile-schema.adoc#headless-tool-result-limit[Client Profiles, Tool-Result Limit]
+|===
+
+[#view-bounds]
+== Bounds of Activity & Views
+
+Compiled bounds of what the runtime records for the operator's views. None is configurable; the table uses the columns above, and a size bound states what happens above it.
+
+[cols="2,3,2,2,2,3,2"]
+|===
+|Name |Value / derivation |Configurable? |Floor / cap |Applies to |Behaviour above the bound |Defined for
+
+|[[activity-journal-bounds]]Activity journal bounds
+|`2000` characters per `text` entry; `5000` entries per task journal.
+|fixed (compiled constant)
+|—
+|The activity journal of every queue task
+|A longer text is cut to the bound; an append beyond the entry bound rewrites the journal without its oldest `text` entries, never a server entry.
+|link:../store-schemas/16-task-queue.adoc#activity-journal[Store Schemas, Activity Journal]
+
+|[[explorer-usage-window]]Explorer usage window
+|`30` days, counted back from the read.
+|fixed (compiled constant)
+|—
+|How often the operator worked in a project (`explorer.json`)
+|Acts older than the window no longer count toward a project's _most used_; its _last used_ stays.
+|link:../runtime-model/01-processes-and-transport.adoc#project-explorer[Runtime Model, The Projects of the Machine]
+
+|[[icon-size-bound]]Harness icon size bound
+|`262144` bytes (256 KiB) per icon file.
+|fixed (compiled constant)
+|—
+|Every harness icon fetched into `<PM_MCP_BASE>/icons/`
+|A larger file is not stored or served; the clients show the harness's monogram.
+|link:../client-profiles/01-profile-schema.adoc#harness-icons[Client Profiles, Harness Icons]; link:../store-schemas/12-machine-stores.adoc[Store Schemas, Machine Stores]
 |===
 
 [#configuration-keys]

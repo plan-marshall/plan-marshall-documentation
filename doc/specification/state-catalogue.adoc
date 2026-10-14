@@ -40,8 +40,10 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-EXT-8[PM-EXT-8: Project Onboarding as One Process]_
 * _See Requirement link:../Requirements.adoc#PM-MIG-4[PM-MIG-4: Stage Exit Criteria & Lifecycle Gate]_
 * _See Requirement link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5: Declarative Workflow DSL & Automated Diagram Generation]_
+* _See Requirement link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7: Data Store Invariants, Footprint Reconciliation & Lock Ordering]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-6[PM-WORK-6: Role Qualification]_
+* _See Requirement link:../Requirements.adoc#PM-ARCH-11[PM-ARCH-11: The Operator's Two Clients & Their Contract]_
 
 == Status: PLANNED
 

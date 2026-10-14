@@ -5,7 +5,7 @@
 
 `PM-MCP` distributes a compiled software system rather than a generated markdown corpus, unifying server and client components under a single version authority: one release.
 
-* The system must distribute one release of four native executables built from one version: `pm-mcp` (the worker-facing command line: the relay `pm-mcp serve --job` of a worker's connection), `pm-operator` (the operator's command line and terminal client, one of the operator's two clients), `pm-mcpd` (the runtime, started on demand by either of them, which also serves the web app, the operator's other client), and `pm-exec` (the job launcher).
+* The system must distribute one release of four native executables built from one version: `pm-mcp` (the worker-facing command line: the relay `pm-mcp serve --job` of a worker's connection), `pm-operator` (the operator's command line and terminal client, one of the operator's two clients), `pm-mcpd` (the runtime, started on demand by `pm-operator` and never by a worker's relay, which also serves the web app, the operator's other client), and `pm-exec` (the job launcher).
 * Every artifact of the product (the module JARs, the parent POM, the native binaries, and the release) must be delivered through the package registry of the GitHub organisation `plan-marshall` and through no other place, never Maven Central or another public registry (`PM-IMPL-1`).
 * The macOS release must ship `pm-mcpd` signed with a Developer ID and notarised (`PM-CRED-2`).
 * The release must embed the client bundles (`classpath:/bundles/<client>/`) for every supported frontier coding agent runtime whose bundle has been delivered by the current stage (`PM-MIG-1`): Claude Code (`claude`), OpenCode (`opencode`), Antigravity (`antigravity`), and Codex (`codex`); full four-host coverage is reached at Stage 6. The bundle version is the release version.
@@ -46,7 +46,7 @@ Implementation watch: link:implementation-watch/client-profiles.adoc#PM-WATCH-CL
 The system must give every worker its MCP connection through the worker's launch, never through a host's configuration file.
 
 * The system must compose the MCP connection of every worker (`pm-mcp serve --job`, `PM-WF-5`) into its launch as the client profile of its harness declares it (a slot of the launch or a file in the worker's working directory, `PM-CLIENT-2`), and must write no MCP connection into a host's user or project configuration.
-* Because `pm-mcp serve --job` starts the runtime on demand and connects to it over its user-private Unix domain socket with the worker's job token, a worker's connection requires no runtime pre-start, bearer token helper, or TCP port.
+* Because `pm-mcp serve --job` runs only as a job of a running runtime and connects to it over its user-private Unix domain socket with the worker's job token, a worker's connection requires no runtime pre-start, bearer token helper, or TCP port.
 
 See the link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/model-work.adoc[Model Work Specification], link:specification/client-profiles.adoc[Client Profiles & Dynamic Translation Specification], and link:specification/workflow-dsl/02-units-jobs-decisions.adoc#clients-only[Workflow DSL & Engine Specification, All Interaction in the Operator's Clients] for implementation details.
 

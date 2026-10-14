@@ -44,7 +44,7 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-record[Store Schemas, Waiver Record]; link:../workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL, Compiled Invariants] (`INV-GEN-2`)
 
 |[[id-instance-version]]Plan instance version (`instance_version`)
-|Integer `N` ≥ 1; the file name `instance/plan.v<N>.pmwf` (the plan instance is always referred to by this file, never as `plan.pmwf`, which names the Phase 4 unit), the header `version` of that instance, and the resource segment `{version}` of `pm://plan/{plan_id}/instance/{version}`.
+|Integer `N` ≥ 1; the file names of one version, `instance/plan.v<N>.pmwf` (the plan unit with the instance header) and `instance/<unit>.v<N>.pmwf` per composed unit (a phase sub-workflow or an axis variant, for example `instance/phase-6-finalize.v3.pmwf`; link:../workflow-dsl/09-plan-instance.adoc[Workflow DSL, Plan Instance]), the header `version` of that instance, and the resource segment `{version}` of `pm://plan/{plan_id}/instance/{version}`.
 |server (composition)
 |Plan
 |Monotonic from `1`; never reused or rewritten
@@ -58,7 +58,7 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |Instance header and `composition.jsonl` link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas, Plan Instance]
 
 |[[id-prune-reason]]Prune reason
-|Closed enum: `posture`, `provider_unconfigured`, `footprint_disjoint`, `change_type_exempt`, `recipe_override`, `local_only`, `land_lane`, `adopt`, `auto_merge_off`, `empty_harvest`, `returned`, `handed_back`, `plan_default` (a step the plan behaviour axes leave out, link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL, Plan Behaviour Axes]).
+|Closed enum: `posture`, `provider_unconfigured`, `footprint_disjoint`, `change_type_exempt`, `local_only`, `land_lane`, `adopt`, `merge_by_operator`, `empty_harvest`, `returned`, `handed_back`, `plan_default` (a step the plan behaviour axes leave out, link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL, Plan Behaviour Axes]).
 |build (composition rules)
 |—
 |Closed; extended only with a schema version
@@ -77,6 +77,13 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |One inbox or mailbox store file
 |Monotonic; never reused
 |link:../store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Store Schemas, Epic Inbox & Plan Mailbox Records]; inbox and mailbox resources link:../mcp-tools.adoc[MCP Tools]
+
+|[[id-epic-item-id]]Epic register item identifier (`item_id`)
+|`^EI-[0-9]+$`, at most 32.
+|server (store-assigned, the next number above the highest ever written)
+|One epic's `register.jsonl` (findings and watches together)
+|Monotonic; never reused
+|link:../store-schemas/04-epic-and-change-ledger.adoc#epic-registers[Store Schemas, Findings and Watches Registers]; link:../model-work/08-epic-coordination.adoc[Model Work, Epic Coordination]
 
 |[[id-report-id]]`report_id`
 |`^rep-[0-9]{4,}$`, at most 64.

@@ -305,6 +305,102 @@ Every line of `landings.jsonl` is one landing record: `format_version` plus the 
 
 When `emit-landing` cannot deliver the landing envelope (`landing_delivery: pending`, xref:02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Workflow State Store]), because the plan's epic linkage is `indeterminate` or because the append retry budget was spent while the linkage is `orchestrated`, the server keeps the undelivered envelope in the plan directory as `plans/<plan_id>/landing-envelope.json`: `{format_version, envelope}` with `envelope` of the landing schema (`landing-envelope.json#`, link:../phase-workflows/05-finalize-review-metrics-descriptor.adoc#_landing_envelope_emit_landing[Phase Workflows Specification, Landing Envelope]). A late finding carried out while the envelope is kept (xref:03-findings-and-review-records.adoc#_findings_ledger_record_findings_jsonl[Findings Ledger Record], Late Findings Are Carried Out) is appended to the envelope's carried messages by a replace of this file. The file is written only by the server under the plan lock, is covered by the plan's digest sidecar, is never deleted (it stays in the plan directory and travels with it into the archive), and is delivered unchanged by the epic's landing reconciliation, which skips an envelope whose `plan_id` `landings.jsonl` already records; it is never re-rendered from the plan's records. A plan whose linkage is `not_orchestrated` or `detached` emits no landing to an inbox and keeps no envelope.
 
+[#epic-drafts]
+== Epic Drafts (`epics/<epic_id>/decomposition.json`, `epics/<epic_id>/review.json`)
+_See Requirement link:../../Requirements.adoc#PM-WF-15[PM-WF-15: Epic Creation, Server-Started Plans & Cross-Plan Merge Mutex]_
+
+An open decomposition and an open review of an epic's registers keep what is not committed yet in the epic's machine store, never in its ledger (link:../filesystem-layout/03-project-store.adoc#machine-store[Filesystem Layout Specification, Per-Project Machine Store]), so leaving and a restart of the runtime resume them where they stopped, in either client. Each is one JSON file replaced by the epic scope's transaction and covered by the scope's digest sidecar; it exists only while its sub-workflow runs and is deleted in the transaction that writes its result to the ledger (link:../model-work/08-epic-coordination.adoc#decomposition-review[Model Work Specification, The Decomposition Is Reviewed], link:../model-work/08-epic-coordination.adoc#epic-review[The Review]). The server's checks are computed on read and never stored.
+
+[#epic-decomposition-draft]
+=== Decomposition Draft (`decomposition.json`)
+
+Written by the `stage`, `spec_section`, `workstream`, `drop`, and `reorder` submits of the drafting task and by the operator's edits in `decomposition.review`; read by the epic's resource while it is open.
+
+[source,json]
+----
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuioss.de/plan-marshall-mcp/schemas/decomposition-draft.json",
+  "title": "EpicDecompositionDraft",
+  "type": "object",
+  "required": ["format_version", "run", "instruction", "rows", "sections", "workstreams", "dropped", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "run": { "type": "string", "enum": ["first", "again", "recut"], "description": "first: the epic's first decomposition; again: the operator's decompose again; recut: a re-cut with its proposal as input." },
+    "instruction": { "type": ["string", "null"], "maxLength": 4000, "description": "The operator's instruction of a decompose again or a draft again; null otherwise." },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["plan_id", "replaces", "workstream_id", "prerequisites", "declared_surface", "spec_section", "edited_by_operator"],
+        "additionalProperties": false,
+        "properties": {
+          "plan_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$", "description": "From the stage submit's plan_slug." },
+          "replaces": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$", "description": "A later run: the committed staged row the draft row changes; null for a new row." },
+          "workstream_id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$" },
+          "prerequisites": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$" } },
+          "declared_surface": { "$ref": "https://cuioss.de/plan-marshall-mcp/schemas/queue-row.json#/properties/declared_surface" },
+          "spec_section": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,127}$" },
+          "edited_by_operator": { "type": "boolean" }
+        }
+      }
+    },
+    "sections": { "type": "object", "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,127}$" }, "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 65536 }, "description": "Staged plan sections of spec.md by anchor, as the spec_section submits or the operator's edits wrote them." },
+    "workstreams": { "type": "array", "items": { "type": "object", "required": ["workstream_id", "title", "order"], "additionalProperties": false, "properties": { "workstream_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$" }, "title": { "type": "string", "minLength": 3, "maxLength": 200 }, "order": { "type": "integer", "minimum": 1, "maximum": 999 } } } },
+    "dropped": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$" }, "description": "A later run: committed staged rows the draft drops." },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
+----
+
+[#epic-review-draft]
+=== Review Dispositions (`review.json`)
+
+Written by the proposals of the review task and by the operator's dispositions in `review.items`; one review is open per epic at a time.
+
+[source,json]
+----
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuioss.de/plan-marshall-mcp/schemas/review-draft.json",
+  "title": "EpicReviewDraft",
+  "type": "object",
+  "required": ["format_version", "register", "items", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "register": { "type": "string", "enum": ["findings", "watches"] },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "proposal", "disposition"],
+        "additionalProperties": false,
+        "properties": {
+          "item_id": { "type": "string", "pattern": "^EI-[0-9]+$" },
+          "proposal": { "type": ["object", "null"], "required": ["kind", "rationale"], "additionalProperties": false, "properties": { "kind": { "type": "string", "enum": ["keep", "drop", "promote", "move_to_watches"] }, "rationale": { "type": "string", "minLength": 1, "maxLength": 2000 } }, "description": "The review task's proposal; null until it is made." },
+          "disposition": {
+            "type": ["object", "null"],
+            "description": "The operator's disposition, confirmed at its read-back where a model drafted it; null while undecided.",
+            "required": ["kind"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["keep", "drop", "promote", "edit", "move_to_watches"] },
+              "reason": { "type": ["string", "null"], "maxLength": 2000, "description": "drop: the operator's reason." },
+              "statement": { "type": ["string", "null"], "maxLength": 2000, "description": "edit: the rewritten statement." },
+              "rules": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1, "maxLength": 400 }, "description": "edit: the rewritten rules." },
+              "row": { "type": ["object", "null"], "description": "promote: the staged row drafted for the item, of the shape of a decomposition draft row, with its section text." }
+            }
+          }
+        }
+      }
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
+----
+
 == Change Ledger Record (`change-ledger.jsonl`)
 _Implementation watch: link:../../implementation-watch/job-runtime.adoc#PM-WATCH-JOB-13[PM-WATCH-JOB-13], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-9[PM-WATCH-STORE-9], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-10[PM-WATCH-STORE-10]_
 

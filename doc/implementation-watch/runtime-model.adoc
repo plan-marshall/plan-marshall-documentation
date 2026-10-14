@@ -22,7 +22,7 @@ lifecycle: link:../ImplementationWatch.adoc[Implementation Watch].
 Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime Model § Start Modes],
 link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]
 Hazard:: A daemon start reported `running` before liveness was verified.
-Guard:: Every on-demand start by `pm-mcp` or `pm-operator` (the relay's included) and `pm-operator status` report `running` only after a
+Guard:: Every on-demand start by `pm-operator` and `pm-operator status` report `running` only after a
 successful authenticated round trip on the runtime's socket (runtime token); `status` is an API request, so its
 `running` is that round trip, and `state/runtime.json` serves only the "not running" answer (no live record) without
 starting the runtime; a test kills the runtime during start, and another leaves a `runtime.json` of a dead process
@@ -45,19 +45,19 @@ token gets `401`, re-reads the file exactly once, and succeeds, and a second `40
 Source:: design review.
 
 [#PM-WATCH-RUN-5]
-=== PM-WATCH-RUN-5: Without a runtime, the three runtime-free verbs start nothing and write nothing
+=== PM-WATCH-RUN-5: Without a runtime, the runtime-free verbs start nothing and write nothing
 
 Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model § Local API] (Availability),
 link:../specification/cli-and-security/01-cli-and-installer.adoc#cli-daemon-access[CLI & Security § Runtime Access & On-Demand Start],
 link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]
 Hazard:: A status query, a client status check, or a drain that silently brings up the runtime or writes a file
 breaks the single-writer rule and turns a read-only check into a state change.
-Guard:: With no runtime running, `pm-operator status`, `pm-operator client status`, and `pm-operator drain` each run
+Guard:: With no runtime running, `pm-operator status`, `pm-operator system`, `pm-operator client status`,
+`pm-operator drain`, and `pm-operator runtime stop` each run
 against a `PM_MCP_BASE` whose tree is hashed before and after: no runtime process is started,
 no socket exists afterwards, and the tree is byte-identical (contents, names, and modes), and each verb opens only
-files of the closed read-only list of `pm-api`; matched control: each command of the on-demand list (the session
-relay `pm-mcp serve --client`, `pm-mcp enter`, a `pm-operator` command that sends an API request, and
-`pm-operator runtime start`) starts the runtime on demand; negative control: the worker relay `pm-mcp serve --job`
+files of the closed read-only list of `pm-api`; matched control: each command of the on-demand list (a `pm-operator` command
+that sends an API request, and `pm-operator runtime start`) starts the runtime on demand; negative control: the worker relay `pm-mcp serve --job`
 started without a runtime starts no runtime process.
 Source:: design review.
 
@@ -89,21 +89,22 @@ Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_si
 link:../specification/runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime Model § Start Modes]
 Hazard:: A losing runtime that waits for, probes, or cleans up after the holder races the winner's startup; a client
 binary that drops `runtime-start.lock` before the round trip lets concurrent commands start further runtimes.
-Guard:: A second `pm-mcpd` for the same `PM_MCP_BASE` exits `0` immediately and writes nothing; concurrent `pm-mcp`
-and `pm-operator` commands against a stopped runtime start exactly one `pm-mcpd`, and `runtime-start.lock` stays held until the
+Guard:: A second `pm-mcpd` for the same `PM_MCP_BASE` exits `0` immediately and writes nothing; concurrent
+`pm-operator` commands against a stopped runtime start exactly one `pm-mcpd`, and `runtime-start.lock` stays held until the
 authenticated round trip succeeds or the runtime start timeout expires.
 Source:: design review.
 
 [#PM-WATCH-RUN-8]
-=== PM-WATCH-RUN-8: An operator-mode question is listed as waiting, never as stalled or timed out
+=== PM-WATCH-RUN-8: A plan in an operator wait is listed as waiting, never as stalled or timed out
 
 Anchor:: link:../specification/runtime-model/04-sessions-and-workers.adoc#stalled-plans[Runtime Model § Stalled Plans],
 link:../Requirements.adoc#PM-WF-12[PM-WF-12]
-Hazard:: A plan waiting on a question in mode `operator` (an unbounded wait, like the integrity pause) is invisible, or is treated as a
-bounded wait and expires.
-Guard:: Aged fixture: a plan resting on a mode-`operator` question beyond the stalled threshold is listed by
-`pm-operator status`, the web app, and the event stream as waiting for an answer with the question named, never as
-`stalled`, produces no `plan_stalled` record, and the question never expires; matched control: the same plan without
+Hazard:: A plan waiting for the operator (an operator wait never ended by time, like the integrity pause and a
+pause) is invisible, or is treated as a bounded wait and expires.
+Guard:: Aged fixture: a plan resting in an operator wait (an open decision) beyond the stalled threshold is listed by
+`pm-operator status`, the web app, and the event stream as waiting for an answer with the decision named, never as
+`stalled`, produces no `plan_stalled` record, and the decision never expires; a paused plan beyond the threshold is
+listed as paused, never `stalled`; matched control: the same plan without
 an open question and without progress beyond the threshold is reported `stalled` with cause `no_progress`.
 Source:: design review.
 
@@ -113,15 +114,16 @@ Source:: design review.
 Anchor:: link:../specification/runtime-model/02-startup-recovery-drain.adoc#_startup_sequence[Runtime Model § Startup Sequence] (Web listener),
 link:../specification/runtime-model/02-startup-recovery-drain.adoc#_drain_stop_upgrade[Runtime Model § Drain, Stop & Upgrade],
 link:../Requirements.adoc#PM-SEC-7[PM-SEC-7]
-Hazard:: A second HTTP server bound in the same start path as the socket makes an occupied `web.port` a start
-failure, so relays and operator verbs lose the runtime over a browser setting; a start that falls back to a free
+Hazard:: A web listener bound in the same start path as the socket makes an occupied `web.port` or
+`web.lan_port` a start failure, so workers and operator verbs lose the runtime over a browser setting; a start that falls back to a free
 port serves paired devices at an address nobody enabled; a drain that clears `web.enabled` silently switches web
 access off, and one that leaves the TCP socket bound keeps a listener without a runtime behind it.
-Guard:: Start test with `web.enabled` true and `web.port` held by a fixture process: the Unix-socket listener
-accepts an authenticated round trip, no TCP socket is listening on any other port, `pm-operator status` reports the
-web listener closed with the port, and `machine-config.json` is unchanged; drain and stop tests with web access
-enabled: after the exit no process listens on `web.port`, `web` in `machine-config.json` is byte-identical, and the
-next start opens the listener again; matched control: with the port free the same start opens it.
+Guard:: Start test with `web.enabled` and `web.lan` true and `web.port` held by a fixture process: the Unix-socket
+listener accepts an authenticated round trip, the LAN listener opens on its own port, no TCP socket is listening on
+any other port, `pm-operator status` reports the loopback listener closed with the port, and `machine-config.json`
+is unchanged; drain and stop tests with both listeners enabled: after the exit no process listens on `web.port` or
+`web.lan_port`, `web` in `machine-config.json` is byte-identical, and the
+next start opens both listeners again; matched control: with the port free the same start opens it.
 Source:: design review.
 
 [#PM-WATCH-RUN-12]
@@ -129,10 +131,10 @@ Source:: design review.
 
 Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model § Local API (`/api/v1`)] (Error codes)
 Hazard:: Refusals of the local API answered with ad-hoc codes or a bare `500`, so `pm-operator` and the web app cannot
-tell a wrong listener from an unknown scope, and a CLI-only endpoint reached over the web listener leaks which scope
+tell a wrong listener from an unknown scope, and a CLI-only endpoint reached over a web listener leaks which scope
 exists before it is refused.
 Guard:: Integration test over every `pm-api` endpoint and refusal path: each refusal returns the HTTP status and code
-of the closed list; a CLI-only endpoint called on the web listener answers `403 cli_only` before argument validation
+of the closed list; a CLI-only endpoint called on a web listener answers `403 cli_only` before argument validation
 and scope lookup. Matched control: an unauthenticated request answers `401` without a code.
 Source:: design review.
 
@@ -156,8 +158,8 @@ Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_st
 link:../specification/runtime-model/02-startup-recovery-drain.adoc#_startup_sequence[Runtime Model § Startup Sequence]
 Hazard:: On a machine without `<PM_MCP_BASE>` the start procedure cannot take `locks/runtime-start.lock`, or creates the
 directories with the process umask, so the runtime's permission check (step 3) refuses the start with exit code `77`
-on a directory the client binary created itself, or accepts a world-readable one.
-Guard:: Test per client binary (`pm-mcp`, `pm-operator`) against an empty `PM_MCP_BASE` under a permissive umask:
+on a directory `pm-operator` created itself, or accepts a world-readable one.
+Guard:: Test of `pm-operator` against an empty `PM_MCP_BASE` under a permissive umask:
 the client creates `<PM_MCP_BASE>`, `locks/`, and `logs/` with mode `0700` before it takes the start lock and spawns
 the runtime (whose output redirect to `logs/daemon.log` needs the directory), the runtime creates `run/`,
 `enrolments/`, and `state/` with mode `0700` before its permission check, and the start succeeds; matched
@@ -165,20 +167,20 @@ control: a pre-existing `<PM_MCP_BASE>` with mode `0755` is checked, never repai
 Source:: design review.
 
 [#PM-WATCH-RUN-15]
-=== PM-WATCH-RUN-15: Open: an upgrade must not be undone by the old relays and the service unit
+=== PM-WATCH-RUN-15: An upgrade is never undone by an old relay or the service unit
 
 Anchor:: link:../specification/runtime-model/02-startup-recovery-drain.adoc#_drain_stop_upgrade[Runtime Model § Drain, Stop & Upgrade]
-Hazard:: Undecided: after the `PATH` symlink switch and the drain, the relays of open host sessions are still the old
-binaries and resolve `PM_MCP_HOME` from their running executable, so their next request starts the old `pm-mcpd`
-again; the per-user service unit (Start Modes) still names the old path. The upgrade is reverted without notice and
-the old installation directory is in use again. Options: (1) host sessions must be restarted, a relay refuses to
-start a runtime that is not the current `PATH` target, and the upgrade re-runs `pm-operator runtime install`; (2) a
-stable `<PM_MCP_HOME>` `current` link that every binary and the unit resolve; (3) accept and document.
-Recommendation: 2, one mechanism covers relays and the service unit.
-Guard:: The plan implementing this anchor decides the point (with the operator where it changes scope), records
-the result in the specification and the requirement it touches, and deletes this item.
-Source:: `runtime-model/02-startup-recovery-drain.adoc:59` (Upgrade), `runtime-model/01-processes-and-transport.adoc:165`
-(Start Modes), `cli-and-security/01-cli-and-installer.adoc:51` (Resolution of `PM_MCP_HOME`).
+Hazard:: After the upgrade switched the `PATH` links, a binary of the old installation directory that starts a
+runtime (a relay resolving `PM_MCP_HOME` from its running executable, or a service unit naming the old path) brings
+the old `pm-mcpd` back, so the upgrade is reverted without notice and the old installation directory is in use
+again.
+Guard:: Upgrade test in a runtime-upgradable layout with a running worker relay of the old installation and the
+service unit installed: the relay never starts a runtime (with the old runtime gone it answers
+`runtime_unavailable` until its job ends), the unit names the new installation directory after the switch, and the
+successor is the new `pm-mcpd`; every worker launched after the upgrade starts the job relay of the new installation
+by absolute path; matched control: a successor that does not answer within the runtime start timeout switches the
+links and the unit back and starts the previous version, which records the upgrade failed.
+Source:: design review.
 
 [#PM-WATCH-RUN-17]
 === PM-WATCH-RUN-17: The socket is private before it is announced, and no native code runs from the temporary directory
@@ -264,9 +266,9 @@ Source:: harness-as-worker evaluation (doc/specification/evaluation.adoc).
 Anchor:: link:../specification/runtime-model/03-relay.adoc#relay-rules[Runtime Model § Relay Rules] (rule 5),
 link:../Requirements.adoc#PM-ARCH-3[PM-ARCH-3]
 Hazard:: With the worker identity, generation, and role visible as tool arguments, the OpenCode model filled them
-with invented values and kept them in its compaction summary; after a compaction an interactive model passed an
-invented worker id remembered from another session.
-Guard:: A `tools/list` through the relay, for a session and a worker relay of every client, contains no property of
+with invented values and kept them in its compaction summary; after a compaction a model passed an invented
+worker id remembered from an earlier run.
+Guard:: A `tools/list` through the worker relay of every client, contains no property of
 the identity set (`generation_id`, `role`, `worker`, `job_token`) in any `inputSchema`; a `tools/call` carrying such an
 argument reaches the runtime without it; the runtime's own tool schemas declare none, and identity, role, and
 generation are taken only from the relay's headers; matched control: a call whose header identity differs from an
@@ -284,7 +286,7 @@ Hazard:: A stalled plan left no record; an agent that announced continuation and
 unnoticed.
 Guard:: `pm-operator status`, the web app, and the epic view derive `stalled` (cause `no_progress`) for non-terminal
 scopes without pending condition or awaited event (no running job, no task queued or leased within its budget, no
-open external wait, waiver wait, or question record) whose last transition or task progress is older than the
+open external wait, operator wait, pause, or hold) whose last transition or task progress is older than the
 compiled stalled threshold, and the runtime records one `plan_stalled` audit record per episode with the idle span;
 a role the supervisor cannot serve stalls nothing, because its tasks close `role_unavailable`; metrics derive idle
 gaps from the audit log; nothing of it reaches a model-facing representation; test with an aged fixture, a blocked

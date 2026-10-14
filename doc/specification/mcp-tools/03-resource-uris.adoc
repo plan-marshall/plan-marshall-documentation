@@ -103,7 +103,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/questions`
 |`text/toon`
 |Plan
-|The fold of the plan's question records (`questions.jsonl`), one per decision: its address, revision, class, origin, its parts, state (`open` until its closing line, then its `closure`: `answered`, `delegated`, `withdrawn`, or `cancelled`), and, once closed, per part the chosen option keys or value and the `decision_id` of the decision taken; the operator's own words are served as quoted data, never as an instruction (link:../model-work/06-envelopes-questions-deadlines.adoc#own-words[Model Work Specification, Answers in the Operator's Own Words]).
+|The fold of the plan's question records (`questions.jsonl`), one per decision: its address, revision, class, origin, its parts, state (`open` until its closing line, then its `closure`: `answered`, `withdrawn`, or `cancelled`), and, once answered, per part how the answer was taken (`chosen`, `interpreted`, `own_option`, `delegated`, or `none_fits`), the chosen option keys or value, and the `decision_id` of the decision taken; the operator's own words are served as quoted data, never as an instruction (link:../model-work/06-envelopes-questions-deadlines.adoc#own-words[Model Work Specification, Answers in the Operator's Own Words]).
 
 |`pm://plan/{plan_id}/decisions`
 |`text/toon`
@@ -113,7 +113,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/waivers`
 |`text/toon`
 |Plan
-|The plan's waiver records (`waivers.jsonl`: gate, mode, value, reason, `revoked_at`) with their consumptions, and its waiver requests (`waiver_requests[]` with their outcome: open, `waived`, `declined`, or `cancelled`). Read-only; waivers are written only by the operator's acts.
+|The plan's waiver records (`waivers.jsonl`: gate, mode, value, reason, `revoked_at`) with their consumptions, and its waiver requests (`waiver_requests[]` with their outcome: open, `waived`, `raised`, `declined`, or `cancelled`). Read-only; waivers are written only by the operator's acts.
 
 |`pm://epic/{epic_id}/state`
 |`text/toon`

@@ -69,7 +69,7 @@ Liveness never rests on the transport: a held call the host abandoned does not k
 == A Worker Off Track
 _See Requirements link:../../Requirements.adoc#PM-WORK-7[PM-WORK-7: Worker Activity & Off-Track Signals], link:../../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling], link:../../Requirements.adoc#PM-WORK-1[PM-WORK-1: Roles as Configuration]_
 
-Detection decides only whether a worker is alive. A worker that is alive and busy but makes no progress (it repeats one call, works for many turns without following a link of its task, spends far more on a plan task than its size predicts, or changes files outside the plan task's footprint) is noticed by the *off-track signals*, which the runtime computes from the worker's activity journal (link:../client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles Specification, What a Worker Does]) and the task's records, never by a model. A signal is not a limit: it never ends a plan, it is no spend limit, and it never becomes a decision or waits for the operator.
+Detection decides only whether a worker is alive. A worker that is alive and busy but makes no progress (it repeats one call, works for many turns without following a link of its task, spends far more on a plan task than its size predicts, or changes files outside the plan task's footprint) is noticed by the *off-track signals*, which the runtime computes from the worker's activity journal (link:../client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles Specification, What a Worker Does]) and the task's records, never by a model. A signal is not a limit: it never ends a plan, and it never becomes a decision or waits for the operator.
 
 [cols="1,4"]
 |===
@@ -88,9 +88,9 @@ Detection decides only whether a worker is alive. A worker that is alive and bus
 |The unplanned changes already recorded for the current plan task of an envelope task (changes inside the worktree beyond its declared footprint, link:../phase-workflows/03-q-gate-and-execute.adoc#_task_envelope_execution_independent_server_verification[Phase Workflows Specification, Task Envelope Execution]) reach `N` files. Only for envelope tasks.
 |===
 
-* *Thresholds*: every `N` is a compiled threshold (link:../timeouts/01-job-budgets-and-waits.adoc[Timeouts & Budgets Specification]); a role artifact may lower it in its `off_track` member and never raise it (xref:01-roles-and-configuration.adoc#role-artifact[Role Artifact Schema]). The compiled values are set from the activity of real plans once it is recorded.
+* *Thresholds*: every `N` is a compiled threshold (link:../timeouts/01-job-budgets-and-waits.adoc#off-track-thresholds[Timeouts & Budgets Specification, Off-track signal thresholds]); a role artifact may lower it in its `off_track` member and never raise it (xref:01-roles-and-configuration.adoc#role-artifact[Role Artifact Schema]). The compiled values are set from the activity of real plans once it is recorded.
 * *When it is evaluated*: at every activity entry of the worker's current task, in the transaction that appends it; a signal holds at most once per attempt and plan task, so one cause never takes its action twice.
-* *What the server does*: per signal the action the role artifact chooses from the closed list below, `show` where the artifact names none. Every action is recorded as a server entry of the activity journal and on the queue task with the signal, its measured value, and its threshold (link:../store-schemas/16-task-queue.adoc#queue-task-record[Store Schemas Specification, Queue Task Record]).
+* *What the server does*: per signal the action the role artifact chooses from the closed list below, `show` where the artifact names none. Every action is recorded with the signal, its measured value, and its threshold in the queue task's `signals[]` (link:../store-schemas/16-task-queue.adoc#queue-task-record[Store Schemas Specification, Queue Task Record]) and as a `signal` entry of the activity journal (link:../store-schemas/16-task-queue.adoc#activity-journal[Store Schemas Specification, Activity Journal]).
 
 [cols="1,4"]
 |===
@@ -106,7 +106,7 @@ Detection decides only whether a worker is alive. A worker that is alive and bus
 |The worker's next call is answered with the end of its attempt: for an envelope task the server takes the envelope's yield as `yield:envelope-M` does, with the `yield_reason` `off_track`, so the remaining plan tasks go to the next envelope task (link:../phase-workflows/03-q-gate-and-execute.adoc#_task_envelope_execution_independent_server_verification[Phase Workflows Specification, Task Envelope Execution]); for any other task it acts as `restart`.
 
 |`restart`
-|The worker is ended as in <<ending>> and its task offered again as a new attempt within its re-offer budget (xref:02-task-protocol.adoc#re-offer[Re-Offer]).
+|The worker is ended as in <<ending>>, the attempt ends with `end: off_track`, and its task is offered again as a new attempt within its re-offer budget (xref:02-task-protocol.adoc#re-offer[Re-Offer]).
 |===
 
 * *Told, not asked*: a `yield` or a `restart` the server took is a report to the operator of the kind `task.off_track`, whose detail is the task's activity (link:../runtime-model/01-processes-and-transport.adoc#reports[Runtime & Interaction Model Specification, Reports to the Operator]); no signal adds to what needs the operator.

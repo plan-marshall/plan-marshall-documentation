@@ -151,11 +151,12 @@ Written only by the runtime under `locks/machine-config.lock`, on the operator's
     "plan_defaults": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The machine's variant of each plan behaviour axis (Workflow DSL Specification, Plan Behaviour Axes); a project's team or operator value and a plan's own override it.",
+      "description": "The machine's variant of each plan behaviour axis (Workflow DSL Specification, Plan Behaviour Axes); a project's team or operator value and a plan's own override it; posture is no axis but resolves by the same levels.",
       "properties": {
         "landing": { "type": "string", "enum": ["landing.pull-request", "landing.main", "landing.files"], "default": "landing.pull-request" },
         "method": { "type": "string", "enum": ["method.test-first", "method.tests-after"], "default": "method.tests-after" },
-        "asking": { "type": "string", "enum": ["ask.every-phase", "ask.key-points", "ask.questions-only"], "default": "ask.questions-only" }
+        "asking": { "type": "string", "enum": ["ask.every-phase", "ask.key-points", "ask.questions-only"], "default": "ask.questions-only" },
+        "posture": { "type": "string", "enum": ["minimal", "standard", "full"], "description": "Optional, no default: the machine's execution posture, set in the machine's settings and never asked in the onboarding; while neither the machine nor the project sets it, a plan asks it in init.options (Workflow DSL Specification, Posture and base branch)." }
       }
     },
     "sources": {
@@ -506,9 +507,9 @@ The allowed origin for a credential is the origin of the `url` of its operator-o
 A file exists only for a complete credential: an empty secret is refused, so no placeholder state exists. The `auth_type` values `none` and `system` of `plan-marshall` have no file: a provider without authentication needs no credential, and the System Lane (the CLI variant of `git`, `github`, `gitlab`) uses the operator's ambient CLI authentication by design (link:../cli-and-security/02-credentials-and-operator.adoc#cli-variant-credentials[CLI, Coordination & Security Specification, Credentials of the CLI Variant]). A GitHub App installation token is derived from the `private_key`, and a user access token from the `refresh_token`, at run time; neither is stored in any backend (link:../cli-and-security/02-credentials-and-operator.adoc#derived-tokens[CLI, Coordination & Security Specification, Short-Lived Derived Tokens]).
 
 [#machine-state-records]
-=== Machine State Records (`install-records.json`, `runtime.json`, `upgrade.json`)
+=== Machine State Records (`install-records.json`, `runtime.json`, `upgrade.json`, `login-environment.json`)
 
-Three single-writer records in `<PM_MCP_BASE>/state/` (mode `0600`), each with `format_version` and a closed schema.
+Four single-writer records in `<PM_MCP_BASE>/state/` (mode `0600`), each with `format_version` and a closed schema.
 
 *`state/install-records.json`*: written by the runtime on the requests of `pm-operator client install|update|remove` under `locks/install-records.lock` (link:../cli-and-security/01-cli-and-installer.adoc#client-installer[CLI, Coordination & Security Specification, Client Bundle Installer]); read by the runtime (ownership and digest verification, link:../client-profiles/03-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles Specification]) and, read-only, by `pm-operator client status` for the drift checks `bundle_outdated` and `bundle_modified` (link:../cli-and-security/01-cli-and-installer.adoc#bundle-drift-notice[CLI, Coordination & Security Specification, Bundle Drift Notice]). One install exists per `(client_id, scope, target_root)`; every owned file, key, and element carries the digest the drift checks compare.
 
@@ -667,6 +668,26 @@ Three single-writer records in `<PM_MCP_BASE>/state/` (mode `0600`), each with `
         "installation_dir": { "type": "string", "minLength": 1 }
       }
     }
+  }
+}
+----
+
+[[login-environment-record]]*`state/login-environment.json`*: the operator's login environment as the terminal client last sent it with a request that needs it (link:../cli-and-security/01-cli-and-installer.adoc#client-environment[CLI, Coordination & Security Specification, What the Terminal Client Sends]), written by the runtime under `locks/login-environment.lock` whenever such a request carries one, replacing the previous record. A request from the web app that needs the environment (the harness scan, a project's onboarding) takes it from this record and shows its time. It is read only by the runtime, never by a job or a model; a variable matching the credential patterns of the job environment is never captured, so the record holds nothing secret (link:../job-runtime/02-confinement-and-environment.adoc#_job_environment_pm_sec_5[Job Runtime Specification, Job Environment]).
+
+[source,json]
+----
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cuioss.de/plan-marshall-mcp/schemas/login-environment.json",
+  "title": "LoginEnvironment",
+  "type": "object",
+  "required": ["format_version", "captured_at", "path", "variables"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "captured_at": { "type": "string", "format": "date-time", "description": "When the terminal client captured the environment it sent." },
+    "path": { "type": "array", "items": { "type": "string", "pattern": "^/" }, "description": "The absolute directories of the login PATH, in order." },
+    "variables": { "type": "object", "additionalProperties": { "type": "string" }, "description": "The variables of the job environment with provenance enrolment, by name." }
   }
 }
 ----
@@ -934,7 +955,7 @@ Every state transition, job execution, operator act (in either client), credenti
 }
 ----
 
-*Enrolment records*: An enrolment HMAC mismatch appends a `security` record (`event: enrolment_tampered`), an operator re-baselining an `operator` record. An enrolment write that sets or clears `container_engine` appends an `operator` record (`event: container_engine_enabled` or `container_engine_disabled`, `details{project_id, engine}`), naming the Docker-group authority the operator confirmed. `pm-operator unenrol` appends `project_unenrolled`, and the release of a project `project_released` (`operator`, `details{project_id, plans, epics}`).
+*Enrolment records*: An enrolment HMAC mismatch appends a `security` record (`event: enrolment_tampered`), an operator re-baselining an `operator` record. An enrolment write that sets or clears `container_engine` appends an `operator` record (`event: container_engine_enabled` or `container_engine_disabled`, `details{project_id, engine}`), naming the Docker-group authority the operator confirmed. `pm-operator project unenrol` appends `project_unenrolled`, and the release of a project `project_released` (`operator`, `details{project_id, plans, epics}`).
 
 *Consent records*: A remembered and a withdrawn consent append an `operator` record (`event: consent_remembered` or `consent_withdrawn`, `details{kind, project_id}`, <<consent>>); a consent answered `yes` or `no` for one run is part of the transition record of its state.
 

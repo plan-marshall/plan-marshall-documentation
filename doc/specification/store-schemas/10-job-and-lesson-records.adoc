@@ -36,8 +36,8 @@ The write-ahead job journal: one record per job, written at three points (four f
   "additionalProperties": false,
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
-    "job_id": { "type": "string", "pattern": "^[bcglp]-[0-9a-f]{16}$" },
-    "kind": { "type": "string", "enum": ["build", "ci", "git", "project_script", "llm"], "description": "llm: a worker, a headless harness CLI the supervisor launches for one role (model-work.adoc, Supervision & Recycling). A review-bot poll is a ci job (budget key ci:<operation>), never a kind of its own." },
+    "job_id": { "type": "string", "pattern": "^[bcglpv]-[0-9a-f]{16}$" },
+    "kind": { "type": "string", "enum": ["build", "ci", "git", "project_script", "llm", "probe"], "description": "llm: a worker, a headless harness CLI the supervisor launches for one role (model-work.adoc, Supervision & Recycling). probe: a program found on the machine or in a checkout and not enrolled yet, run after the operator's consent (job-runtime.adoc, Probe Jobs); its scope is machine or entry. A review-bot poll is a ci job (budget key ci:<operation>), never a kind of its own." },
     "execution": { "type": "string", "enum": ["process", "in_process"], "description": "in_process only for git and ci operations of the native variant; their process fields (argv_digest, pid, process_started_at, spawned_at, exit_code, signal) are null and confinement is not_applicable." },
     "scope": {
       "type": "object",
@@ -195,7 +195,8 @@ The write-ahead job journal: one record per job, written at three points (four f
     }
   },
   "allOf": [
-    { "if": { "properties": { "kind": { "const": "llm" } } }, "then": { "properties": { "worker": { "type": "object" }, "execution": { "const": "process" }, "scope": { "properties": { "type": { "enum": ["project", "machine"] } } } } }, "else": { "properties": { "worker": { "type": "null" } } } }
+    { "if": { "properties": { "kind": { "const": "llm" } } }, "then": { "properties": { "worker": { "type": "object" }, "execution": { "const": "process" }, "scope": { "properties": { "type": { "enum": ["project", "machine"] } } } } }, "else": { "properties": { "worker": { "type": "null" } } } },
+    { "if": { "properties": { "kind": { "const": "probe" } } }, "then": { "properties": { "execution": { "const": "process" }, "scope": { "properties": { "type": { "enum": ["machine", "entry"] } } } } } }
   ]
 }
 ----

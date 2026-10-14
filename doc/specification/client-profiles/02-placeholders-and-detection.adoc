@@ -113,7 +113,7 @@ The one use of detection is the operator checks of `pm-operator`: they recognise
 
 [#host-integration-table]
 === Host Integration Table (Normative)
-_Implementation watch: link:../../implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-13[PM-WATCH-CLIENT-13]_
+_Implementation watch: link:../../implementation-watch/client-profiles.adoc#PM-WATCH-CLIENT-4[PM-WATCH-CLIENT-4]_
 
 This table is the single source for host-specific values. Requirements, other specifications, and the roadmap reference it instead of repeating values. Values without a marker are verified against a local installation of the host and what it sends at `initialize` (Claude Code 2.1, OpenCode 1.18, Antigravity CLI `agy` 1.3), or backed by the evaluation (link:../evaluation.adoc[Evaluation Reference]) or by `plan-marshall` (`script-shared/scripts/marketplace_paths.py`, `platform-runtime/scripts/{opencode,antigravity}_runtime.py`, verified at commit `1d4a1da37`). Values marked _(provisional)_ are known from the host's documentation, source, or binary only and are verified against a live host before the profile ships: every Codex value, and the Antigravity values that only a live session shows.
 

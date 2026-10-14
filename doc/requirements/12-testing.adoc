@@ -140,8 +140,8 @@ The command-line clients and the web app must be developable and testable agains
 
 * The system must provide a mock runtime (`pm-mock-runtime`, a module of `pm-mcp-clients`) that serves the local API `/api/v1` with the contract of `pm-api` on the Unix socket of a `PM_MCP_BASE` it is given and, on request, on a loopback web port, driven by scenario files that list states, the links leading between them, and timed events; it must never run a job, start a harness, read the machine, write a store, or be shipped.
 * The system must validate every scenario against the codecs of `pm-api` when it is loaded and refuse a request that matches no link of the current state with an error naming the state.
-* The system must use the same scenario files for development, for the integration tests of `pm-operator` and `pm-relay`, and for the unit tests of the web app.
-* Every client-facing flow must ship its scenarios with its API, and once the real runtime serves the flow, the integration tests of `pm-mcp-server` must replay the scenarios against it and fail on a different state, link relation, or error code.
+* The system must use the same scenario files for development, for the integration tests of `pm-operator`, and for the unit tests of the web app.
+* Every client-facing flow must ship its scenarios with its API, and once the real runtime serves the flow, the integration tests of `pm-mcp-server` must replay the scenarios against it and fail on a different state, offered operator link, event, or error code.
 
 See the link:specification/runtime-model/05-mock-runtime.adoc[Runtime & Interaction Model Specification, Mock Runtime] and the link:specification/module-structure.adoc[Module Structure Specification] for implementation details.
 

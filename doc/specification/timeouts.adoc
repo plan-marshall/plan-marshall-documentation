@@ -39,6 +39,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-SEC-3[PM-SEC-3: Operator Channel Isolation (Operator CLI & Paired Web Devices)]_
 * _See Requirement link:../Requirements.adoc#PM-SEC-7[PM-SEC-7: Optional Web Access, Device Pairing & Browser Channel Hardening]_
 * _See Requirement link:../Requirements.adoc#PM-TECH-4[PM-TECH-4: Operating System Platform Integration (macOS & Linux)]_
+* _See Requirement link:../Requirements.adoc#PM-EXT-6[PM-EXT-6: Configuration Split by Owner Class (Team, Operator, Server State)]_
 * _See Requirement link:../Requirements.adoc#PM-CLIENT-5[PM-CLIENT-5: Versioned Client Profile Schema & Override Hierarchy]_
 * _See Requirement link:../Requirements.adoc#PM-IMPL-4[PM-IMPL-4: Bounded Long-Poll & Progress-Reset Waiting Primitives]_
 * _See Requirement link:../Requirements.adoc#PM-MIG-5[PM-MIG-5: Quantitative Triggers & Project Release]_
@@ -76,6 +77,6 @@ A value marked _open_ is not yet defined; it belongs to the named open design to
 
 == Parts
 
-* link:timeouts/01-job-budgets-and-waits.adoc[Job Budgets & Waits] — job budgets and escalation (workers included), no-verdict outcomes, waits and long-polls (the release's landing wait included), worker supervision and recycling (acknowledgement deadline, silence limit, idle recycle, token budget, start-failure guard, task re-offer budget, the thresholds of the off-track signals), and the remediation budgets with the vote wait and the commit attempt caps
+* link:timeouts/01-job-budgets-and-waits.adoc[Job Budgets & Waits] — job budgets and escalation (workers and probes included), no-verdict outcomes, waits and long-polls (the release's landing wait included), worker supervision and recycling (acknowledgement deadline, silence limit, idle recycle, token budget, start-failure guard, task re-offer budget, the thresholds of the off-track signals), and the remediation budgets with the vote wait and the commit attempt caps
 * link:timeouts/02-runtime-leases-operator-web.adoc[Runtime Lifecycle, Leases, Operator & Web] — runtime lifecycle timeouts (the runtime HTTP idle timeout, the event buffer, the metrics event interval, the update check, and the language server restart cap included), leases and heartbeats (the merge-mutex admission wait, model slots, task leases, job tokens, and generations included), the operator wait and the waiver, waiver-request, access-grant, and integrity-pause lifetimes, and web access
-* link:timeouts/03-retention-host-config.adoc[Retention, Host Integration & Configuration] — retention and rotation of residue, the one cleanup of work history, host integration, derived fact validity, the worker input size limits, and configuration keys
+* link:timeouts/03-retention-host-config.adoc[Retention, Host Integration & Configuration] — retention and rotation of residue, the one cleanup of work history, host integration, derived fact validity, the worker input size limits, the bounds of activity and views, and configuration keys

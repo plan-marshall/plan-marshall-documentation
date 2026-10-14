@@ -82,6 +82,7 @@ The runtime (`pm-mcpd`) persists machine-wide configuration and the machine's ot
 │   ├── enrolment-hmac.key               # Enrolment integrity key while the file store holds it (mode 0600)
 │   ├── runtime.json                     # Runtime record: pid, start instant, version, listener, socket path; written at socket bind
 │   ├── upgrade.json                     # Newest version known, last check, last upgrade, the way back
+│   ├── login-environment.json           # Login PATH and build environment the terminal client last sent, with its time (mode 0600)
 │   ├── reports.jsonl                    # Reports to the operator: report, read, and deleted events (own leaf lock)
 │   ├── cleanup.jsonl                    # Cleanup jobs: job, decided, deleted, kept, released events (own leaf lock)
 │   └── usage-aggregate.jsonl            # Tokens of deleted plans per day, project, model, and role (own leaf lock)
@@ -97,7 +98,7 @@ The runtime (`pm-mcpd`) persists machine-wide configuration and the machine's ot
 │
 ├── locks/                               # Cross-process OS FileChannel.lock() primitives
 │   ├── runtime.lock                     # Runtime singleton lock (held for the runtime lifetime)
-│   ├── runtime-start.lock               # Serializes on-demand runtime start by pm-mcp and pm-operator (their only lock)
+│   ├── runtime-start.lock               # Serializes on-demand runtime start by pm-operator (its only lock)
 │   │                                    # Machine store locks, one sibling lock per renamed store,
 │   │                                    # acquired alphabetically after all scope locks:
 │   ├── build-slots.lock                 # state/build-slots.json
@@ -111,6 +112,7 @@ The runtime (`pm-mcpd`) persists machine-wide configuration and the machine's ot
 │   ├── host-tools.lock                  # host-tools.json and its .hmac
 │   ├── icons.lock                       # icons/
 │   ├── install-records.lock             # state/install-records.json
+│   ├── login-environment.lock           # state/login-environment.json
 │   ├── machine-config.lock              # machine-config.json
 │   ├── merge.lock                       # state/merge-queue.json (merge leases)
 │   ├── model-catalogue.lock             # model-catalogue.json
@@ -197,7 +199,7 @@ The runtime creates every file under `<PM_MCP_BASE>` with mode `0600` and every 
 
 |`<PM_MCP_BASE>/locks/*.lock` and `<PM_MCP_BASE>/projects/<project_id>/locks/*.lock`
 |`0600` (`-rw-------`)
-|Held via OS kernel `FileChannel.lock()`. The store and scope locks are taken only by the runtime, the only store writer; `runtime-start.lock` is also taken by a `pm-mcp` or `pm-operator` command during the on-demand start, and no other process takes a lock.
+|Held via OS kernel `FileChannel.lock()`. The store and scope locks are taken only by the runtime, the only store writer; `runtime-start.lock` is also taken by a `pm-operator` command during the on-demand start, and no other process takes a lock.
 
 |`<PM_MCP_BASE>/run/`
 |`0700` (`drwx------`), no symlink

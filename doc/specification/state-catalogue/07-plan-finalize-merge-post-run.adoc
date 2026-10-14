@@ -69,9 +69,9 @@ Continues xref:04-plan-finalize-terminal.adoc#state-catalogue-finalize[Phase 6: 
 |[[state-finalize.remediate-merge-conflict]]`finalize.remediate-merge-conflict`
 |`phase-6-finalize`
 |`call`
-|`finalize.merge-sync` (`conflict`, `rejected_lease`; lease released).
+|`finalize.merge-sync` (`conflict`, `rejected_lease`; lease released); `finalize.land-main` (`conflict`, `landing.main`).
 |`call remediation.merge-conflict (retry_budget=0, fix_budget=2, actions=[fix])` (xref:11-remediation-units-merge-qgate-spend.adoc#state-catalogue-remediation-merge[`remediation.merge-conflict`]); a moved remote is integrated by a server rebase onto the observed remote head, never by a forced push over the foreign commits.
-|`resolved` -> `finalize.merge-gate` (the next `finalize.merge-sync` pushes the rebased branch with the lease); `exhausted` -> `finalize.replan` (trigger `ceiling`); `stepped_out` -> `finalize.hand-back`.
+|`resolved` -> `finalize.merge-gate` (the next `finalize.merge-sync` pushes the rebased branch with the lease), or `finalize.land-main` under `landing.main`; `exhausted` -> `finalize.replan` (trigger `ceiling`); `stepped_out` -> `finalize.hand-back`.
 |link:../phase-workflows/06-finalize-re-entry-and-merge.adoc#merge-path[Phase Workflows Specification, Merge Path]
 
 |[[state-finalize.merge-evidence-wait]]`finalize.merge-evidence-wait`
@@ -93,9 +93,9 @@ Continues xref:04-plan-finalize-terminal.adoc#state-catalogue-finalize[Phase 6: 
 |[[state-finalize.remediate-barrier]]`finalize.remediate-barrier`
 |`phase-6-finalize`
 |`call`
-|`finalize.merge-barrier` (`findings_untriaged`, `evidence_missing`).
+|`finalize.merge-barrier` (`findings_untriaged`, `evidence_missing`); `finalize.land-main` (`findings_untriaged`, `evidence_missing`, `landing.main`).
 |`call remediation.review-findings (retry_budget=1, fix_budget=3, actions=[retry,fix])`; terminus findings are fix-free, dependency-delta findings `FIX`-only.
-|`resolved`, `waived` -> `finalize.merge-gate`; `exhausted` -> `finalize.replan` (trigger `ceiling`); `stepped_out` -> `finalize.hand-back`.
+|`resolved`, `waived` -> `finalize.merge-gate`, or `finalize.land-main` under `landing.main`; `exhausted` -> `finalize.replan` (trigger `ceiling`); `stepped_out` -> `finalize.hand-back`.
 |link:../phase-workflows/06-finalize-re-entry-and-merge.adoc#_two_fail_closed_barrier_predicates[Phase Workflows Specification, Two Fail-Closed Barrier Predicates]
 
 |[[state-finalize.remediate-barrier-ci]]`finalize.remediate-barrier-ci`
@@ -209,7 +209,7 @@ Every plan passes these states, whatever its outcome; after a fallback or an emp
 |`auto`
 |`finalize.next-step` (step `default:archive-plan`, order `1100`); `finalize.archive-unobserved` (`retry`, `cancelled`).
 |`auto finalize.archive-plan`: observes the plan's pull request, if it has one (`ci.pr-observe`), then moves the plan to `archive/<plan_id>/` with `merge_outcome` and `merge_state` from the observation (link:../store-schemas/02-workflow-state-store.adoc#merge-outcome-mapping[Store Schemas Specification, Merge Outcome Mapping]) and enters the terminal of the recorded plan `outcome`. A failed observation archives nothing while the compiled condition budget of the step (link:../timeouts/01-job-budgets-and-waits.adoc#condition-budget[Timeouts & Budgets Specification, Condition Budget]) has attempts left; once it is spent, a failed observation archives the plan with the `merge_outcome` the plan's own records determine (the merge record, the hand-back record) and `merge_state: unknown`, counted in the landing's `missing_facts`, and settles the recorded plan `outcome`. The pull request of a handed-back plan stays open.
-|`merged`, `no_change` -> `completed`; `handed_back` -> `handed_back`; `returned` -> `returned` (each `completes default:archive-plan as done`, also after a spent budget with `merge_state: unknown`); `observation_failed` (budget left) -> `finalize.archive-unobserved`.
+|`merged` -> `finalize.merged`; `no_change` -> `finalize.no-change`; `handed_back` -> `finalize.handed-back`; `returned` -> `finalize.returned` (the phase's terminals, on which the plan unit enters `completed`, `handed_back`, or `returned`; each `completes default:archive-plan as done`, also after a spent budget with `merge_state: unknown`); `observation_failed` (budget left) -> `finalize.archive-unobserved`.
 |link:../phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows Specification, Step Catalogue row `1100`]
 
 |[[state-finalize.archive-unobserved]]`finalize.archive-unobserved`
@@ -219,4 +219,12 @@ Every plan passes these states, whatever its outcome; after a fallback or an emp
 |`composite_job finalize.archive-unobserved`, the server's retry wait: it records the failed observation and the attempts left and waits the retry backoff (`TIME`, link:../timeouts/01-job-budgets-and-waits.adoc#server-retry-backoff[Timeouts & Budgets Specification, Server Retry Backoff]) before the archive step re-observes, so the retry is no engine-chained cycle (Rule 11a). Nothing is archived and no `merge_state` is written while the pull request cannot be observed and budget is left; the state never strands the plan.
 |`retry` (the backoff elapsed), `cancelled` -> `finalize.archive-plan`; with the budget spent `finalize.archive-plan` archives with `merge_state: unknown` instead of settling `observation_failed` again.
 |link:../phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows Specification, Step Catalogue row `1100`]
+
+|[[state-finalize.merged]][[state-finalize.no-change]][[state-finalize.handed-back]][[state-finalize.returned]][[state-finalize.reenter-execute]][[state-finalize.loop-back-outline]]`finalize.merged`, `finalize.no-change`, `finalize.handed-back`, `finalize.returned`, `finalize.reenter-execute`, `finalize.loop-back-outline`
+|`phase-6-finalize`
+|`terminal`
+|`finalize.archive-plan` (`merged`, `no_change`, `handed_back`, `returned`); `finalize.allocate-remediation` (`allocated`), `finalize.replan` (`reentered`); `finalize.replan` (`reauthor`).
+|The terminals of the phase sub-workflow `phase-6-finalize`: declared `terminal merged success`, `terminal no_change success`, `terminal handed_back failure`, `terminal returned failure`, `terminal reenter_execute unsettled`, and `terminal loop_back_outline unsettled`.
+|The phase's exits of the same names to the plan unit's `phases.finalize` call states (xref:18-plan-unit-axes-short-landings.adoc#state-catalogue-plan-unit[Plan Unit]): `merged`, `no_change` -> `completed`; `handed_back` -> `handed_back`; `returned` -> `returned`; `reenter_execute` -> `phases.execute-reentry`; `loop_back_outline` -> `phases.outline-rework`.
+|link:../workflow-dsl/03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Workflow DSL Specification, `phase-6-finalize.pmwf` Excerpt]
 |===

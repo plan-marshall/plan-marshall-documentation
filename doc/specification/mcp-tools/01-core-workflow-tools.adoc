@@ -155,7 +155,7 @@ Returns the current hypermedia representation (`state`, `summary`, `skill` URI, 
     "plan_id": {
       "type": "string",
       "pattern": "^([a-z0-9][a-z0-9-]{1,62}[a-z0-9]|NO_PLAN)$",
-      "description": "Identifier of the target plan scope, or the literal NO_PLAN for the project's workspace scope. Exactly one of plan_id or epic_id is required (server-enforced)."
+      "description": "Identifier of the target plan scope, or the literal NO_PLAN for the project's workspace scope, or for the machine scope where the worker's task is of the machine scope (resolved from the job record). Exactly one of plan_id or epic_id is required (server-enforced)."
     },
     "epic_id": {
       "type": "string",
@@ -204,7 +204,7 @@ The sole state transition verb of the MCP surface. Executes the transition ident
     "plan_id": {
       "type": "string",
       "pattern": "^([a-z0-9][a-z0-9-]{1,62}[a-z0-9]|NO_PLAN)$",
-      "description": "Identifier of the target plan scope, or the literal NO_PLAN for the project's workspace scope. Exactly one of plan_id or epic_id is required (server-enforced)."
+      "description": "Identifier of the target plan scope, or the literal NO_PLAN for the project's workspace scope, or for the machine scope where the worker's task is of the machine scope (resolved from the job record). Exactly one of plan_id or epic_id is required (server-enforced)."
     },
     "epic_id": {
       "type": "string",

@@ -91,9 +91,9 @@ Guard:: Rule 8 is implemented: a unit with a path from the start state to a stat
 producer on it is refused, and the matched control with the producer on the path passes (`WorkflowValidatorTest`
 with `gate-producer-missing.pmwf` of `pm-workflow`,
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-verify.adoc#_rule_8_gate_producers[Workflow Verification Developer Guide § Rule 8: Gate Producers]).
-Remaining: a test unit whose recipe shortcut reaches the Phase 3 arrival gate without a `pr_title` producer, while
-its other path passes one, fails rule 8 (the fixture has a single path); the shipped recipe path passes because
-`init.recipe-selected` renders `pr_title_template`, and the light lane, which skips Phase 2 by design, passes because
+Remaining: a test unit with two paths to the Phase 3 arrival gate, one without a `pr_title` producer, fails rule 8
+(the fixture has a single path); a recipe's workflow passes because its own phases render the recipe's
+`pr_title_template` before it calls the phase, and the light lane, which skips Phase 2 by design, passes because
 its collapsed envelope's `submit:outline` must carry `pr_title`, both over the shipped default units of
 `pm-mcp-server`; a test unit whose light path lacks that producer fails rule 8. Rule 8 counts as a producer the
 primitive of an `auto`, `job`, `composite_job`, or `facts` clause only, not a link's primitive or a task's return
@@ -186,20 +186,19 @@ routes `stepped_out`.
 Source:: design review.
 
 [#PM-WATCH-DSL-18]
-=== PM-WATCH-DSL-18: The integrity pause offers nothing and holds every deadline
+=== PM-WATCH-DSL-18: The integrity pause offers only its two acts and takes no transition
 
 Anchor:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#waivers-and-integrity[Workflow DSL § Waivers, Waiver Requests & the Integrity Pause],
 link:../Requirements.adoc#PM-WF-3[PM-WF-3]
-Hazard:: A paused scope still renders a link, or a server timer (question wait, waiver wait) expires during the
-pause and takes a fallback the operator could not prevent; `accept-edit` clears the pause without re-verifying the
-store.
+Hazard:: A paused scope still renders a link or takes a transition, or the pause restores the file or computes a
+difference over a store that cannot be trusted; accepting the edit clears the pause without re-verifying the store.
 Guard:: Scenario: a digest mismatch of `status.json` raises `integrity_breach`; the representation carries the
-condition and no link, every `pm_do` is refused with `integrity_paused`; the deadline of an open question record or
-a pending waiver request that passed during the pause fires once, right after it ends, and its `expires_at` is
-unchanged; `accept-edit` re-baselines and the
-engine re-verifies before the current state is re-rendered; `abort` enters `plan.aborted`; matched control: a
-non-integrity condition on the same state is remedied by the server within its budget while the scope's task
-entities keep their links.
+condition and no link, every `pm_do` is refused with `integrity_paused`, and no transition of the scope is taken
+while it is set; both clients show the hold `integrity_pause` with the tampered file and its recorded and current
+size and digest, and nothing is restored and no difference is computed; accepting the edit re-baselines and the
+engine re-verifies before the current state is re-rendered; the cancel ends the plan in `plan.aborted` with the
+outcome `aborted` (an epic `cancelled`); matched control: a non-integrity condition on the same state is remedied
+by the server within its budget while the scope's task entities keep their links.
 Source:: design review.
 
 [#PM-WATCH-DSL-20]
@@ -221,11 +220,11 @@ Source:: design review.
 
 Anchor:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL § Task States] (Fan-out)
 Hazard:: A fan-out that raises `job_incomplete` per ended task stacks conditions on one state; a re-offer that
-covers every element repeats finished work and its spend; a cancellation that reaches one task leaves the others
+covers every element repeats finished work and its tokens; a cancellation that reaches one task leaves the others
 running; and tasks created as a set bypass the leaf rule or the one-writer rule that hold for a single task.
 Guard:: Scenario on a `job llm … each …` state over a list of three: with one entity left without its required
 submission, `job_incomplete` is recorded once, on the state, and the re-offer covers exactly that entity's task and
-no finished one; the state completes only once every task has ended; `pm-operator abort` cancels every queued and
+no finished one; the state completes only once every task has ended; the operator's cancel of the plan cancels every queued and
 leased task of the state; an empty list completes the state in the entering transaction without creating a task;
 Rule 4 fails a unit in which an entity of the fan-out reaches a `job llm` state, and at most one writer task per
 plan is leased among the fan-out's tasks.
@@ -237,11 +236,11 @@ Source:: design review.
 Anchor:: link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#workflow-definition-units[Workflow DSL § Workflow Definition Units] (`entity-multi.pmwf`),
 link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL § Task States]
 Hazard:: An entity that counts as complete after its first repeatable submit lets a worker that stopped halfway pass
-as finished, and a re-offer that replays what the first attempt already persisted writes the same rows or lesson
-changes twice.
-Guard:: Scenario on `entity-multi.pmwf` (decomposition draft and lesson review): every repeatable submit returns
+as finished, and a re-offer that replays what the first attempt already persisted writes the same rows or messages
+twice.
+Guard:: Scenario on `entity-multi.pmwf` (the epic decomposition draft and the epic completion): every repeatable submit returns
 `recorded` and leaves the entity in `entity-multi.active`; only the closing submit (`submit:decompose`,
-`submit:review`) reaches `entity-multi.completed`; an attempt whose worker ends after two repeatable submits and
+`submit:completion`) reaches `entity-multi.completed`; an attempt whose worker ends after two repeatable submits and
 without the closing one is re-offered; the next attempt receives the two persisted submits as its recorded progress
 and continues from them, so no persisted submit is submitted or written a second time.
 Source:: design review.
@@ -310,16 +309,18 @@ a gather state has two targets).
 Source:: design review.
 
 [#PM-WATCH-DSL-31]
-=== PM-WATCH-DSL-31: The spend budget check never offers a remedy
+=== PM-WATCH-DSL-31: A waiver wait is entered only from a waiver request and never ends by time
 
-Anchor:: link:../specification/workflow-dsl/08-remediation-units.adoc#unit-template[Workflow DSL § Unit Template] (`budget-check`),
+Anchor:: link:../specification/workflow-dsl/08-remediation-units.adoc#unit-template[Workflow DSL § Unit Template] (`budget-check`, `waiver-wait`),
 link:../Requirements.adoc#PM-WF-7[PM-WF-7]
-Hazard:: A spend unit that shares the generic budget check can return `budget_left` into a `decide` it does not have,
-a dead end that keeps an over-spent plan resting instead of reaching the waiver wait or the hand-back.
-Guard:: Test: `remediation.check-spend-budget` settles only `exhausted_wait` (with `waiver_wait_seconds > 0`) or
-`exhausted`, for every spend fixture; the compiled `remediation.spend` unit declares no `budget_left` route, and a
-fixture unit whose spend budget check routes `budget_left` fails Rule 2. Matched control: the generic
-`remediation.check-budgets` of a unit with budget left settles `budget_left`.
+Hazard:: A budget check that sends an exhausted unit into a waiver wait by itself makes the plan wait for the
+operator where no decision task asked for a waiver; a waiver wait with a timer ends by the passing of time.
+Guard:: Test over every remediation unit: `remediation.check-budgets` with no admissible action settles `exhausted`
+and enters the `exhausted` terminal, never the waiver wait; the waiver wait is entered only from the decision task's
+`request_waiver` and has no timer; its outcomes route `raised` -> `budget-check` with the new ceiling, `waived` ->
+`waived`, `declined` -> `exhausted`, and `cancelled` -> `exhausted`; a fixture unit whose waiver wait is reachable
+from `budget-check` fails validation. Matched control: `remediation.check-budgets` of a unit with budget left
+settles `budget_left`.
 Source:: design review.
 
 [#PM-WATCH-DSL-32]
@@ -414,9 +415,10 @@ transition taken (`SubWorkflowExecutionTest` in `pm-workflow`). Open: scenario t
 `git.commit_and_push` (`cause: attempts_exhausted`) called by `remediation-ci.commit-fix` returns
 `stepped_out {by: server, cause: attempts_exhausted}` to that call site, which routes it to
 `remediation-ci.budget-check`, and that the unwind of a spent condition budget records the server step-out
-`{by: server, cause: condition}` (`INV-REM-4` exemption); a representation test asserts that `step_out` appears on
-every resting `link` state of a sub-workflow the entry session drives (the source units, `lessons.pmwf`) and on no
-task entity, no view, and no `auto`, `job`, `composite_job`, or `job llm` state.
+`{by: server, cause: condition}` (`INV-REM-4` exemption); a representation test asserts that the operator's implicit `step_out`
+appears on every operator wait of a sub-workflow a workspace, machine, or entry unit calls (the source units of a
+start, a later run of a setup or onboarding aspect) as an operator link of the local API, never in a model-facing
+representation, and on no task entity, no view, and no `auto`, `job`, `composite_job`, or `job llm` state.
 Source:: design review.
 
 [#PM-WATCH-DSL-15]

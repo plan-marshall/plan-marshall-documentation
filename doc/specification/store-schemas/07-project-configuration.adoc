@@ -174,7 +174,7 @@ The pinned compiled defaults (for example the review rate-window values) live in
 [#config-workflow-json]
 === Team File `workflow.json`
 
-Which finalize steps exist is decided by the project's `finalize.pmwf` unit, never by this file: `steps` only sets the lane and parameters of an optional step the unit contains, and a `steps` entry for a step the unit does not contain is the finding `config_step_not_in_unit`.
+Which finalize steps exist is decided by the project's `phase-6-finalize.pmwf` unit, never by this file: `steps` only sets the lane and parameters of an optional step the unit contains, and a `steps` entry for a step the unit does not contain is the finding `config_step_not_in_unit`.
 
 [source,json]
 ----
