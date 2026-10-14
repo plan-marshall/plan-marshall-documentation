@@ -49,10 +49,18 @@ instance_header      = ? one line of canonical JSON, valid against the plan inst
                          Plan Instance) ? ;
 ----
 
-The `workflow` header of an instance is `workflow plan version <N> format <f>`, where `<N>` is the plan's `instance_version` (the instance header's `version`), which the file name `instance/plan.v<N>.pmwf` repeats; the unit id `plan` never refers to the Phase 4 part file `plan.pmwf`. The body is the composed state list; it never contains an element that no template declares, and every call site carries the effective values it binds. Pruned elements are absent from the body and listed in the header (`pruned[]`), so the verification rules and invariants run over exactly what the plan executes. A project unit that contains an `instance` line fails validation.
+Its frontmatter (xref:01-grammar.adoc#unit-frontmatter[Unit Frontmatter]), written by the server, declares `type: instance`, no entry and no exit, the name `Plan <plan_id>, version <N>`, the composition event as its description, the day of the composition as `modification_date`, the release of the runtime that composed it as `version`, and the author `plan-marshall`; a file outside the plan's `instance/` directory that declares `type: instance` fails validation. The `workflow` header of an instance is `workflow plan version <N> format <f>`, where `<N>` is the plan's `instance_version` (the instance header's `version`), which the file name `instance/plan.v<N>.pmwf` repeats; the unit id `plan` never refers to the Phase 4 part file `plan.pmwf`. The body is the composed state list; it never contains an element that no template declares, and every call site carries the effective values it binds. Pruned elements are absent from the body and listed in the header (`pruned[]`), so the verification rules and invariants run over exactly what the plan executes. A project unit that contains an `instance` line fails validation.
 
 [source,text]
 ----
+---
+name: Plan header-parser, version 3
+description: Composed at the event plan.
+type: instance
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow plan version 3 format 1
 instance {"format_version":1,"plan_id":"header-parser","version":3,"event":"plan", …}
 scope plan

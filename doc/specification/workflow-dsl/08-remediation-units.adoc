@@ -133,13 +133,31 @@ Every unit follows one state template; the unit's own states are named `remediat
 
 [source,text]
 ----
+---
+name: Remediate a CI Failure
+description: Decides and runs the remedy for a failing CI run within the budgets of its call.
+type: subworkflow
+entry: remediate
+entry_description: The step's CI run failed; the call binds the budgets and the admitted actions.
+exit: resolved
+exit_description: The CI run passes.
+exit: waived
+exit_description: An operator waiver settles the failure.
+exit: exhausted
+exit_description: The budgets are spent without a passing run.
+exit: fix_requested
+exit_description: The failure needs a fix the caller allocates.
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow remediation.ci-failure version 1 format 1
 scope subworkflow
 param retry_budget: int[0..5]
 param fix_budget: int[0..5]
 param waiver_wait_seconds: int[0..86400]
 param actions: list<enum[retry|fix|loop_back]>
-start remediation-ci.gather
+entry remediate -> remediation-ci.gather
 
 state remediation-ci.gather
   phase inherit

@@ -12,7 +12,7 @@ link:../../Specification.adoc[Specification] » link:../workflow-dsl.adoc[Workfl
 == Workflow Definition Units (Multi-File Workflows)
 _Implementation watch: link:../../implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-27[PM-WATCH-DSL-27]_
 
-A workflow definition may be split across several `.pmwf` files:
+A workflow definition may be split across several `.pmwf` files. Every file opens with its frontmatter, whose type says which of the kinds below it is (`workflow` for each phase file and the epic unit, `recipe`, `subworkflow`, `system` for the workspace, bootstrap, source, and lesson maintenance units, `task` for `worker-task` and the entity units, `instance` for a plan instance; xref:01-grammar.adoc#unit-types[Unit Types]) and whose entries and exits are the unit's interface (xref:01-grammar.adoc#interface-rules[Interface Rules]):
 
 * *Plan workflow*: All phase workflow files of a plan (`init.pmwf`, `refine.pmwf`, `outline.pmwf`, `plan.pmwf`, `execute.pmwf`, `land.pmwf` for the `land` lane states, `finalize.pmwf`) together form *one* workflow definition, the plan *template*. The loader merges them into a single `WorkflowDefinition` before validation; the merge (the union of the states and migrations, the start state of `init.pmwf`, the merged header `plan` of scope `plan` whose version is the sum of the part versions recorded per file, the per-file `derived_from` of a project's files, and the refusal of a part of another scope, format, or origin and of a state declared twice) is implemented by https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/unit/PlanUnitMerger.java[`PlanUnitMerger`] (https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-unit.adoc#_merging_the_plan_unit[Workflow Units Developer Guide § Merging the Plan Unit]). The `start` of every other phase file names that phase's entry state, and a transition in one phase file may target a state declared in another (for example `allocated -> execute.envelope-ready` in `finalize.pmwf`). Every phase file declares its own `workflow <part> version <n>` header; the part headers identify files only. Because a part version only ever increases, the derived version increases with every change of any part. The unit id `plan` is the value of `CallFrame.callerWorkflowId` for every `call` made from a plan-workflow state (`status.json` `call_stack[].caller_workflow_id`), whichever phase file declares the calling state; the part header `workflow plan` of `plan.pmwf` (Phase 4) is a file identifier and never names the unit.
 * *Plan instance*: A plan never executes the template directly. It executes its *plan instance*, a single-file unit composed by the server from the template, the sub-units it calls, the composition rules, and the plan's facts, and versioned per composition event (xref:09-plan-instance.adoc#plan-instance[Plan Instance]). Every rule of this document applies to each instance version as to the template.
@@ -115,6 +115,18 @@ The protocol of one task is the compiled sub-workflow unit `worker-task`; its se
 
 [source,text]
 ----
+---
+name: Task Protocol
+description: The protocol of one task: offered to a worker of its role, leased, worked, and settled.
+type: task
+exit: submitted
+exit: asked
+exit: infeasible
+exit: lost
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow worker-task version 1 format 1
 scope subworkflow
 start task.queued
@@ -223,6 +235,16 @@ The adjudication of a question set is the sub-workflow unit `adjudicate.decision
 
 [source,text]
 ----
+---
+name: Adjudicate Decisions
+description: Decides a question set by quorum where its decision kinds allow it, and escalates it to the user otherwise.
+type: subworkflow
+exit: decided
+exit: escalated
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow adjudicate.decisions version 1 format 1
 scope subworkflow
 decide interpretation -> quorum(quorum-a, quorum-b, 90)

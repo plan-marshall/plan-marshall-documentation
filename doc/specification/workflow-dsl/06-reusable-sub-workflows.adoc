@@ -17,7 +17,7 @@ Workflows are composed not only of atomic `do` / `auto` / `job` primitives, but 
 
 The call of a sub-workflow (the frame pushed onto the persisted `call_stack` with the bound arguments, the caller's phase and `pushed_at`, and `phase inherit`), the resting states inside a sub-workflow that are persisted with the call stack, the return of a terminal that pops exactly one frame and continues at the calling state's transition in the same transaction (an outcome routed twice by the result guard that holds over the frame's result record), and the step-out that unwinds exactly one frame which the caller routes once (a caller that is itself a sub-workflow to a state of its own that continues the unwinding) are implemented in the workflow engine and documented in https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc#_call_stack_and_exit_contracts[Workflow Engine Developer Guide § Call Stack and Exit Contracts]. The following statements are not implemented yet:
 
-1. *Sub-Workflow Invocation (`call`)*: `callerWorkflowId` is the id of the caller's definition unit, `plan` for every state of the plan instance (xref:02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units (Multi-File Workflows)]). `paramBindings` are the effective values the plan instance binds at the call site, whose provenance (template file, composition rule, or waiver) the instance header records (xref:09-plan-instance.adoc#plan-instance[Plan Instance]). Preserving `callerPhase` guarantees that phase-scoped guards (such as `in_worktree`), phase metric accounting (`metrics.json`), and terminal-title updates remain invariant regardless of which caller invoked the sub-workflow.
+1. *Sub-Workflow Invocation (`call`)*: A call enters the callee through the entry it names, or the callee's one entry, at the state that entry binds (xref:01-grammar.adoc#interface-rules[Interface Rules]); the frame records the entry (`call_stack[].entry`), so the view and the history show through which channel the unit was entered. `callerWorkflowId` is the id of the caller's definition unit, `plan` for every state of the plan instance (xref:02-units-jobs-decisions.adoc#workflow-definition-units[Workflow Definition Units (Multi-File Workflows)]). `paramBindings` are the effective values the plan instance binds at the call site, whose provenance (template file, composition rule, or waiver) the instance header records (xref:09-plan-instance.adoc#plan-instance[Plan Instance]). Preserving `callerPhase` guarantees that phase-scoped guards (such as `in_worktree`), phase metric accounting (`metrics.json`), and terminal-title updates remain invariant regardless of which caller invoked the sub-workflow.
 2. *Resting States Inside a Sub-Workflow*: The scope's view and a session-driven state's representation resolve against the active sub-workflow state at the top of `call_stack`, and the tasks a resting state inside a sub-workflow created carry their creating frame.
 3. *Sub-Workflow Return (`terminal <outcome_id> <outcome_class>`)*: The result record of `done` is validated against the unit's `result` schema.
 4. *Step-Out (`stepped_out`)*: A terminal of class `stepped_out` returns `{by: server, cause: <the outcome that entered it>}`; in a session-driven sub-workflow the implicit `step_out (reason)` of a resting link state (xref:02-units-jobs-decisions.adoc#implicit-job-links[Implicit Links]) returns like a terminal with the outcome `stepped_out {by: model, cause: step_out, reason}`. A step-out consumes no budget and writes no waiver; the gap record of a fallback that a caller's routing of a step-out leads to names `cause: stepped_out` with its `step_out_cause` (and the reason of a model's `step_out`). The engine's unwind of an undeclared `lost` (xref:02-units-jobs-decisions.adoc#model-job-states[Task States] item 4) is no step-out a caller routes: its gap names `cause: exhausted` with the task's `queue_task_id` and `task_reason`.
@@ -50,12 +50,24 @@ The sub-workflow header declares both parameters with `param` and its result rec
 
 [source,text]
 ----
+---
+name: Commit and Push
+description: Commits the changes of the plan's worktree and pushes its branch as the push mode says.
+type: subworkflow
+entry: commit
+entry_description: The worktree holds the changes to commit, or is clean.
+exit: done
+exit_description: Commit and push are settled; the result record says what was committed, pushed, or landed.
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow git.commit_and_push version 1 format 1
 scope subworkflow
 param message_mode: enum[auto_deliverable|step_or_fallback|interactive|none_assert_clean]
 param push_mode: enum[never|if_push_remote|always|post_pr_conditional]
 result schema[commit-result]
-start git.inspect-worktree
+entry commit -> git.inspect-worktree
 
 state git.inspect-worktree
   phase inherit
