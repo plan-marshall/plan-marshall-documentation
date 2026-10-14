@@ -35,7 +35,8 @@ Flow::
        │                      onboarding
        ▼ yes
   [S] entry.pairing            a pairing code, unless a browser of this
-       │                       machine is paired already (web open)
+       │                       machine is paired already (web open) and the
+       │                       session is not an SSH session
        ▼
   [C] entry.where              a desktop session, or an SSH session
        │                       (SSH_CONNECTION, SSH_TTY)?
@@ -55,7 +56,7 @@ Flow::
        ▼
   [O] entry.wait               the ways in stay at hand: copy one, a new
        │                       code, another device; the operator works on
-       │ code redeemed ───────► reported; a fresh code for a further device
+       │ code redeemed ───────► entry.wait, reported, with a fresh code
        │ another device ─────► entry.other-device
        ▼ the operator is done
   done                         the runtime keeps running
@@ -65,7 +66,8 @@ Flow::
        │                       self-signed certificate, fingerprint to compare
        ├── no ← ─────────────► entry.wait, unchanged
        ▼ yes
-  [S] entry.lan                LAN listener
+  [S] entry.lan                the LAN listener, beside the loopback
+       │                       listener, which stays open
        ├── cannot open ──────► entry.wait, unchanged, with the cause
        ▼ open
   entry.wait                   the ways in gain the URL with the host, its
@@ -77,6 +79,7 @@ Changes::
 * *The terminal client as the entry* (<<change-start>>).
 * *Loopback `Host` without the port* (<<change-loopback-host>>).
 * *A fresh code after a redemption* (<<change-fresh-code>>).
+* *Loopback and LAN listeners side by side* (<<change-two-listeners>>): the LAN listener opens beside the loopback one, whose URL and forward stay valid.
 Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7]; the pairing and `web open` are specified in link:../specification/cli-and-security/03-web-server.adoc#web-open[CLI, Coordination & Security Specification, Open on the same machine].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/05-transcripts-entry.adoc#t-entry[Terminal Client, The Entry]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/entry.adoc[Web App, Entry]
 
@@ -112,10 +115,11 @@ Flow::
        ▼ done
   done
 ----
-Variations:: revoking the device the operator acts from asks first and leaves the web app at the pairing page. The terminal client needs no pairing and is never listed; from it, _revoke all others_ revokes every paired device. _Turn the network listener off_ is offered only while it is on; turning it on again is the entry's `entry.other-device` (<<UC-ENT-1>>).
+Variations:: revoking the device the operator acts from asks first and leaves the web app at the pairing page; so does turning the network listener off from a device on the network, which loses its access with it. The terminal client needs no pairing and is never listed; from it, _revoke all others_ revokes every paired device. _Turn the network listener off_ is offered only while it is on; turning it on again is the entry's `entry.other-device` (<<UC-ENT-1>>).
 Outcome:: only the devices the operator wants can act on the machine.
 Changes::
 * *Devices in both clients* (<<change-devices>>).
+* *Loopback and LAN listeners side by side* (<<change-two-listeners>>): the network listener closes alone.
 Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices] (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc#listener-off[the network listener turned off]); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#devices[Web App, Machine Settings]
 
@@ -131,9 +135,9 @@ Gap:: `web open` opens a browser on this machine only and, without one, prints t
 Fix::
 * `pm-operator` without a verb is the entry and runs the flow of <<UC-ENT-1>> without waiting in it: on an onboarded machine at once, on a machine not fully onboarded when the operator chooses the web app. There is no verb `start`; `web open` stays as the explicit verb.
 * It recognises an SSH session by `SSH_CONNECTION` or `SSH_TTY`, then opens no browser and shows the forward command built from the user name and the machine's host name.
-* The browser is opened with a pairing code only while no browser of this machine is paired; otherwise the terminal client prints the URL.
+* The browser is opened with a pairing code only while no browser of this machine is paired; otherwise the terminal client prints the URL. In an SSH session the entry always issues a code, as `web pair` does, since the browser is on the operator's own computer; a browser that holds a valid device secret does not redeem it.
 * `entry.wait` is not a screen of its own: the ways in stay at hand in the terminal client while the operator works on. Like every operator verb the entry runs only in an interactive terminal, because it issues a pairing code.
-* Other devices only on the operator's yes (then a confirmation): it then enables the LAN listener as `web enable --lan` does, with the same certificate and fingerprint, and shows the QR code of the pairing URL.
+* Other devices only on the operator's yes: it then opens the LAN listener beside the loopback listener as `web enable --lan` does (<<change-two-listeners>>), with the same certificate and fingerprint, and shows the QR code of the pairing URL.
 Affects:: link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer] (command listing), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-pairing[Pairing Protocol].
 
 [#change-loopback-host]
@@ -143,7 +147,7 @@ Gap:: the `Host` validation requires `127.0.0.1:<port>` or `localhost:<port>` wi
 Fix::
 * On the loopback listener a `Host` of `127.0.0.1`, `localhost`, or `[::1]` is accepted with any port or none. The check exists against foreign host names (DNS rebinding); the port adds nothing to it.
 * The `Origin` check of state-changing requests compares the same way on the loopback listener.
-* The LAN listener keeps the full comparison with its port.
+* The LAN listener, a listener of its own (<<change-two-listeners>>), keeps the full comparison with its port.
 Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-security-headers[Request Validation & Security Headers].
 
 [#change-fresh-code]
@@ -157,9 +161,20 @@ Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-pairing[
 [#change-devices]
 === Devices in Both Clients
 
-Gap:: the paired devices are listed and revoked only by `pm-operator web devices`; the web app shows none, a device has no label the operator chose, a revoked device's open pages are not told, and the network listener is turned off only by `web disable`, which closes the loopback listener as well.
+Gap:: a device's label is chosen only at pairing (`web pair --label`) and cannot be changed; a revoked device's page is shown the pairing page without being told why; nothing records from where a device was paired; the network exposure is turned off only by `web disable`, which closes the loopback access as well; and disabling web access is among the CLI-only endpoints a paired device cannot reach.
 Fix::
-* `GET /api/v1/devices` and the acts rename, revoke, revoke all others, and turning the network listener off over the local API, for both clients; a revocation ends the device's event streams with a reason the web app shows.
-* Turning the network listener off leaves the loopback listener open, unlike `web disable`, which closes both.
-Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices], link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
+* The list, rename, revoke, revoke all others, and turning the network listener off over the local API, for both clients; a revocation ends the device's event streams with a reason the web app shows.
+* Turning the network listener off is accepted from a paired device, since it narrows access; it leaves the loopback listener open (<<change-two-listeners>>), unlike `web disable`, which closes both. Turning it on stays CLI-only.
+* The device record gains `paired_from` (`loopback` or `lan`), and the client marks the device it acts from by its own `device_id`.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices], link:../specification/cli-and-security/03-web-server.adoc#web-proxy[API Access & Device Secret] (the CLI-only endpoints), link:../specification/store-schemas/12-machine-stores.adoc#web-access-records[Web Access Records] (`paired_from`), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API].
 
+[#change-two-listeners]
+=== Loopback and LAN Listeners Side by Side
+
+Gap:: web access has one listener with one exposure at a time: enabling the LAN exposure while the loopback one is enabled is refused (`web_listener_conflict`) until `web disable`, and in LAN mode the same listener serves the loopback address over HTTPS on the same port. Opening the network for another device therefore either fails or, done by disabling and enabling again, invalidates the `http://127.0.0.1:<port>` URL and the SSH forward the operator already holds.
+Fix::
+* Two listeners. The loopback listener (plain HTTP on `127.0.0.1`, `web.port`) stays open while the LAN listener (HTTPS on all interfaces, its own port `web.lan_port`, with the certificate and fingerprint as today) opens and closes beside it.
+* `web.enabled` turns the loopback listener on and off, `web.lan` only the LAN listener; `web enable --lan` opens the LAN listener beside the loopback one (enabling that one too when it is closed) and is no longer refused for the other exposure; `web disable` closes both.
+* A request is judged by the listener it arrived on: what is restricted to the loopback listener (a credential secret, link:01-onboarding.adoc#change-web-credentials[Credentials in the Web App]) is refused on the LAN listener, also when it names a loopback address there.
+* `web open` always opens the loopback URL with `http`. Each listener applies the occupied-port rule to its own port.
+Affects:: link:../specification/cli-and-security/03-web-server.adoc#web-server-lifecycle[Lifecycle], link:../specification/cli-and-security/03-web-server.adoc#web-listener[Listener Exposure] (with link:../specification/cli-and-security/03-web-server.adoc#web-listener-bind[Occupied Port]), link:../specification/cli-and-security/03-web-server.adoc#web-open[Open on the same machine], link:../specification/cli-and-security/03-web-server.adoc#web-security-headers[Request Validation & Security Headers], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store] (`web`), link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7].
