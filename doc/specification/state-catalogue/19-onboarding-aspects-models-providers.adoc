@@ -156,7 +156,7 @@ Run for the machine from `onboard.assign-roles`, and for a project from its onbo
 |[[state-store.unavailable]]`store.unavailable`
 |`machine`
 |`operator_wait`
-|`store.choose` (`os_unavailable`); `store.check` (`failed`).
+|`store.choose` (`os_unavailable`); `store.check` (`failed`); `store.move` (`failed`, the old store kept).
 |Names why (a locked collection, no session bus over SSH) and the fix. `recheck`, `choose_another`.
 |`recheck` -> `store.detect`; `choose_another` -> `store.choose`.
 |link:../cli-and-security/02-credentials-and-operator.adoc#credential-store-choice[CLI, Coordination & Security Specification, Credential Store as an Operator Choice]
@@ -189,8 +189,8 @@ Run for the machine from `onboard.assign-roles`, and for a project from its onbo
 |`machine`
 |`auto`
 |`store.confirm-move` (`move`).
-|Moves every entry, deleting each from the old store only once it reads back from the new one, then the enrolment integrity key, last of all, once the HMAC sidecars verify under it in the new store; an interrupted move is resumed by the next run from its journal, so a secret is never in both stores after a completed move and never in neither.
-|`moved` -> `store.record`.
+|Moves the store as link:../cli-and-security/02-credentials-and-operator.adoc#credential-store-move[CLI, Coordination & Security Specification, The move] states: copies every entry into the new store and reads each back, copies the enrolment integrity key last and verifies the HMAC sidecars under it, switches `credentials.store`, and only then deletes the entries from the old store; an interrupted move is resumed by the next run from its record, so a secret is never in neither store and, once the move completes, in one only. A failed copy or read-back stops the move: the copies are deleted from the new store, the old store stays the recorded one, and the failure is reported with its cause (`credential_store_failed`).
+|`moved` -> `store.record`; `failed` -> `store.unavailable`.
 |link:../cli-and-security/02-credentials-and-operator.adoc#credential-store-choice[CLI, Coordination & Security Specification, Credential Store as an Operator Choice]
 
 |[[state-store.record]]`store.record`
@@ -205,7 +205,7 @@ Run for the machine from `onboard.assign-roles`, and for a project from its onbo
 [#state-catalogue-providers]
 === Providers: `providers`
 
-Entries: `start` (`onboard.providers`) and `verify` (`settings.verify-providers`, over the providers a changed credential serves). No model task runs here.
+Entries: `start` (`onboard.providers`) and `verify` (`settings.verify-providers`, over the providers a changed credential serves, or over every chosen provider on the operator's request). No model task runs here.
 
 [cols="2,1,1,2,3,2,2"]
 |===
