@@ -98,7 +98,7 @@ job_clause           = ( "job" | "composite_job" ) , primitive_id , EOL ,
                        outcome_transition , { outcome_transition }
                      | "job" , "llm" , entity_kind , "role" ,
                        ( role_name , [ "each" , primitive_id ] | "each" , primitive_id ) ,
-                       [ "ask" ] , EOL ,
+                       [ "ask" , [ "fresh" ] ] , EOL ,
                        { consult_clause } ,
                        outcome_transition , { outcome_transition } ;
                        (* job llm: a task state; one queue task of the named role per entity of the
@@ -108,7 +108,9 @@ job_clause           = ( "job" | "composite_job" ) , primitive_id , EOL ,
                           entity (only in the unit adjudicate.decisions, whose primitive reads the listed
                           roles of its quorum declarations); ask: the state's task entities offer the
                           ask link, and the engine makes the question state <state>.asked (refused on a
-                          role each state and, at composition, on a zero_tool role);
+                          role each state and, at composition, on a zero_tool role); ask fresh: the
+                          asking task never continues after its question, its work always goes on
+                          in a new task (model-work/06, Continuing after a Question);
                           02-units-jobs-decisions.adoc, Task States *)
 consult_clause       = "consult" , "role" , role_name , EOL ;
                        (* one consult:<role> link on the state's task entities (PM-WORK-4) *)
