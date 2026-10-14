@@ -87,7 +87,7 @@ A task ends only in one of four closed outcomes, recorded on the queue task with
 |The entity recorded its required submission.
 
 |`asked`
-|The worker followed the entity's `ask` link, offered only where the creating state declares `ask` in its `job llm` clause (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Task States (`job llm`), item 8]; never on a `zero_tool` role's task or a vote task): a question record was created (xref:06-envelopes-questions-deadlines.adoc#question-records[Question Records]); the state that created the task serves the question, and the work continues in a new task with the answer in its facts.
+|The worker followed the entity's `ask` link, offered only where the creating state declares `ask` in its `job llm` clause (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Task States (`job llm`), item 8]; never on a `zero_tool` role's task or a vote task): a question record was created (xref:06-envelopes-questions-deadlines.adoc#question-records[Question Records]) and the task did not continue after it (xref:06-envelopes-questions-deadlines.adoc#continuation[Continuing after a Question]): no continuation was allowed, or its hold or suspension ended without the answer, or its resume was refused. The state that created the task serves the question, and the work continues in a new task with the answer in its facts. A task that continued closes with the outcome of its later submission.
 
 |`infeasible`
 |The worker reported the task infeasible through the entity's `infeasible` link, which every task entity except the consultation entity offers (xref:05-consultation.adoc#consult-serving[Serving the Consultation]), with its evidence (required); the creating state takes its infeasible route.
@@ -154,11 +154,15 @@ The worker state is recorded in the worker's job record (link:../store-schemas/1
 
 |`executing`
 |Works along the task's links.
-|`submitted` (the task closes), `consulting` (a consultation link), `lost`
+|`submitted` (the task closes), `consulting` (a consultation link), `awaiting_answer` (a question it holds for), `ended` (a question it suspends for, xref:06-envelopes-questions-deadlines.adoc#continuation[Continuing after a Question]), `lost`
 
 |`consulting`
 |Waits in `pm_wait` for a consultation's answer.
 |`executing` (the answer), `lost`
+
+|`awaiting_answer`
+|Holds its task and waits in `pm_wait` for the answer to its question, within the role's hold limit.
+|`acknowledged` (the answer acknowledged, xref:06-envelopes-questions-deadlines.adoc#answer-acknowledgement[Answer Acknowledgement]), `ended` (the hold limit: the task is suspended or falls back), `lost` (among others a missing answer acknowledgement)
 
 |`submitted`
 |The task closed; the lease is released.
@@ -183,6 +187,8 @@ The protocol of one task is the compiled sub-workflow unit `worker-task`, which 
 * *`waiting`*: Waits for a `pm_wait` of a worker of the role; the offer leases the task and leaves to `offered`; a release (the role's workers stopped by the start-failure guard) returns to `queued`.
 * *`offered`*: Waits for the engine events of the lease: `ack` leaves to `executing`; the loss or withdrawal of the lease returns to `queued` as a re-offer.
 * *`executing`*: Runs the entity's own unit (link:../state-catalogue/10-entity-units.adoc[State Catalogue, Entity Units]), whose links are the task's links, together with the consultation links of the calling state. A consultation link leaves to `consulting`; the end of the entity unit leaves to the terminal of its outcome (`entity.completed` to `submitted`, `entity.infeasible` to `infeasible`, `entity.asked` to `asked`, link:../state-catalogue/10-entity-units.adoc[State Catalogue, Entity Units]); the loss of the worker returns to `queued` as a re-offer.
+* *`awaiting_answer`*: Entered by an `ask` link where the task continues (xref:06-envelopes-questions-deadlines.adoc#continuation[Continuing after a Question]). Runs the adjudication of the new question set and waits on its record (`QUESTION_ANSWER`, the record's own deadline) and on the hold limit (`TIME`). The answer, once acknowledged by the holding generation, returns to `executing`; the hold limit leaves to `suspended` where the task may resume, else to the terminal `asked`; the loss of the worker returns to `queued`, and the answer reaches the successor in `facts.answers`.
+* *`suspended`*: The worker has ended with its session stored; no lease is held. The answer starts the resumed generation and leaves to `offered`; the resume limit or a refused resume leaves to the terminal `asked`, with its reason.
 * *`consulting`*: Waits for the consultation's answer and returns to `executing`; the loss of the worker returns to `queued`, and the answer reaches the successor in the task's facts (xref:05-consultation.adoc[Consultation]).
 * *Terminals*: `submitted`, `asked`, `infeasible`, `lost` (<<task-outcomes>>). A re-offer beyond the budget leaves to `lost`.
 

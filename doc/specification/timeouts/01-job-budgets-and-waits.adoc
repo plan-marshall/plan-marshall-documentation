@@ -124,7 +124,7 @@ Learned values live in the project's `<PM_MCP_BASE>/projects/<project_id>/build-
 |link:../domain-extensions.adoc[Domain Extensions] (Project Script Jobs); link:../job-runtime.adoc[Job Runtime]
 
 |[[model-job-budget]]Worker budget (`llm`)
-|Allocation as above over the key `llm:<role>`, with the role floor as $F$: the `budget_floor_seconds` of the role artifact, compiled minimum `60`; shipped floors: link:../model-work/01-roles-and-configuration.adoc#default-roles[Model Work, Default Role Set]. The budget runs for a fresh worker from its spawn to its exit, and for a warm worker per task from the offer to the attempt's end; a consultation's wait counts toward the asker's budget. A fresh worker feeds $L$ with its spawn-to-exit duration, a warm worker with the duration of each attempt that closed its task (offer to attempt end), only on success (link:../job-runtime/03-parsers-and-gates.adoc#_adaptive_timeout_learning[Job Runtime Specification, Adaptive Timeout Learning]); escalation and the cap $C$ apply as above. No other time bound of model work exists: the supervisor observes every worker's end.
+|Allocation as above over the key `llm:<role>`, with the role floor as $F$: the `budget_floor_seconds` of the role artifact, compiled minimum `60`; shipped floors: link:../model-work/01-roles-and-configuration.adoc#default-roles[Model Work, Default Role Set]. The budget runs for a fresh worker from its spawn to its exit, and for a warm worker per task from the offer to the attempt's end; a consultation's wait counts toward the asker's budget; a hold for the answer to a question does not, the budget pausing from the ask to the answer acknowledgement (link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work, Continuing after a Question]). A fresh worker feeds $L$ with its spawn-to-exit duration, a warm worker with the duration of each attempt that closed its task (offer to attempt end), only on success (link:../job-runtime/03-parsers-and-gates.adoc#_adaptive_timeout_learning[Job Runtime Specification, Adaptive Timeout Learning]); escalation and the cap $C$ apply as above. No other time bound of model work exists: the supervisor observes every worker's end.
 |via $O$ per `llm:<role>` in `command_budgets`; the floor in the role artifact
 |$t \ge$ the role floor; floor `60`..`86400`
 |workers of every role
@@ -356,6 +356,30 @@ The supervisor ends, recycles, and replaces workers by these values (link:../mod
 |every task whose state declares consultations
 |No further `consult` link is offered; the task continues without consulting.
 |link:../model-work/05-consultation.adoc#consultation[Model Work, Consultation]
+
+|[[question-hold]]Question hold
+|The role's `questions.hold_seconds`, `0` to `3600`, cut to the harness's `headless.resumability.max_hold_seconds`; no compiled default (a role without `questions` does not hold).
+|role artifact (`questions.hold_seconds`)
+|cap `3600` and the harness's measured maximum
+|every task of the role that asks, where its state and harness allow a continuation
+|The hold ends: the task is suspended where it may resume, else it closes `asked`.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work, Continuing after a Question]
+
+|[[question-resume-window]]Question resume window
+|The role's `questions.resume_within_seconds`, `0` to `604800`, from the suspension, cut to the harness's `headless.resumability.resume.max_age_seconds`.
+|role artifact (`questions.resume_within_seconds`)
+|cap `604800` and the harness's measured maximum
+|every suspended task
+|The task closes `asked` with `fallback_reason: resume_expired`; its work continues in a new task.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work, Continuing after a Question]
+
+|[[question-bound]]Question bound
+|`3` `ask` links per entry of a state; `3` `ask:TASK-NNN` links per plan task over all its envelope tasks.
+|fixed (compiled)
+|—
+|every task state that declares `ask`, and every envelope task
+|No further `ask` or `ask:TASK-NNN` link is offered; the worker decides on its own judgment or reports the task infeasible.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#question-bound[Model Work, Question Bound]
 
 |[[harness-start-spacing]]Start spacing of one harness
 |The next worker start of a harness waits until the previous worker of that harness made its first call or ended, at most `30`.

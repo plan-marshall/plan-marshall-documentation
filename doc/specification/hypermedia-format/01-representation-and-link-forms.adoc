@@ -136,6 +136,11 @@ _Implementation watch: link:../../implementation-watch/hypermedia-format.adoc#PM
 
 While a sub-workflow is active (a `call` has made the sub-workflow's first state current, link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_stack_execution_persistence_semantics[Workflow DSL Specification, Call-Stack Execution]), a view and a session-driven state carry `facts.call_path`, the call-site state ids of the scope's call stack from the root frame outward (for example `call_path[1]: finalize.push-barrier`); it is absent at the root frame. In a session-driven state it states where the implicit `step_out` returns to (one frame up, <<question-waiver-and-exit-links>>). A task entity never carries it: the task's own `skill` and `facts` frame its one judgment.
 
+[#answers-facts]
+==== Answers to Earlier Questions (`facts.answers`)
+
+A task that continues after its question (link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]) receives its answer, and a task that continues the work of a task that ended `asked` may be served by another generation, harness, or model, which never saw the question. Both therefore carry every closed question they continue from as `answers[N]{question_id,plan_task_id,question_text,branch_key,label,text,closure}`: a continued task its own question, the task of `<state>` re-entered from `<state>.asked` the questions its state's earlier tasks asked in the same entry of the state, the envelope task after `execute.task-question` the questions of its plan tasks. `branch_key` and `label` are the chosen option (for `closure: assumed`, the applied default), `text` the answer's optional text, quoted as data, `plan_task_id` is set for class `task` only, and `closure` is `answered` or `assumed`, so the worker can tell an answer from a default. The record's channel, the answering device, and a quorum's votes are recorded, never rendered (link:../model-work/06-envelopes-questions-deadlines.adoc#answer-in-next-task[Model Work Specification, The Answer in the Next Task]).
+
 [#remediation-evidence-facts]
 ==== Remediation Evidence (`facts.failures`)
 
@@ -227,17 +232,17 @@ These links are ordinary `submit` or `noop` links; their relation and form satis
 |`ack`
 |`next`
 |`noop`
-|The only link of an offered task entity (`task.offered`). The worker's explicit acknowledgement of the offer, within its host's acknowledgement deadline; it returns the task entity in the first state of its entity unit (link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]).
+|The only link of an offered task entity (`task.offered`), and of a task entity that carries the answer to the question its worker held or resumed for (link:../model-work/06-envelopes-questions-deadlines.adoc#answer-acknowledgement[Model Work Specification, Answer Acknowledgement]: the worker received the answer and continues). The worker's explicit acknowledgement of the offer, within its host's acknowledgement deadline; it returns the task entity in the first state of its entity unit (link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]).
 
 |`ask` (`question:schema[question-envelope]`)
 |`submit`
 |`submit`
-|Offered on a task entity only by states that declare it. Creates a server-owned question record (`origin: model`) from the model-supplied envelope (xref:02-link-grammar.adoc#named-parameter-schemas[Named Parameter Schemas]) and ends the task with the outcome `asked`; the state then waits on the record in its question state and offers a new task with the answer in its `facts` (link:../workflow-dsl/02-units-jobs-decisions.adoc#question-states[Workflow DSL Specification, Question States]). Server-raised questions (init classifiers, the optional outline review) are created by their primitive, never through `ask`.
+|Offered on a task entity only by states that declare it. Creates a server-owned question record (`origin: model`) from the model-supplied envelope (xref:02-link-grammar.adoc#named-parameter-schemas[Named Parameter Schemas]). Where the task continues, its representation moves to `awaiting_answer`, whose only next step is `pm_wait` (hold), or tells the worker to end (resume), and the answer returns to the same task in `facts.answers` (link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]); otherwise it ends the task with the outcome `asked`, the state waits on the record in its question state and offers a new task with the answer in its `facts` (link:../workflow-dsl/02-units-jobs-decisions.adoc#question-states[Workflow DSL Specification, Question States]). Server-raised questions (init classifiers, the optional outline review) are created by their primitive, never through `ask`.
 
 |`ask:<task_id>` (`question:schema[question-envelope]`)
 |`submit`
 |`submit`
-|The task-question link of a task envelope entity (`envelope.task.active`). Records the question for the plan task and ends the envelope task (`yield_reason: question`, server-recorded); the envelope's remaining plan tasks, the asking one included, go to the next envelope task, which receives the answer in `facts`. No task waits on a question.
+|The task-question link of a task envelope entity (`envelope.task.active`). Records the question for the plan task. Where the envelope task continues, it rests in `envelope.task.awaiting_answer` and returns to the same plan task with the answer; otherwise it ends the envelope task (`yield_reason: question`, server-recorded), and the envelope's remaining plan tasks, the asking one included, go to the next envelope task, which receives the answer in `facts`. Only a held continuation keeps a worker waiting, within its hold limit.
 
 |`infeasible` (`evidence:text[1..2000]`)
 |`submit`

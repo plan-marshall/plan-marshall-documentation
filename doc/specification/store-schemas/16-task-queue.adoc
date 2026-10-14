@@ -24,10 +24,11 @@ Every piece of model work of a project is a queue task, persisted in the project
 
 One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` state creates one per entity in the transaction that enters it (kind `work`); a `consult:<role>` link creates one for the consulted role (kind `consultation`, whose `queue_task_id` is the `consultation_id`, link:../model-work/05-consultation.adoc[Model Work Specification, Consultation]). The semantics of every field are those of link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]; this section fixes the record.
 
-* *Status*: `queued` (waiting for a generation of its role started with the role's current configuration digest, or for a matching session; matching: link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]), `offered` (leased, not yet acknowledged), `executing` (from the acknowledgement on, recorded as `lease.acknowledged_at`), `consulting` (an own consultation is open), `closed`. An attempt that ends without a result returns the task to `queued`, released at once, and the task is offered again within its re-offer budget (link:../timeouts/01-job-budgets-and-waits.adoc#task-reoffer-budget[Timeouts & Budgets Specification, Task Re-Offer Budget]).
+* *Status*: `queued` (waiting for a generation of its role started with the role's current configuration digest, or for a matching session; matching: link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]), `offered` (leased, not yet acknowledged), `executing` (from the acknowledgement on, recorded as `lease.acknowledged_at`), `consulting` (an own consultation is open), `awaiting_answer` (its generation holds it for the answer to its question), `suspended` (no lease; the asking worker ended with its session stored, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]), `closed`. An attempt that ends without a result returns the task to `queued`, released at once, and the task is offered again within its re-offer budget (link:../timeouts/01-job-budgets-and-waits.adoc#task-reoffer-budget[Timeouts & Budgets Specification, Task Re-Offer Budget]).
 * *Outcome and Reason*: A closed task has exactly one of the outcomes `submitted`, `asked` (with its `question_id`), `infeasible`, or `lost`; a `lost` task names its `reason`: `attempts_spent` (its re-offers are spent), `role_undefined`, `class_mismatch`, `role_unqualified`, or `role_unavailable` (the model caller closed it before any attempt), `deadline_expired` (a vote task still open at the vote wait's expiry, link:../model-work/10-decision-quorum.adoc#adjudication[Model Work Specification, The Adjudication]), or `withdrawn` (its state or scope ended while the task was open). `form_downgraded` records that the caller ran a `warm` role `fresh` because only the fresh form qualifies.
 * *Lease*: `lease` names the generation the task is leased to, set in the transaction of the offer (for a fresh worker: at its spawn) and cleared at the submit that closes the attempt, at the fence of the generation, and at the withdrawal of an unacknowledged session offer. Every call on the task entity is checked against it.
 * *Attempts*: One entry per offer, with its generation, its worker (`null` for a session), the configuration digest the worker was started with (`null` for a session), its instants, and how it ended. `counts` is `false` for an attempt ended by a restart, a drain, a start failure of a fresh worker, or the withdrawal of a session offer, which spend no re-offer.
+* *Continuation*: A task that asked and continues records it in `continuation` (`null` otherwise): the `question_id`, the `form` in force (`hold` or `resume`), when the hold ends (`hold_until`), the stored session (`session_id`, `suspended_at`, `resume_until`, the configuration digest and the worktree head at the suspension), and, where it fell back, `fallback_reason` (`not_allowed`, `hold_expired`, `resume_expired`, `session_missing`, `configuration_changed`, `harness_changed`, `worktree_moved`, `resume_unacknowledged`). The attempt of a suspended worker ends `suspended` and spends no re-offer; the resumed generation's offer is a new attempt.
 * *Consultations*: The asking task lists its consultations in `consultations[]` (their limits: link:../model-work/05-consultation.adoc[Model Work Specification, Consultation]); the consultation task names its asker in `consultation_of`. The answer is recorded on the asker's entry when the consultation closes and delivered once, to the asking generation's next wait, or to the successor in the task's facts after a fence (`delivered_to`).
 
 [source,json]
@@ -37,7 +38,7 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
   "$id": "https://cuioss.de/plan-marshall-mcp/schemas/queue-task.json",
   "title": "QueueTaskRecord",
   "type": "object",
-  "required": ["format_version", "queue_task_id", "kind", "role", "class", "scope", "entity", "state_id", "session_first", "form_downgraded", "status", "lease", "attempts", "consultations", "consultation_of", "outcome", "reason", "question_id", "created_at", "closed_at"],
+  "required": ["format_version", "queue_task_id", "kind", "role", "class", "scope", "entity", "state_id", "session_first", "form_downgraded", "status", "lease", "continuation", "attempts", "consultations", "consultation_of", "outcome", "reason", "question_id", "created_at", "closed_at"],
   "additionalProperties": false,
   "$defs": {
     "generation": { "type": "string", "pattern": "^(l-[0-9a-f]{16}|sg-[0-9a-f]{16})$" }
@@ -61,7 +62,24 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
     "state_id": { "type": "string", "description": "The job llm state that created the task, or the asking task's state for a consultation." },
     "session_first": { "type": "boolean", "description": "The role sets session_first, which only a read_only role may (PM-WORK-5); always false for a writer or zero_tool role." },
     "form_downgraded": { "type": "boolean" },
-    "status": { "type": "string", "enum": ["queued", "offered", "executing", "consulting", "closed"] },
+    "status": { "type": "string", "enum": ["queued", "offered", "executing", "consulting", "awaiting_answer", "suspended", "closed"] },
+    "continuation": {
+      "type": ["object", "null"],
+      "description": "The continuation after the task's last question (model-work/06, Continuing after a Question); null when the task never asked or did not continue.",
+      "required": ["question_id", "form", "hold_until", "session_id", "suspended_at", "resume_until", "suspended_digest", "suspended_head", "fallback_reason"],
+      "additionalProperties": false,
+      "properties": {
+        "question_id": { "type": "string", "pattern": "^Q-[0-9]{3,6}$" },
+        "form": { "type": "string", "enum": ["hold", "resume"] },
+        "hold_until": { "type": ["string", "null"], "format": "date-time" },
+        "session_id": { "type": ["string", "null"], "maxLength": 256, "description": "The harness session id read from the worker's structured result at the suspension." },
+        "suspended_at": { "type": ["string", "null"], "format": "date-time" },
+        "resume_until": { "type": ["string", "null"], "format": "date-time" },
+        "suspended_digest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "suspended_head": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "fallback_reason": { "type": ["string", "null"], "enum": ["not_allowed", "hold_expired", "resume_expired", "session_missing", "configuration_changed", "harness_changed", "worktree_moved", "resume_unacknowledged", null] }
+      }
+    },
     "lease": {
       "type": ["object", "null"],
       "description": "The current lease; null while queued or closed.",
@@ -89,7 +107,7 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
           "offered_at": { "type": "string", "format": "date-time" },
           "acknowledged_at": { "type": ["string", "null"], "format": "date-time" },
           "ended_at": { "type": ["string", "null"], "format": "date-time" },
-          "end": { "type": ["string", "null"], "enum": ["closed", "worker_lost", "exited_without_submit", "waited_again", "budget", "start_failure", "session_withdrawn", "restart", "drain", "withdrawn", "deadline_expired", null], "description": "closed: the attempt closed the task; withdrawn and deadline_expired: the task closed lost (reason withdrawn or deadline_expired) while the attempt held it; every other value returned the task to queued; null while it runs." },
+          "end": { "type": ["string", "null"], "enum": ["closed", "worker_lost", "exited_without_submit", "waited_again", "budget", "start_failure", "session_withdrawn", "restart", "drain", "withdrawn", "deadline_expired", "suspended", null], "description": "closed: the attempt closed the task; suspended: the worker ended with its session stored and the task waits for its answer; withdrawn and deadline_expired: the task closed lost (reason withdrawn or deadline_expired) while the attempt held it; every other value returned the task to queued; null while it runs." },
           "counts": { "type": "boolean", "description": "Whether the attempt spent a re-offer of the state's job_incomplete budget." }
         }
       }

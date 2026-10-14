@@ -61,7 +61,17 @@ A role artifact is the file `<name>.json` of a role set (<<role-sets>>). Its sch
       "description": "Required for form warm, absent for form fresh."
     },
     "budget_floor_seconds": { "type": "integer", "minimum": 60, "maximum": 86400, "description": "Floor of the job budget learned for the role." },
-    "context_budget_tokens": { "type": "integer", "minimum": 10000, "description": "Context budget of a worker of the role, the basis of the per-envelope packing budget; absent: the harness fallback of the client profile." }
+    "context_budget_tokens": { "type": "integer", "minimum": 10000, "description": "Context budget of a worker of the role, the basis of the per-envelope packing budget; absent: the harness fallback of the client profile." },
+    "questions": {
+      "type": "object",
+      "required": ["hold_seconds", "resume_within_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "hold_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "description": "How long a worker of the role holds its task for the answer to its question; 0: no hold. Cut to the harness's max_hold_seconds." },
+        "resume_within_seconds": { "type": "integer", "minimum": 0, "maximum": 604800, "description": "How long a task of the role stays suspended for a resume after the hold; 0: no resume. Cut to the harness's resume.max_age_seconds." }
+      },
+      "description": "Continuation after a question (Continuing after a Question); absent: a task of the role that asks ends asked. Not allowed for zero_tool."
+    }
   }
 }
 ----
@@ -73,6 +83,8 @@ A role artifact is the file `<name>.json` of a role set (<<role-sets>>). Its sch
 * *`skills`*: a compiled skill, among them the shipped role skills `skill://pm/role/<role>/SKILL.md`, or an extension skill of the machine or project skill directory (link:../mcp-tools/02-service-and-skill-tools.adoc#skill-extensions[MCP Tools Specification, Skill Extensions]). A role that the shipped set does not define takes its contract from an extension skill, so adding a role needs no code change; an artifact of the machine set that names a project extension skill is valid only in the projects whose directory holds that skill (<<role-validation>>).
 * *`budget_floor_seconds`*: the floor of the job budget that the runtime learns per role, at least the compiled minimum of the link:../timeouts/01-job-budgets-and-waits.adoc#model-job-budget[Timeouts & Budgets Specification, Worker Budget]; the shipped floors are in <<default-roles>>.
 * *`context_budget_tokens`*: the context budget of a worker of the role, which depends on the model the artifact names; the per-envelope packing budget is derived from it (xref:06-envelopes-questions-deadlines.adoc[Task Envelopes, Envelope Budget]). Where the artifact does not set it, the harness fallback `headless.context_budget_tokens` of the client profile applies (link:../client-profiles/01-profile-schema.adoc[Client Profiles Specification, Profile Schema]).
+
+* *`questions`*: whether a task of the role continues after it asked, and how long (xref:06-envelopes-questions-deadlines.adoc#continuation[Continuing after a Question]). It is set per role because a role names its harness and model: a continuation pays off where the work before the question is large and the model keeps it reliably, which differs per model. Each value is cut to what the role's harness declares in `headless.resumability`; a harness that declares neither form makes the member ineffective, which `pm-operator roles show` reports. The member is invalid on a `zero_tool` role, which never asks.
 
 The *configuration digest* of an artifact is the SHA-256 of its canonical JSON (RFC 8785) with `description` removed, together with the digests of its skills as the project resolves them (an extension skill with the digests of its files at that read) and the major.minor of the enrolled harness version (link:../store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Store Schemas Specification, Harness Enrolment Store]). It identifies the configuration a worker generation is started with: task offers and recycling compare it (xref:02-task-protocol.adoc#offer[Offer], xref:03-supervision-and-recycling.adoc[Supervision & Recycling]).
 

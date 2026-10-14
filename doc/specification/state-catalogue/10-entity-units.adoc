@@ -11,7 +11,7 @@ link:../../Specification.adoc[Specification] » link:../state-catalogue.adoc[Sta
 [#state-catalogue-other]
 == Entity Units
 
-Every task of a model state is worked on an entity scope in a state of an entity unit, reached through its worker's job-bound connection (or the entry session's connection, where the session takes the task as an optional worker), which admits only the entity's links and, read-only, the resources of the task's own project and `skill://pm/…` (link:../mcp-tools/01-core-workflow-tools.adoc[MCP Tools Specification, Core Workflow Tools]); every entity unit declares `phase inherit`. No entity state waits on a question: a question ends the task `asked` and is answered on the owning scope. An entity kind that submits once runs `entity.pmwf`, a kind that submits several times `entity-multi.pmwf`, a task envelope its envelope unit. When the task ends, the return-evaluation primitive of the model state reads the entity's persisted records; an attempt whose entity did not reach its terminal is offered again (`job_incomplete`, xref:01-conventions-generic-conditions.adoc#condition-job_incomplete[Condition job incomplete]). The bootstrap units `bootstrap-plan` and `bootstrap-epic` are entity units of the workspace scope, catalogued in xref:09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap].
+Every task of a model state is worked on an entity scope in a state of an entity unit, reached through its worker's job-bound connection (or the entry session's connection, where the session takes the task as an optional worker), which admits only the entity's links and, read-only, the resources of the task's own project and `skill://pm/…` (link:../mcp-tools/01-core-workflow-tools.adoc[MCP Tools Specification, Core Workflow Tools]); every entity unit declares `phase inherit`. An entity waits on a question only where its task continues after it (link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]): the entity rests in the `awaiting_answer` state of its unit (`entity.awaiting_answer`, `entity-multi.awaiting_answer`, <<state-envelope.task.awaiting_answer>>), whose only link, once the answer is there, is `ack`, which returns it to the state it asked from. Otherwise a question ends the task `asked` and is answered on the owning scope. An entity kind that submits once runs `entity.pmwf`, a kind that submits several times `entity-multi.pmwf`, a task envelope its envelope unit. When the task ends, the return-evaluation primitive of the model state reads the entity's persisted records; an attempt whose entity did not reach its terminal is offered again (`job_incomplete`, xref:01-conventions-generic-conditions.adoc#condition-job_incomplete[Condition job incomplete]). The bootstrap units `bootstrap-plan` and `bootstrap-epic` are entity units of the workspace scope, catalogued in xref:09-bootstrap-and-lessons.adoc#state-catalogue-bootstrap[Bootstrap].
 
 [cols="2,1,1,2,3,2,2"]
 |===
@@ -33,6 +33,14 @@ Every task of a model state is worked on an entity scope in a state of an entity
 |—
 |link:../model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Task Envelopes]
 
+|[[state-entity.awaiting_answer]]`entity.awaiting_answer`
+|inherit (entity scope)
+|`link`
+|`entity.active` (`ask` where the task continues, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]).
+|While the question is open: no link; the worker holds `pm_wait`, or has ended with its session stored. With the answer: only `ack` (the answer acknowledgement), `facts.answers` carrying it.
+|`ack` -> `entity.active`; the continuation falling back -> `entity.asked`.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]
+
 |[[state-entity.infeasible]][[state-entity.asked]]`entity.infeasible`, `entity.asked`
 |inherit (entity scope)
 |`terminal`
@@ -49,6 +57,14 @@ Every task of a model state is worked on an entity scope in a state of an entity
 |A repeatable submit (`recorded`) -> this state; the closing submit (`submitted`) -> `entity-multi.completed`; `infeasible` -> `entity-multi.infeasible`; `asked` -> `entity-multi.asked`.
 |link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Model Job States]; link:../model-work/09-completion-usage-and-spend.adoc[Model Work Specification, Entity Units]
 
+|[[state-entity-multi.awaiting_answer]]`entity-multi.awaiting_answer`
+|inherit (entity scope)
+|`link`
+|`entity-multi.active` (`ask` where the task continues, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]).
+|While the question is open: no link; the worker holds `pm_wait`, or has ended with its session stored. With the answer: only `ack` (the answer acknowledgement), `facts.answers` carrying it.
+|`ack` -> `entity-multi.active`; the continuation falling back -> `entity-multi.asked`.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]
+
 |[[state-entity-multi.completed]][[state-entity-multi.infeasible]][[state-entity-multi.asked]]`entity-multi.completed`, `entity-multi.infeasible`, `entity-multi.asked`
 |inherit (entity scope)
 |`terminal`
@@ -62,8 +78,16 @@ Every task of a model state is worked on an entity scope in a state of an entity
 |`link`
 |The `implement` worker's `ack` of the task of `envelope-M`; itself after each `submit:TASK-i` that is neither the last plan task nor a chain tail.
 |`submit:TASK-NNN`; `ask:TASK-NNN` (`question:schema[question-envelope]`: records a question record of class `task` and ends the entity); `infeasible:TASK-NNN`; `yield:envelope-M` (no parameter). `facts.task_id` names the current plan task. The server records the `yield_reason` from the exit taken: `chain_tail`, `question`, or `context`.
-|Next plan task -> this state; the last plan task, a chain-tail task, `ask`, or `yield` -> `envelope.completed`; on every early end the remaining plan tasks, an asking task included, move to `envelope-(M+1)`, whose task carries a question's answer in `facts`.
+|Next plan task -> this state; `ask` where the task continues -> `envelope.task.awaiting_answer`; the last plan task, a chain-tail task, `ask` without continuation, or `yield` -> `envelope.completed`; on every early end the remaining plan tasks, an asking task included, move to `envelope-(M+1)`, whose task carries a question's answer in `facts`.
 |link:../model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Sequential Task Yield]
+
+|[[state-envelope.task.awaiting_answer]]`envelope.task.awaiting_answer`
+|inherit (entity scope)
+|`link`
+|`envelope.task.active` (`ask:TASK-NNN` where the task continues, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]).
+|While the question is open: no link; the worker holds `pm_wait`, or has ended with its session stored. With the answer: only `ack` (the answer acknowledgement), `facts.answers` carrying it.
+|`ack` -> `envelope.task.active` for the same plan task; the continuation falling back -> `envelope.completed` with `yield_reason: question`, the remaining plan tasks moving to `envelope-(M+1)` as for `ask` without continuation.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]
 
 |[[state-envelope.completed]]`envelope.completed`
 |inherit (entity scope)
