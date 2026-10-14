@@ -5,7 +5,7 @@
 
 xref:../Requirements.adoc[Requirements] » xref:README.adoc[Discussions] » Specification Changes for the Clients
 
-What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work], link:../use-cases/06-controlling-work.adoc#changes[Controlling Work]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
+What the specifications must gain so that the runtime gives the two clients of the operator, the terminal client and the web app, the input their designs show (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/README.adoc[`pm-mcp-clients`, Design]). It analyses the changes the use cases propose (link:../use-cases/01-onboarding.adoc#changes[Onboarding], link:../use-cases/02-entry.adoc#changes[Entry], link:../use-cases/03-plans.adoc#changes[Plans], link:../use-cases/04-projects.adoc#changes[Projects], link:../use-cases/05-starting-work.adoc#changes[Starting Work], link:../use-cases/06-controlling-work.adoc#changes[Controlling Work], link:../use-cases/07-system.adoc#changes[System]), names what they leave out, and cuts the work into packages. It is deleted once its content is written into the specifications.
 
 [#decided]
 == Decided
@@ -24,7 +24,7 @@ What the specifications must gain so that the runtime gives the two clients of t
 . *The operator's links over the local API have no form*: no representation of a state for a client (its id, kind, step, level, facts, proposal, items, links), no scheme of link ids and endpoints. Every link of today's hypermedia format is model-facing.
 . *No event catalogue*: the event streams are a list of contents in prose; no event has a name or a payload schema, so no client can follow a decision, an overview, or a check line.
 . *Texts of the runtime*: a client shows only catalogue texts, but representations carry prose (a check's cause and fix, a reason). The contract must say which fields are message keys with arguments and which are verbatim external or model text (a provider's answer, a harness's error text, question content).
-. *The client's environment*: three steps need what only the client sees (its locale, the operator's login `PATH`, an SSH session), while the runtime's own environment is never an input (link:../specification/runtime-model/01-processes-and-transport.adoc#_environment[Environment]); the request must carry them.
+. *The client's environment*: three steps need what only the client sees (its locale, the operator's login `PATH`, an SSH session), while the runtime's own environment is never an input (link:../specification/runtime-model/01-processes-and-transport.adoc#runtime-environment[Environment]); the request must carry them.
 . *Client-owned files*: the terminal client keeps its history and the overview's selection in its state directory, outside `<PM_MCP_BASE>`; the closed list of the files a CLI binary reads (link:../specification/cli-and-security/01-cli-and-installer.adoc#cli-file-reads[Direct File Reads]) needs that exception.
 
 [#per-change]
@@ -40,7 +40,7 @@ Beyond the sections each change names in its _Affects_:
 |a consent store in the machine layout; the closed list of consent kinds, with one for running an unknown program to verify its profile, and `check_credential_store` and `verify_providers`; a remembered `run_checkout_scripts` in `consents.json`, keyed by the project and the scripts' digests, never in the enrolment; which consents can never be remembered; one state with several consents answered separately; endpoints to list and withdraw remembered consents, also from the machine's settings (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]).
 
 |link:../use-cases/01-onboarding.adoc#change-machine-scope[Machine Scope]
-|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for cost estimates; how a sub-workflow writes a project or plan level.
+|the scope in the store schemas (`scope_type`, a phase value, `onboard_run`, the progress of the steps); the onboarding's progress and the machine's host name in the runtime status (the badge `[setup 3/7]`, the entry's "set up up to step 2 of 7", "Machine: <host>"); a state catalogue module for the onboarding and the entry; where role tasks of the machine scope queue and which workspace their jobs use; machine-scope metrics for the expected tokens of a task; how a sub-workflow writes a project or plan level.
 
 |link:../use-cases/01-onboarding.adoc#change-two-channels[Operator Choices]
 |the configuration over the local API: every value with its origin (`default`, `machine`, `project`, `team`, `plan`) and what it overrides, `set` and `unset` per key and level, and a later run of an aspect for the machine (link:../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]), a project, or a plan; the runtime refuses an aspect-owned key in `config set` with an error code; a verb that needs a step of the onboarding not done yet is refused with an error code that names the terminal client; one edit of Operator Channel Isolation, item 1, shared with Answers from the Terminal Client; a secret entered in the onboarding against `PM-CRED-4`.
@@ -99,6 +99,15 @@ Beyond the sections each change names in its _Affects_:
 |link:../use-cases/06-controlling-work.adoc#change-epic-actions[An Epic's Actions], link:../use-cases/06-controlling-work.adoc#change-findings-watches[Findings and Watches], link:../use-cases/06-controlling-work.adoc#change-epic-review[The Review]
 |the epic's `terminal_reason` `abandoned` renamed to `cancelled`, and `released` added; the registers' schema and their ledger files, an item of the findings register a finding; who may write them (the epic's tasks, the review); the trigger grammar of a watch; the archive check's list against `epic.review-completion` (only `open` findings block; kept findings and watches are carried into the archive); the planning role's submit schemas for proposal, draft, and rewrite; the `needs_operator` kind of new findings.
 
+|link:../use-cases/06-controlling-work.adoc#change-epic-auto[An Epic Runs by Itself]
+|the header's `auto_start` and its operator endpoint; the project key `epic.auto_start` in the local configuration and in `project_defaults`; the project key `epic.overlap_max_files` with its compiled upper bound and the header's `overlap_max_files`, changed from the epic's settings; the wait reason `overlap` beside `dependency`, `lock`, and `scope`, with the plan it waits for; where an overlap found while running is recorded in the ledger and the checkpoint that finds it; `epic.recut` split into the changes it applies once the server's checks pass and those that wait in `decomposition.review`; `epic.review-completion` no longer entering `epic.archive`, and when it runs with the mode off; the events of a switch and of an overlap.
+
+|link:../use-cases/03-plans.adoc#change-reports[Reports to the Operator]
+|the new requirement in `PM-WF`; the report record, its identifier kind (`rep-NNNN`) in the identifier registry, and the journal `state/reports.jsonl` with its leaf lock in the machine layout; the catalogue's subjects and bodies in both languages; the source transition of each kind and how a report a transition owed at a stop is written at the next start; the endpoints, the stream `reports`, and the representation with its `detail` link; a plan's completion report as a resource of an ended plan; `epic.launchable` written by `epic.next-work` only with the mode off.
+
+|link:../use-cases/03-plans.adoc#change-token-usage[Tokens, Not Money]
+|the pointer `reasoning` and the value `"not_applicable"` of `headless.usage` in every shipped profile, with the per-figure declaration of each harness (Claude Code, OpenCode, Antigravity, Codex); the columns `reasoning_tokens` and `harness_version` and the value `not_applicable` in both row schemas; `total_tokens` over five components; the derived `tokens_in` and `tokens_out` with their coverage in every view that shows usage; `cost_usd` kept as recorded data that no view and no rule reads; `usage_report` in the harness enrolment and in the harness list's resource; the usage check of the profile verification's worker stage; recorded harness outputs per harness and version as parsing fixtures; the removal of every spend limit the change lists (anchors, projection, `split_advice`, `spend_exceeded`, the pre-merge spend check, `remediation.spend`, the gate `spend`, `finalize_spend_ratio`) with their rules, states, invariants, and the requirements `PM-WF-7`, `PM-WF-12`, and `PM-WF-17`; the texts of the coverage ("3 of 41 tasks unmeasured", "at least") in both languages.
+
 |link:../use-cases/03-plans.adoc#change-epic-resource[The Epic as a Resource], link:../use-cases/03-plans.adoc#change-event-streams[Events per Scope], link:../use-cases/03-plans.adoc#change-ended-work[Ended Work]
 |the epic's resource and its sub-resources against `pm://epic/*`; the resume rule and the `reset` of a scope's stream; the paging of ended work and what of an archived plan is readable.
 
@@ -108,6 +117,18 @@ Beyond the sections each change names in its _Affects_:
 |link:../use-cases/02-entry.adoc#change-devices[Devices], link:../use-cases/04-projects.adoc#change-project-release[Release], link:../use-cases/06-controlling-work.adoc#change-holds[Holds]
 |the device's label; the closing of a revoked device's streams; revoking all others; turning the LAN listener off with the loopback listener left open; the release's confirmation against the engine-owned abort, every plan ending with the outcome `released` and every epic with the `terminal_reason` `released`; the closed list of holds (`stalled`, `condition`, `integrity_pause`, `held`, `landing_failed`), their acts and their arguments, and the end of `facts.operator_command`.
 
+|link:../use-cases/07-system.adoc#change-runtime-lifecycle[The Runtime's Lifecycle]
+|the operator endpoints of the stop (`when`, `then`), its withdrawal, and the upgrade, privileged in Operator Channel Isolation; the lifecycle state, the version, the newest version known, and an upgrade's result in the runtime status and in the machine state records; the events `runtime.draining`, `runtime.drain_withdrawn`, `runtime.stopping`, `runtime.upgrading`, `runtime.upgraded`, `runtime.upgrade_failed` in the event catalogue; the successor's start after a restart and under the service unit; the consent kind `check_updates`; the release's form in the organisation's registry and the credential that reads it (open); the installation root beside `<PM_MCP_HOME>` in `PM-ARCH-2`; how a client of the operator says that its version differs from the runtime's.
+
+|link:../use-cases/07-system.adoc#change-runtime-metrics[The Runtime's Metrics]
+|the new requirement in `PM-ARCH`, the next free id (the ninth); the closed metric catalogue with names, units, labels, and one writer each; the endpoints `GET /api/v1/system` and `GET /api/v1/system/metrics` and the event `system.metrics` in the event catalogue; the models' hourly figures filled from the metrics stores at the start; the disk use in the periodic sweep; `unavailable` as a value of every figure; the library of the registry, a dependency decision of the operator (open); the OpenMetrics text as an option on the socket only.
+
+|link:../use-cases/07-system.adoc#change-cleanup[One Cleanup]
+|the new requirement in `PM-ARCH`, the next free id after the metrics'; the keys `cleanup.*` in the machine configuration and the project's operator configuration, `retention.archived_plans_days` and `retention.job_logs_days` removed and `retention.workspace_rows_days` without the plans' metrics rows; the residue removed by the periodic sweep from now on, `pm-operator sweep` reduced to residue and the quiet-window retirement, the verb `pm-operator cleanup`; the journal `state/cleanup.jsonl` with its leaf lock and the identifier kind `cln-NNNN` in the identifier registry; the tombstones of a deleted plan and epic; `unenrolled_at` in `store.json`; the usage aggregate `state/usage-aggregate.jsonl` that the runtime's metrics are filled from beside the metrics stores; the audit record `cleanup_deleted`; the endpoints and the events `cleanup.*` in the event catalogue; the report kind `system.cleanup_due` with `from` the machine; the recurring waivers counted over 90 days of the audit log; the texts of the job in both languages.
+
+|link:../use-cases/03-plans.adoc#change-process-designer[Designing a Process]
+|the new requirement in `PM-WF`; the machine level `<PM_MCP_BASE>/workflows/` in the machine layout and the resolution by level (project, machine, default) in the loader, the composition, and the effective configuration's `units[]`; the missing unit resolving to the next level, and the setup's first run copying no unit; the variants of the plan axes as owned units with their invariants; the machine units in the header digests and in `config_drift`; the endpoints of the units and of the catalogue in the machine scope and a project's, the catalogue complete and generated from the registries of the parser, the static verification, and the composition, with the runtime's version and a digest, the validation with its dry run, and placing and removing, with their refusal codes; none of the designer endpoints `cli_only`, all reached on the web listener (a compiled-only unit, a changed unit, a failing project); the short landing of a project unit; the audit record of a placing and a removal.
+
 |link:../specification/runtime-model/05-mock-runtime.adoc[Mock Runtime]
 |its socket `run/pm-mcpd.sock` against `run/runtime.sock` everywhere else; scenario links keyed by the operator link's id, not by a link relation; its events (`check`) named from the event catalogue.
 
@@ -115,7 +136,7 @@ Beyond the sections each change names in its _Affects_:
 |if the package `cli-test-infra` chooses a seam the operator checks accept only in tests, a statement of it in Operator Channel Isolation, item 2.
 |===
 
-UC-PLN-3 (designing a plan's process) proposes no change yet: its building blocks are open points of the use case, to be worked out there before any specification. link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1 stands on its own (showing, replacing, and extending a phase); UC-PLN-3 is a later user of it.
+UC-PLN-3 (designing a plan's process, in the web app only) builds on link:../use-cases/03-plans.adoc#change-phase-sub-workflows[Phases as Sub-Workflows] of UC-PLN-1, which stands on its own (showing, replacing, and extending a phase); its own change is link:../use-cases/03-plans.adoc#change-process-designer[Designing a Process].
 
 [#conflicts]
 == Conflicts Between the Changes
@@ -175,8 +196,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`process-contract`
 |`pm-mcp-clients`
-|The Plan's Process as a Structure, Events of the Process: the process resource with the state of every node, and its events
-|`operator-interaction-contract`; `phase-sub-workflows`; UC-PLN-1 agreed
+|The Plan's Process as a Structure, Events of the Process: the process resource with the state of every node, the tokens a running plan used so far, and its events
+|`operator-interaction-contract`; `phase-sub-workflows`; `token-usage`; UC-PLN-1 agreed
 
 |`project-onboarding-unit`
 |`pm-mcp-core`
@@ -195,8 +216,8 @@ The work is cut along what each part needs, the foundations first. A contract pa
 
 |`onboarding-contract`
 |`pm-mcp-clients`
-|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`); the machine's settings (UC-ONB-10)
-|`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; UC-ONB agreed
+|the onboarding's stores and steps: consents, catalogue, roles, credential store, providers, plan axes, overrides, icons, unknown harness, automatic onboarding (`auto.consent`, the reasons and items of `auto.result`); the machine's settings (UC-ONB-10); what each harness reports of its usage (`usage_report`) in the harness list
+|`operator-interaction-contract`; `message-catalogue`; `machine-onboarding-unit`; `token-usage`; UC-ONB agreed
 
 |`entry-contract`
 |`pm-mcp-clients`
@@ -238,15 +259,65 @@ The work is cut along what each part needs, the foundations first. A contract pa
 |The Decomposition Is Reviewed, its _chat_ through `chat`
 |`operator-wait-and-machine-scope`; `chat`; UC-STA-6 agreed
 
+|`epic-auto`
+|`pm-mcp-core`
+|An Epic Runs by Itself: the epic's automatic mode and its switch, the overlap wait at admission and the overlap found while running, the epic's reactions on an ended plan (a re-cut applied or waiting for the operator, the next start), the completion review when the epic is through
+|`plan-and-epic-control`; `epic-decomposition`; UC-CTL-2 agreed
+
+|`token-usage`
+|`pm-mcp-core`
+|Tokens, Not Money: the usage recorded as the harness reports it (the pointer `reasoning`, `"not_applicable"`, `reasoning_tokens`, `harness_version`, `cost_usd` recorded only), the one figure `total_tokens` with its split `tokens_in` and `tokens_out` and its coverage, `priced_units` internal only, the profile verification's usage check and `usage_report`, the parsing fixtures, and the removal of the spend limits
+|UC-PLN-1, UC-PLN-5, UC-PLN-6, UC-SYS-2, and UC-ONB-4 agreed
+
+|`operator-reports`
+|`pm-mcp-core`
+|Reports to the Operator: the new requirement, the report record, its catalogue and its journal in the machine scope, read per machine, the endpoints and the stream `reports`, the representation with its `detail` link, the source transition of each kind, a plan's completion report
+|`operator-wait-and-machine-scope`; `entity-addressing`; `plan-and-epic-control`; `epic-auto`; `decision-engine`; `start-from-clients`; `token-usage`; UC-PLN-6 agreed
+
 |`control-contract`
 |`pm-mcp-clients`
-|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, a plan's settings, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource
-|`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
+|the client side of Controlling Work, of the decomposition, and of an epic's view: the actions of a plan and an epic, a plan's settings, the archive check, the holds and their acts, the states of the reviews, of the decomposition, and of a chat, a chat about ended work and its follow-up start, the epic resource with the tokens the epic used; the epic's automatic mode and its switch, and the wait `overlap`
+|`operator-interaction-contract`; `chat`; `plan-and-epic-control`; `epic-findings-review`; `epic-decomposition`; `epic-auto`; `token-usage`; UC-CTL, UC-STA-6, and UC-PLN-5 agreed
+
+|`report-contract`
+|`pm-mcp-clients`
+|the client side of Reports to the Operator: the report and its list, the unread count on entering a client, the notice, reading one or all shown, the `detail` link, and a plan's completion report with its section _tokens_
+|`operator-interaction-contract`; `overview-contract`; `operator-reports`; `token-usage`; UC-PLN-6 agreed
 
 |`start-contract`
 |`pm-mcp-clients`
 |the client side of Starting from the Clients: the entry's states and sources for both clients, the listing of files, a chat about the entry
 |`operator-interaction-contract`; `start-from-clients`; `chat`; `recipe-workflows`; `forgejo-provider`; UC-STA-1 to UC-STA-5 and UC-STA-7 to UC-STA-9 agreed
+
+|`process-designer`
+|`pm-mcp-core`
+|Designing a Process: the new requirement, the machine level of workflow units and their resolution by level, the validation with its composition dry run, placing and removing with their audit and the project's short landing, the catalogue of building blocks
+|`workflow-engine`; `static-verifier-and-fuzzer`; `project-units-and-invariants`; `plan-instance`; `phase-sub-workflows`; `recipe-workflows`; `machine-onboarding-unit`; `start-from-clients`; `audit-trail`; UC-PLN-3 agreed
+
+|`designer-contract`
+|`pm-mcp-clients`
+|the client side of Designing a Process: the units with their levels, the catalogue in the machine scope and a project's with its digest, the validation's findings and composed process, placing and removing, the landing of a project unit in the project's running work
+|`operator-interaction-contract`; `process-contract`; `process-designer`; UC-PLN-3 agreed
+
+|`runtime-control`
+|`pm-mcp-core`
+|The Runtime's Lifecycle: the stop by drain or now and its withdrawal, the restart with its successor's start, the update check under `check_updates`, the upgrade with its way back, the lifecycle state and events; builds on the done packages `runtime-lifecycle` and `service-unit`
+|`operator-wait-and-machine-scope`; `machine-onboarding-unit`; UC-SYS-1 agreed
+
+|`runtime-metrics`
+|`pm-mcp-core`
+|The Runtime's Metrics: the new requirement, the registry and its catalogue (the models' figures in tokens, no money), the figures kept where things happen and filled at the start, the snapshot, the metrics endpoint, and the event `system.metrics`
+|`token-usage`; UC-SYS-2 agreed; the operator's decision on the registry's library
+
+|`cleanup`
+|`pm-mcp-core`
+|One Cleanup: the new requirement, the daily check and the report `system.cleanup_due`, the cleanup job with its journal, delete with its audit and tombstones, remind, the kept items, the durations `cleanup.*` replacing the retention of work history, the residue removed by the periodic sweep, `pm-operator sweep` and `pm-operator cleanup`, the usage aggregate, the endpoints and events
+|`operator-reports`; `plan-and-epic-control`; `runtime-metrics`; `machine-onboarding-unit`; `project-onboarding-unit`; UC-SYS-3 agreed
+
+|`system-contract`
+|`pm-mcp-clients`
+|the client side of the System area: the runtime's lifecycle acts and their states, the version and the newer one, the system view and its live figures in tokens with their split, the events of the runtime's lifecycle and of its metrics; the cleanup job with its summary, details, and three decisions, the kept items, the durations, and the residue's figures
+|`operator-interaction-contract`; `runtime-control`; `runtime-metrics`; `cleanup`; `token-usage`; UC-SYS agreed
 |===
 
-The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`.
+The runtime and the engine implement each specification in their own packages, planned in `pm-mcp-core` and `plan-marshall-mcp` once the contract is written; the clients build against the mock runtime meanwhile. The client packages wait on their contract: `cli-onboarding` and `web-onboarding` on `onboarding-contract` and `entry-contract`, `cli-decisions` and `web-decisions` on `decision-contract`, `cli-overview` and `web-overview` on `overview-contract`, `cli-plan-view` and `web-plan-view` on `process-contract`, `cli-projects` and `web-projects` on `project-contract`, `cli-start` and `web-start` on `start-contract`, `cli-actions` and `web-actions` on `control-contract`, the client packages of the reports on `report-contract`, `cli-system` and `web-system` on `system-contract`, `web-designer` on `designer-contract` (the terminal client has no designer).

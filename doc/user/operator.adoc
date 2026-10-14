@@ -38,7 +38,7 @@ How long running work may finish after the runtime was asked to stop, before it 
 |`3153600000`, 100 years of 365 days
 
 |Invalid value
-|A negative number, a fraction, a string, a number above the maximum, a file that cannot be read, or a file that is not exactly one JSON object (for example a truncated file, or content after the object) is invalid. The runtime then uses the default of `600` seconds and logs the warning `PM_MCP-154`, naming the file and the reason (link:../LogMessages.adoc[Log Messages]). A wrong value never stops the start or the drain.
+|A negative number, a fraction, a string, a number above the maximum, a file that cannot be read, or a file that is not exactly one JSON object (for example a truncated file, or content after the object) is invalid. The runtime then uses the default of `600` seconds and logs the warning `PM_RUNTIME-110`, naming the file and the reason (link:../LogMessages.adoc[Log Messages]). A wrong value never stops the start or the drain.
 |===
 
 [#what-a-drain-does]
@@ -49,12 +49,12 @@ A drain is the clean end of the runtime: on `SIGTERM` or `SIGINT` (as `pm-operat
 
 . stops admitting new work and ends what is idle;
 . lets what still runs finish, up to `drain_timeout_seconds`;
-. terminates what has not finished and records it `killed` (the warning `PM_MCP-153` says that the timeout expired);
+. terminates what has not finished and records it `killed` (the warning `PM_RUNTIME-109` says that the timeout expired);
 . closes its components, the web listener last;
 . removes `state/runtime.json`, `run/runtime.token` and `run/runtime.sock`;
 . releases its singleton lock and exits with code `0`.
 
-The log shows the start of a drain as `PM_MCP-54` with the drain timeout, and its end as `PM_MCP-55` with what got quiet in time and what was terminated. A component that fails during the drain is logged as `PM_MCP-158`; the drain goes on and still removes the files and releases the lock, so the next start finds a clean base.
+The log shows the start of a drain as `PM_RUNTIME-15` with the drain timeout, and its end as `PM_RUNTIME-16` with what got quiet in time and what was terminated. A component that fails during the drain is logged as `PM_RUNTIME-114`; the drain goes on and still removes the files and releases the lock, so the next start finds a clean base.
 
 A second stop request during a drain waits for the drain in progress. Merge-queue and review-bot leases are deliberately kept: a merge or a review round may still be running on the provider. The next start finds them orphaned and keeps or releases them by the same rules as after a crash.
 
@@ -65,11 +65,11 @@ _Requirements: link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7]_
 A runtime that was killed, or that crashed, leaves no clean end behind. Nothing has to be done by hand: the next start repairs each enrolled project, after the socket is bound, so the runtime is reachable at once.
 
 * A project is repaired on the first call that addresses it, and every enrolled project in a pass in the background; each project once per runtime.
-* A call to a project whose repair takes longer than 10 seconds gets the error `runtime_recovering`. It is retryable: repeat the call, and it is served once the repair has finished. The log shows the wait as `PM_MCP-155`. Calls to other projects are served meanwhile.
-* A repair that fails stops only its project; the log names the project, the step and the reason (`PM_MCP-252`). Each finished repair is logged as `PM_MCP-56`.
+* A call to a project whose repair takes longer than 10 seconds gets the error `runtime_recovering`. It is retryable: repeat the call, and it is served once the repair has finished. The log shows the wait as `PM_RUNTIME-111`. Calls to other projects are served meanwhile.
+* A repair that fails stops only its project; the log names the project, the step and the reason (`PM_RUNTIME-204`). Each finished repair is logged as `PM_RUNTIME-17`.
 * A project that is not enrolled is not touched.
 
-The repair marks the leases of the dead runtime as orphaned, releases a lease only on positive evidence that it was abandoned, completes the store transactions the crash interrupted, and makes the derived writes they left undone. Once an hour the runtime also sweeps the enrolled projects that are repaired (`PM_MCP-57`, and `PM_MCP-159` for a step that failed).
+The repair marks the leases of the dead runtime as orphaned, releases a lease only on positive evidence that it was abandoned, completes the store transactions the crash interrupted, and makes the derived writes they left undone. Once an hour the runtime also sweeps the enrolled projects that are repaired (`PM_RUNTIME-18`, and `PM_RUNTIME-115` for a step that failed).
 
 [#relay-version-mismatch]
 == Relay Version Mismatch
@@ -80,7 +80,7 @@ After an upgrade, the relays of host sessions that were already open are still t
 For each relay version that differs from its own, the runtime once per runtime instance:
 
 * writes an audit record `relay_version_mismatch` with both versions (`relay_version`, `runtime_version`);
-* logs the warning `PM_MCP-156`, naming both versions and the recommendation;
+* logs the warning `PM_RUNTIME-112`, naming both versions and the recommendation;
 * keeps the latest mismatch as status data for `pm-operator status`: the relay version, the runtime version, and the recommended command `pm-operator drain`.
 
 The recommended action is `pm-operator drain`, which stops the old runtime. The detection is not stored across a restart: a runtime started anew reports a mismatch it observes again.

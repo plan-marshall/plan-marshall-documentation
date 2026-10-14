@@ -13,7 +13,7 @@ How the operator gets to work with `PM-MCP`: the first command after installing,
 Status:: `DRAFT`
 Actor:: the operator, in a terminal of the machine the runtime runs on: sitting at it, or logged in over SSH.
 Goal:: get to work with one command and no further friction: onboard the machine when it is not ready, in the terminal or in the web app, and otherwise reach the web app, whether the browser is on this machine or on the operator's own computer at the other end of an SSH connection.
-Trigger:: the operator starts the terminal client without naming anything to do, the first command after installing. On a machine not fully onboarded it asks first whether to go on in the terminal or in the web app (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); on an onboarded machine it connects the web app at once. This is the one use case bound to a client by its nature: the first command is typed in a terminal, so its flow names what the terminal client does on its own (`[C]`).
+Trigger:: the operator starts the terminal client without naming anything to do, the first command after installing. On a machine not fully onboarded it asks first whether to go on in the terminal or in the web app (link:01-onboarding.adoc#UC-ONB-1[UC-ONB-1]); on an onboarded machine it connects the web app at once. It is bound to the terminal client by its nature (as UC-PLN-3 is to the web app): the first command is typed in a terminal, so its flow names what the terminal client does on its own (`[C]`).
 Flow::
 +
 [source,text]
@@ -117,7 +117,7 @@ Outcome:: only the devices the operator wants can act on the machine.
 Changes::
 * *Devices in both clients* (<<change-devices>>).
 Requirements:: link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7]; the devices are specified in link:../specification/cli-and-security/03-web-server.adoc#web-devices[Paired Devices].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#devices[Web App, Machine Settings]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc[Paired Devices] (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/paired-devices.adoc#listener-off[the network listener turned off]); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-devices[Terminal Client, Paired Devices]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#devices[Web App, Machine Settings]
 
 [#changes]
 == Changes to the Specification

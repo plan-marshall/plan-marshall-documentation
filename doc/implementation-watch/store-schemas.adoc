@@ -63,9 +63,10 @@ Hazard:: A store move redirected the shared path resolver, but sites that matche
 elsewhere (an epic spec path captured as `source_id` in a plan's request) never passed through it.
 Guard:: Cross-scope references are persisted as ids, never paths; no session row or scope record stores a path of
 the checkout (the main checkout is always the enrolled `project_root`, a worktree only its name `worktree_of`). A
-schema test asserts that no session-row field holds a path; a test re-enrols a relocated checkout and asserts that
-every scope resolves through the new `project_root`, never a stale path, and that `pm-mcp enter` and the
-`PM-MCP-Workspace` header resolve through the same one rule.
+test re-enrols a relocated checkout and asserts that every scope resolves through the new `project_root`, never a
+stale path, and that `pm-mcp enter` and the `PM-MCP-Workspace` header resolve through the same one rule. Present in
+`pm-mcp-core`: the schema test that no session-row field holds a path (`ScopeSessionRowSchemaParityTest`); the
+relocation test stays for the project resolution and `pm-mcp enter`.
 Source:: plan-marshall orchestrator-refactor PLAN-03 D3.
 
 [#PM-WATCH-STORE-42]
@@ -80,8 +81,10 @@ pending record is deleted by the terminal, for `committed` in the fixed write or
 epic queue row, and the lesson claim; no lesson claim, queue-row change, or capture ref exists before the plan scope
 is written, and the capture ref of a `local_changes` plan is set right after it; a crash between these writes is
 completed by the startup recovery (<<PM-WATCH-STORE-44>>; a missing capture ref is re-created at `snapshot_sha`), and a crash
-before the plan scope leaves only the pending record; a record older than the pending entry maximum age is removed by the sweep with an audit record; a
-record whose digest mismatches pauses only its own entry.
+before the plan scope leaves only the pending record; a record whose digest mismatches pauses only its own entry.
+Present in `pm-mcp-core`: a record older than the pending entry maximum age is removed by the periodic sweep with an
+audit record (`PendingEntryRecordsSweepTest`), and two concurrent entries never share a record
+(`PendingEntryStoreTest`); the terminal and crash-point scenarios stay for the bootstrap.
 Source:: design review.
 
 == Workflow State Store (`mcp/status.json`)

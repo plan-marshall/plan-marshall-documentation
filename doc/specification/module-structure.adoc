@@ -147,7 +147,7 @@ _Implementation watch: link:../implementation-watch/module-structure.adoc#PM-WAT
 
 |[[module-pm-workflow]]`pm-workflow` (in `pm-mcp-core`)
 |`de.planmarshall.workflow.*`
-|The workflow language and the process it runs: the line-oriented DSL lexer/parser, immutable AST records, the compile-time/startup static verifier, the deterministic state machine interpreter (call stack, guards, loop-back budgets, question and waiver handling), plan instance composition, the hypermedia state engine (representations, link forms, composite waits), the model caller (one abstract caller that reads the artifact of the role a `job llm` state names and turns the step into queue tasks), the task protocol unit `worker-task` (offers, acknowledgement, leases, fencing, consultation, task outcomes and re-offers, the conservative fallback of unqualified roles), task envelopes, return evaluation, batches, screening and triage states, question records, and epic coordination, the plan-domain primitives, the loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly (<<model-facing-content>>), and the Mermaid/AsciiDoc-table/ASCII diagram generators. Its tests run against fixture units; the build tests of the default units and the diagram and state-catalogue drift tests run in `pm-mcp-server`, where the units are. The deterministic scenario replay harness `pm-scenario` is a test-scope part of this module (JUnit, in-process), not a module of its own. Depends on `pm-core`, the JDK, Jackson, and `cui-java-tools` only; never on Quarkus, CDI, MCP libraries, JGit, `cui-http`, or a provider module. The `git.*` and `ci.*` primitives are contributed by the provider modules through the SPI in `pm-core`, so validation of the units against the assembled primitive catalogue runs in `pm-mcp-server`.
+|The workflow language and the process it runs: the line-oriented DSL lexer/parser, immutable AST records, the compile-time/startup static verifier, the deterministic state machine interpreter (call stack, guards, loop-back budgets, question and waiver handling), plan instance composition, the hypermedia state engine (representations, link forms, composite waits), the model caller (one abstract caller that reads the artifact of the role a `job llm` state names and turns the step into queue tasks), the task protocol unit `worker-task` (offers, acknowledgement, leases, fencing, consultation, task outcomes and re-offers, the conservative fallback of unqualified roles), task envelopes, return evaluation, batches, screening and triage states, question records, and epic coordination, the plan-domain primitives, the loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly (<<model-facing-content>>), the loader and the compiled invariants of the project-owned units, and the Mermaid/AsciiDoc-table/ASCII diagram generators. Its tests run against fixture units; the build tests of the default units and the diagram and state-catalogue drift tests run in `pm-mcp-server`, where the units are. The deterministic scenario replay harness `pm-scenario` is a test-scope part of this module (JUnit, in-process), not a module of its own. Depends on `pm-core`, the JDK, Jackson, and `cui-java-tools` only; never on Quarkus, CDI, MCP libraries, JGit, `cui-http`, or a provider module. The `git.*` and `ci.*` primitives are contributed by the provider modules through the SPI in `pm-core`, so validation of the units against the assembled primitive catalogue runs in `pm-mcp-server`.
 |link:workflow-dsl.adoc[Workflow DSL] (all parts except the conformance harness), link:state-catalogue.adoc[State Catalogue], link:phase-workflows.adoc[Phase Workflows], link:model-work.adoc[Model Work] (parts 01, 02, 05–11), link:hypermedia-format.adoc[Hypermedia Format] (parts 01, 02, composite wait of 03), link:domain-extensions/04-setup-state-machine.adoc[Domain Extensions § Setup State Machine], link:domain-extensions/06-configuration.adoc[Domain Extensions § Configuration] (plan instance composition), link:mcp-tools/01-core-workflow-tools.adoc[MCP Tools § Core Workflow Tools] (semantics of `pm_state`, `pm_do`), link:timeouts.adoc[Timeouts] (waits, question and waiver deadlines)
 
 |[[module-pm-provider-git]]`pm-provider-git` (in `pm-mcp-core`, `pm-providers`)
@@ -291,7 +291,7 @@ The packages of the modules that have more than one; every other module has the 
 |link:identifiers.adoc[Identifiers]
 
 |`de.planmarshall.core.log`
-|The one registry of log messages every module logs through (`PmMcpLogMessages`), so that the identifiers are numbered once (PM-IMPL-1).
+|The log messages of `pm-core` (`CoreLogMessages`, prefix `PM_CORE`), the one holder of another module that a module may log through. Every module that logs has its own holder in its own `log` package with its own prefix, so that the identifiers are numbered once per prefix (PM-IMPL-1, link:../LogMessages.adoc[Log Messages]).
 |<<modules>>
 
 |===
@@ -322,8 +322,8 @@ The packages of the modules that have more than one; every other module has the 
 |link:workflow-dsl/01-grammar.adoc[Workflow DSL § Grammar]
 
 |`de.planmarshall.workflow.verify`
-|The static verifier of workflow units, which runs at build time and at the start of the runtime.
-|link:workflow-dsl/07-loop-back-diagrams-verification.adoc[Workflow DSL § Loop-Back, Diagram Generation & Verification]
+|The static verifier of workflow units, which runs at build time and at the start of the runtime, the compiled invariants of the project-owned units, and the compiled bounds of their declarations.
+|link:workflow-dsl/07-loop-back-diagrams-verification.adoc[Workflow DSL § Loop-Back, Diagram Generation & Verification], link:workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL § Project-Owned Workflow Units & Compiled Invariants], link:workflow-dsl/08-remediation-units.adoc#remediation-invariants[Workflow DSL § Compiled Invariants of Remediation Units], link:workflow-dsl/02-units-jobs-decisions.adoc#unit-declarations[Workflow DSL § Unit Declarations]
 
 |`de.planmarshall.workflow.engine`
 |The deterministic interpreter of the state machine: the call stack, the guards, the loop-back budgets, the remediation units, and the handling of questions and waivers.
@@ -373,9 +373,13 @@ The packages of the modules that have more than one; every other module has the 
 |The plan-domain primitives, which implement the SPI of `pm-core`.
 |link:workflow-dsl/05-primitives.adoc[Workflow DSL § Primitive Interface & Transition Validation]
 
+|`de.planmarshall.workflow.log`
+|The log messages of `pm-workflow` (`WorkflowLogMessages`, prefix `PM_WORKFLOW`).
+|link:../LogMessages.adoc[Log Messages]
+
 |`de.planmarshall.workflow.unit`
-|The loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly; this module carries none.
-|link:workflow-dsl/02-units-jobs-decisions.adoc[Workflow DSL § Workflow Units, Implicit Links, Questions & Waivers] (Workflow Definition Units)
+|The loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly (this module carries none), the merge of the phase files into the plan unit, and the loader of a project's own units from `.marshall/config/`, which verifies them and returns every verified unit or every finding with its file and line.
+|link:workflow-dsl/02-units-jobs-decisions.adoc[Workflow DSL § Workflow Units, Implicit Links, Questions & Waivers] (Workflow Definition Units), link:workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL § Project-Owned Workflow Units & Compiled Invariants]
 
 |`de.planmarshall.workflow.setup`
 |The state machine of the project setup.
@@ -431,6 +435,10 @@ The packages of the modules that have more than one; every other module has the 
 |`de.planmarshall.runtime.lock`
 |Plan locking, the implementation of the locking interface of `pm-core`: the one lock manager of the runtime (`FileLockManager`, one in-process lock per key and at most one lock of the operating system per lock file), the liveness of a lease holder (`HolderLiveness`) and the stale lease sweep at runtime start (`StaleLeaseSweep`) (PM-IMPL-7, link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]). The assembly wires exactly one `FileLockManager`.
 |<<modules>>, link:store-schemas/13-leases-integrity-testing.adoc[Store Schemas § Leases, Integrity Invariants & Script Disposition]
+
+|`de.planmarshall.runtime.log`
+|The log messages of `pm-runtime` (`RuntimeLogMessages`, prefix `PM_RUNTIME`), and the messages of the assembly `pm-mcp-server` until it takes them over.
+|link:../LogMessages.adoc[Log Messages]
 
 |`de.planmarshall.runtime.worker`
 |The worker supervisor, one per project and role: starting, acknowledgement, silence and exit detection, recycling, ending and fencing of workers.

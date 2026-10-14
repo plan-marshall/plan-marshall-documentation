@@ -5,7 +5,7 @@
 
 link:../UseCases.adoc[Use Cases] » Onboarding
 
-The operator makes a machine ready for `PM-MCP`: the languages it speaks, the harnesses it works with, the models plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#_architecture_enrichment_judgment_links_project_setup_state_machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
+The operator makes a machine ready for `PM-MCP`: the languages it speaks, the harnesses it works with, the models plans may use, a model for every role, where credentials are kept, the providers the machine can reach, and how plans run by default. Everything here is machine level; a project's own setup (link:../specification/domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[project setup]) follows per project, and a project or a single plan may override what the machine provides (<<machine-defaults>>).
 
 Each use case is a process the server runs as a workflow: <<UC-ONB-1>> is the onboarding workflow, each of <<UC-ONB-2>> to <<UC-ONB-9>> is a sub-workflow it calls, and <<UC-ONB-10>> changes later what they recorded. The flows below are those processes, not screens; the states are named as they would be in the workflow unit. The operator takes the choices in the web app or in the terminal: both render the same states, and each use case is designed for both. What the specification has to gain for each use case is modelled in its _Changes_ and collected in <<changes>>.
 
@@ -35,14 +35,15 @@ The closed list of the consent kinds, for every use case that asks one (<<change
 |`probe_harness_login` |run the login probe of each chosen harness: its command, or one minimal headless call with its token cost |`harness.probe-consent` (<<UC-ONB-4>>) |yes, for the machine |stays
 |`verify_harness_profile` |run a harness the binary does not know, to verify its draft profile, with the token cost of its stages |`harness.add-consent` (<<UC-ONB-4>>) |never |stays
 |`probe_harness_models` |run the model probe of each enrolled harness |`catalogue.consent` (<<UC-ONB-5>>) |yes, for the machine |stays
-|`model_advice` |a task of the steward, with its expected cost |`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>) |yes, for the machine |goes on without the advice
+|`model_advice` |a task of the steward, with the tokens it is expected to use |`catalogue.consent` (<<UC-ONB-5>>), `roles.consent` (<<UC-ONB-6>>) |yes, for the machine |goes on without the advice
 |`check_credential_store` |write, read, and delete one test entry in the chosen OS credential store (the keychain) |`store.consent` (<<UC-ONB-7>>) |yes, for the machine |stays
 |`scan_providers` |look for the CLI tools of the providers and the credentials already stored |`providers.consent` (<<UC-ONB-8>>) |yes, for the machine |stays
 |`verify_providers` |call each chosen provider with its credential, and run its CLI tool |`providers.verify-consent` (<<UC-ONB-8>>, <<UC-ONB-10>>) |yes, for the machine |stays
 |the automatic run |every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only |`auto.consent` (<<UC-ONB-2>>) |never |back to `onboard.mode`
 |`inspect_checkout` |read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the host tools' version probes from the absolute directories of the login `PATH`; changes nothing |`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |stays
 |`run_checkout_scripts` |run the named scripts of a project's checkout, each with its arguments, confined like a job |`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project and the digest of each script, in `consents.json` (never in the enrolment) |goes on, what needs the scripts unknown
-|`model_cost` |a role task whose expected cost is shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
+|`model_cost` |a role task whose expected tokens are shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
+|`check_updates` |ask the organisation's registry, over the network, for a release newer than the installed one |`runtime.update-consent` (link:07-system.adoc#UC-SYS-1[UC-SYS-1]) |yes, for the machine |goes on: no newer version is known
 |===
 
 A grant is not a consent: reading the issues of another repository (link:05-starting-work.adoc#UC-STA-4[UC-STA-4]) is a cross-repository read grant, kept with the grants.
@@ -51,7 +52,7 @@ A grant is not a consent: reading the issues of another repository (link:05-star
 == UC-ONB-1: Onboard a Machine
 
 Status:: `DRAFT`
-Actor:: the operator, in the web app or in the terminal of the machine.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: get from a freshly installed `PM-MCP` to a machine on which the first project can be set up, in one guided run.
 Trigger:: the operator enters on a machine that is not fully onboarded (link:02-entry.adoc#UC-ENT-1[UC-ENT-1]) and chooses to go on in the terminal or in the web app. A later run of one aspect starts from the machine settings of either client (<<UC-ONB-10>>).
 Preconditions:: the binaries are installed (link:../specification/cli-and-security/01-cli-and-installer.adoc#installation-layout[Installation Layout]); the runtime can be started.
@@ -59,7 +60,7 @@ Flow::
 +
 [source,text]
 ----
-  onboard.entry                first run, or a later run of one aspect
+  [S] onboard.entry            first run, or a later run of one aspect
        │ first run                     │ reconfigure <aspect> (UC-ONB-10)
        │                               └──► ↳ the sub-workflow of that aspect,
        │                                      then onboard.completed
@@ -89,14 +90,14 @@ Outcome:: the languages chosen, the harnesses enrolled with one of them the defa
 Changes::
 * *Machine scope* (<<change-machine-scope>>): the onboarding workflow runs in a scope of its own that exists before any project is enrolled.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>).
-Requirements:: none yet; the parts that exist are named in each use case below.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#frame[Web App, Onboarding]
+Requirements:: link:../requirements/08-security.adoc#PM-SEC-3[PM-SEC-3] (the machine's configuration only through the operator's channel), link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the web app as a channel of the operator); for the onboarding as one process of the machine none yet (<<change-machine-scope>>); the parts that exist are named in each use case below.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc[Consents] (the consent states of every step); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/README.adoc[Terminal Client]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#frame[Web App, Onboarding]
 
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
 
 Status:: `DRAFT`
-Actor:: an operator who does not want to weigh options.
+Actor:: an operator who does not want to weigh options, in the web app or in the terminal client.
 Goal:: get every setting of the onboarding decided in one go, and see afterwards what was decided.
 Trigger:: <<UC-ONB-1>>, `onboard.mode` with _automatic_, in the web app or in the terminal alike.
 Flow::
@@ -138,10 +139,9 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 == UC-ONB-3: Choose the Languages
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: choose the language the system speaks to the operator, and, separately, the language of the content a model writes and reads.
 Trigger:: <<UC-ONB-1>>, state `onboard.language`, the first step; or a later reconfiguration.
-Preconditions:: none.
 Flow::
 +
 [source,text]
@@ -165,17 +165,17 @@ Variations:: the model language _same as the interface_ follows a later change o
 Outcome:: the interface language and the model language recorded.
 Changes::
 * *Languages and internationalisation* (<<change-i18n>>).
-Requirements:: the model language exists per project as `user_language` (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]); an interface language does not.
+Requirements:: link:../requirements/15-extensions-and-recipes.adoc#PM-EXT-6[PM-EXT-6] (the model language among the operator's keys of a project, `user_language`, specified in link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]); for an interface language none yet.
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/texts-and-languages.adoc[Texts and Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-language[Terminal Client, Languages]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#language[Web App, Onboarding]
 
 [#UC-ONB-4]
 == UC-ONB-4: Enrol the Harnesses
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: have every harness of this machine that the operator wants to work with enrolled, from one scan, with one of them the default the later steps of onboarding use.
 Trigger:: <<UC-ONB-1>>, state `onboard.harnesses`, or a later run of it from the machine settings (a harness installed since, or one to remove).
-Preconditions:: none: this step runs before any harness is enrolled, so no state of it may need a model.
+Preconditions:: on a first run no harness is enrolled yet, so no state of this step may need a model.
 Flow::
 +
 [source,text]
@@ -205,7 +205,8 @@ Flow::
        │                       fetch leaves the monogram
        ▼
   [O] harness.choose           every found harness, each with version,
-       │                       supported or not, worker-eligible or not;
+       │                       supported or not, worker-eligible or not,
+       │                       what it reports of its token usage;
        │                       every supported one preselected, the first of
        │                       them as the default
        ├── add another (under "Advanced") ──► harness.add
@@ -257,6 +258,7 @@ Flow::
   harness.choose               the added harness among the found ones
 ----
 Variations::
+* *What a harness reports of its usage*: each harness is shown with what this harness and version reports of its token usage, complete, partial (naming what is missing, "no cache figure"), or not reported, from its profile and, for a verified profile, from its verification; a harness that reports less is still enrolled, and the figures of its tasks say what was not measured (link:03-plans.adoc#change-token-usage[Tokens, Not Money]).
 * A known harness that is not found where it is looked for can be pointed at by its path in `harness.add`; its shipped profile is used and no draft is asked for.
 * The step cannot finish without one usable harness: the last chosen harness cannot be left out, and when every chosen harness fails its probe the step goes to `harness.none`, where the operator rechecks, adds one, or leaves the onboarding to continue later.
 * A later run scans again: a harness found that is not enrolled is offered, an enrolled one no longer found is shown as missing and offered for removal; the default can change, and a harness that roles use cannot be removed before they are reassigned (<<UC-ONB-6>>).
@@ -267,14 +269,15 @@ Changes::
 * *Login probe* (<<change-login-probe>>): the probe tells whether a harness is logged in.
 * *Harness icons* (<<change-harness-icons>>): each harness is shown with its icon, fetched on consent.
 * *Unknown harness* (<<change-unknown-harness>>): a harness without a shipped profile is added through a verified draft.
-Requirements:: the enrolment exists: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
+* *Tokens, not money* (link:03-plans.adoc#change-token-usage[Tokens, Not Money]): what a harness reports of its usage, checked by the profile verification.
+Requirements:: link:../requirements/06-execution.adoc#PM-EXEC-1[PM-EXEC-1] (a model job only through a harness the operator enrolled: its path, version probe, and digest), link:../requirements/08-security.adoc#PM-SEC-3[PM-SEC-3] (`enrol-harness` a verb of the operator), link:../requirements/13-client-profiles.adoc#PM-CLIENT-5[PM-CLIENT-5] (the operator's verification and installation of a profile, for a harness the release does not ship); the enrolment is specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-enrol-harness[Harness Enrolment] and link:../specification/store-schemas/11-enrolment-store.adoc#harness-enrolment-store[Harness Enrolment Store]; for the scan and the login probe none yet.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-harness[Terminal Client, Harnesses]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#harness[Web App, Onboarding]
 
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Models for the Work
 
 Status:: `DRAFT`
-Actor:: the operator, advised by a model.
+Actor:: the operator, in the web app or in the terminal client, advised by a model.
 Goal:: decide which models of the enrolled harnesses the server may use for the roles of every plan.
 Trigger:: <<UC-ONB-1>>, state `onboard.models`, or a later run of it.
 Preconditions:: <<UC-ONB-4>> done: the harnesses are enrolled, one of them the default.
@@ -285,7 +288,7 @@ Flow::
   [O] catalogue.consent        may the server run the model probes of the
        │                       enrolled harnesses, and ask a model for
        │                       advice? (two consents, each shown with its
-       │                       cost: probe_harness_models, model_advice)
+       │                       tokens: probe_harness_models, model_advice)
        ├── no to the probes ──► stays at catalogue.consent
        ▼ yes | yes, don't ask again
   [S] catalogue.models         the models each enrolled harness offers, from
@@ -295,7 +298,7 @@ Flow::
        ▼
   [M] catalogue.advise         a role task of the steward on the default
        │                       harness: which models suit which kind of work,
-       │                       with cost, limits, and a recommendation
+       │                       with their limits and a recommendation
        ▼
   [O] catalogue.select         the models to allow per harness; the
        │                       recommendation preselected; model ids typed
@@ -311,14 +314,14 @@ Changes::
 * *Consent* (<<change-consent>>, <<consents>>): the model probes and the advice wait for the operator's consent.
 * *Model catalogue* (<<change-model-catalogue>>): a machine store of the allowed models per harness, and how the models of a harness are found.
 * *Steward role* (<<change-steward-role>>): the role that gives the advice of onboarding.
-Requirements:: none yet.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Models]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]
+Requirements:: link:../requirements/16-model-work.adoc#PM-WORK-1[PM-WORK-1] (a role names the harness, model, and effort it runs on); for a catalogue of the models allowed on a harness none yet.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/06-transcripts-steps-1-3.adoc#t-models[Terminal Client, Models]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding.adoc#models[Web App, Onboarding]
 
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
 
 Status:: `DRAFT`
-Actor:: the operator, optionally advised by a model.
+Actor:: the operator, in the web app or in the terminal client, optionally advised by a model.
 Goal:: give every role a harness, a model, and an effort from the catalogue, starting from the default assignment.
 Trigger:: <<UC-ONB-1>>, state `onboard.assign-roles`, or a later reconfiguration.
 Preconditions:: <<UC-ONB-5>> done.
@@ -340,7 +343,7 @@ Flow::
        │                       accept as it is, or change single roles or
        │                       groups, each with its advisory beside it
        ├── ask the steward ──► [O] roles.consent  may a model refine the
-       │                            │              defaults? (cost shown)
+       │                            │              defaults? (tokens shown)
        │                            ├── no ──► roles.review, unchanged
        │                            ▼ yes
        │                       [M] roles.propose   departures from the
@@ -365,17 +368,16 @@ Changes::
 * *Default role assignment* (<<change-default-assignment>>): every role ships with a default harness, model and effort and an advisory of what and why.
 * *Role assignment* (<<change-role-assignment>>): the process writes the harness, model and effort of a role without copying the whole artifact.
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override the harness, model and effort of a role.
-Requirements:: the roles exist: link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]
+Requirements:: link:../requirements/16-model-work.adoc#PM-WORK-1[PM-WORK-1] (roles as configuration, each naming its harness, model, and effort), link:../requirements/02-workflow.adoc#PM-WF-14[PM-WF-14] (a worker's harness, model, and effort only from its role), link:../requirements/16-model-work.adoc#PM-WORK-6[PM-WORK-6] (the qualification that follows per project); the roles are specified in link:../specification/model-work/01-roles-and-configuration.adoc#role-artifact[Role Artifact], link:../specification/model-work/01-roles-and-configuration.adoc#role-sets[Role Sets], link:../specification/model-work/01-roles-and-configuration.adoc#role-validation[Role Validation]; for a default assignment and an assignment apart from the artifact none yet.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-roles[Terminal Client, Roles]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#roles[Web App, Onboarding]
 
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide, knowingly, whether the machine keeps its credentials in the operating system's credential store or in protected files, and keep that choice until the operator changes it.
 Trigger:: <<UC-ONB-1>>, state `onboard.credential-store`, or a later reconfiguration.
-Preconditions:: none.
 Flow::
 +
 [source,text]
@@ -413,14 +415,14 @@ Outcome:: the machine's credential store is recorded; every credential and the e
 Changes::
 * *Consent* (<<change-consent>>, <<consents>>): the check of an OS store waits for the operator's consent (`check_credential_store`); the file store lies in the machine's own directory and is checked without one.
 * *Credential store as an operator choice* (<<change-credential-store>>).
-Requirements:: link:../Requirements.adoc#PM-CRED-2[PM-CRED-2] and link:../Requirements.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]
+Requirements:: link:../requirements/07-credentials.adoc#PM-CRED-2[PM-CRED-2] and link:../requirements/07-credentials.adoc#PM-CRED-3[PM-CRED-3] choose the store automatically at every runtime start; the change makes it the operator's.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]
 
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide which providers (git hosting and CI, code analysis, review bots) this machine can reach, how (native or through a CLI tool), and with which credentials, as the default for every project and plan.
 Trigger:: <<UC-ONB-1>>, state `onboard.providers`, or a later reconfiguration.
 Preconditions:: <<UC-ONB-7>> done: the credential store is chosen.
@@ -473,14 +475,14 @@ Changes::
 * *Provider verification* (<<change-provider-verification>>): a configured provider is verified before it is recorded, and again when the operator asks.
 * *Plan overrides* (<<change-plan-overrides>>): a plan may override providers, roles, and models.
 * *Credentials in the web app* (<<change-web-credentials>>).
-Requirements:: the parts exist per project: link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]
+Requirements:: link:../requirements/06-execution.adoc#PM-EXEC-5[PM-EXEC-5] (the native and the CLI variant of a provider), link:../requirements/15-extensions-and-recipes.adoc#PM-EXT-6[PM-EXT-6] (the integration variant an operator's choice), link:../requirements/07-credentials.adoc#PM-CRED-4[PM-CRED-4] (a secret entered by the operator only; `verify`); the parts are specified per project in link:../specification/domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Integration Variants] and link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials]; for providers as defaults of the machine none yet.
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-providers[Terminal Client, Providers]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#providers[Web App, Onboarding]
 
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
 
 Status:: `DRAFT`
-Actor:: the operator.
+Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide once how a plan runs when its project and the plan itself say nothing else: how its work lands, how it works, and how often it asks the operator.
 Trigger:: <<UC-ONB-1>>, state `onboard.plan-defaults`, or a later reconfiguration.
 Preconditions:: <<UC-ONB-8>> done: the providers are known, since landing through a pull request needs one.
@@ -517,7 +519,7 @@ Outcome:: the machine's default for every axis; a project's setup may set its ow
 Changes::
 * *Plan behaviour axes* (<<change-plan-axes>>).
 * *Plan overrides* (<<change-plan-overrides>>): a plan may set its own variant of an axis.
-Requirements:: parts exist per project and plan: the merge policy `merge.auto_merge`, the question handling `questions.*`, `review_outline` at a plan's start (link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]).
+Requirements:: link:../requirements/15-extensions-and-recipes.adoc#PM-EXT-6[PM-EXT-6] (the merge policy `merge.auto_merge`, the question handling `questions.*`, and the outline review as operator keys of a project), link:../requirements/02-workflow.adoc#PM-WF-13[PM-WF-13] (what the merge policy decides), link:../requirements/02-workflow.adoc#PM-WF-12[PM-WF-12] (the question modes); the keys are specified in link:../specification/store-schemas/08-project-configuration-local.adoc#local-config[Operator Local Configuration]; for the axes and a default of the machine none yet.
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-defaults[Terminal Client, Plan Defaults]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#plan-defaults[Web App, Onboarding]
 
 [#UC-ONB-10]
@@ -525,7 +527,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `DRAFT`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, or a credential.
+Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, a credential, or the cleanup's durations.
 Trigger:: the operator opens the machine settings of either client; or a credential has expired or is about to (reported by the status, or a plan held by it, link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
 Preconditions:: the onboarding has completed once (<<UC-ONB-1>>, resting in `onboard.completed`).
 Flow::
@@ -534,7 +536,8 @@ Flow::
 ----
   [O] settings.choose          what the machine recorded, per aspect, with
        │                       the remembered consents, the documents mode,
-       │                       and the credentials with their status
+       │                       the cleanup's durations, and the credentials
+       │                       with their status
        ├── reconfigure <aspect> ──► ↳ the aspect's sub-workflow (UC-ONB-3 to
        │                              UC-ONB-9) as a later run, its current
        │                              values the proposal ─► settings.choose
@@ -550,6 +553,9 @@ Flow::
        │                              ▼
        │                         [S] settings.record   the machine setting,
        │                                               audited ─► settings.choose
+       ├── cleanup durations ────► [S] settings.record   the durations of
+       │                                               UC-SYS-3, audited
+       │                                               ─► settings.choose
        ▼ a credential
   [O] settings.credential      rotate (a new secret for the entry, its other
        │                       fields kept) or replace (a new entry, another
@@ -573,17 +579,19 @@ Variations::
 * The documents mode is the machine's `sources.documents_mode` (`copy`, `move`, or `ask`, the default; link:05-starting-work.adoc#change-documents[Documents]); answering _always_ in a plan's start writes the same setting.
 * A credential that has expired holds every plan that needs it as a condition; the hold names the act that resolves it, which is this flow, and the plan goes on once the new credential verifies (link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
 * In the web app a secret is entered only on the loopback listener; on the LAN listener the form names the terminal command (<<change-web-credentials>>).
+* *The cleanup's durations*: how long archived plans, archived epics, the logs of ended work, read reports, and unenrolled projects are kept before the cleanup offers them, and after how many days a postponed cleanup asks again, are machine settings changed here, as in the cleanup view (link:07-system.adoc#UC-SYS-3[UC-SYS-3]); a project's own duration for its plans, epics, and logs is set in its settings.
 * An aspect a project sets for itself is changed in that project's setup, never here.
+* *Changed in two clients at once*: the first change wins; a later one made against an older value is refused with `conflict`, the current value shown, and the operator may apply theirs again on top of it (<<concurrent-changes>>).
 Outcome:: the changed value is recorded for the machine and audited; every project and plan that follows the machine's value uses it from its next read.
-Open points:: the documents mode and the credentials (rotate, replace) are not yet designed in the machine settings of either client.
 Changes::
 * *Consent* (<<change-consent>>, <<consents>>): the remembered consents are listed and withdrawn here.
 * *Operator choices in the web app and the terminal* (<<change-two-channels>>): every aspect can be changed alone later.
 * *Credential store as an operator choice* (<<change-credential-store>>): changing the store is a move.
 * *Provider verification* (<<change-provider-verification>>): a changed credential is verified again.
 * *Credentials in the web app* (<<change-web-credentials>>).
-Requirements:: the credential verbs exist: link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials] (`rotate`, `set`).
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#remembered[Consents, The Remembered Consents]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-later[Terminal Client, Later Changes]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc[Web App, Machine Settings]
+* *One cleanup* (link:07-system.adoc#change-cleanup[One Cleanup]): the durations `cleanup.*`.
+Requirements:: link:../requirements/07-credentials.adoc#PM-CRED-4[PM-CRED-4] (the credential verbs, a secret entered by the operator only), link:../requirements/08-security.adoc#PM-SEC-3[PM-SEC-3] (the machine's configuration only through the operator's channel); the credential verbs are specified in link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-credential-cli[Credentials] (`rotate`, `set`).
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#remembered[Consents, The Remembered Consents]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-settings[Terminal Client, The Machine's Settings] (with link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-documents[the documents mode] and link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/08-transcripts-later.adoc#t-credential[a credential]); link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc[Web App, Machine Settings] (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#documents[Documents], link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/machine-settings.adoc#credentials[Credentials])
 
 [#changes]
 == Changes to the Specification
@@ -622,9 +630,10 @@ Fix::
 * The machine scope's choice states (`[O]`) are the operator's links of the local API. Two clients render them: the web app and the terminal client, each as its design says. Both show the same state, the same proposal and the same texts; a run started in one continues in the other.
 * A choice is an operator act in either: audited with channel `web` and the `device_id`, or channel `cli`; never relayed by a model and never taken through MCP elicitation. The terminal keeps the operator checks of `pm-operator` (an interactive terminal, no coding-agent environment).
 * Every aspect can also be changed alone later, with its current values as the proposal: the aspect's sub-workflow runs as a later run (<<UC-ONB-10>>). A client may take the choices of an aspect as answers given in advance and ask only for the ones it was not given; the terminal client does (link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/01-commands.adoc#direct-verbs[Terminal Client, A Direct Verb Runs a Sub-Workflow]).
+* [[concurrent-changes]]*Concurrent changes of a setting*: a change of a recorded value (a machine setting, <<UC-ONB-10>>; a project's operator value, link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]; a plan's own value, link:06-controlling-work.adoc#UC-CTL-5[UC-CTL-5]) carries the revision of the settings it was made against. The first change wins; a later one made against an older revision is refused with the code `conflict` (`409`), the client shows the current value, and the operator may apply theirs again on top of it. Nothing is merged and nothing is overwritten unseen.
 * Identifiers, and the commands and options of a client, are the same in every language; only the texts are translated (<<change-i18n>>).
 * The same two channels answer what a plan asks: the content answers of channel `cli` (link:03-plans.adoc#change-cli-answers[Answers from the Terminal Client]) rest on this change, and the specification parts it affects are listed here once.
-Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../Requirements.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`).
+Affects:: link:../requirements/08-security.adoc[PM-SEC-3, PM-SEC-7] (the web app is no longer the only dependable channel of content questions), link:../requirements/02-workflow.adoc#PM-WF-12[PM-WF-12], link:../specification/cli-and-security/01-cli-and-installer.adoc[CLI & Installer], link:../specification/cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[Operator Channel Isolation] (item 1: "there is no CLI command that answers one"), link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel], link:../specification/cli-and-security/03-web-server.adoc#web-app[Web App] (the dependable question channel), link:../specification/runtime-model/01-processes-and-transport.adoc#local-api[Local API] (the answer endpoint for channel `cli`; the revision of a settings change and the code `conflict` among the link:../specification/runtime-model/01-processes-and-transport.adoc#api-error-codes[Error Codes]).
 
 [#change-auto]
 === Automatic Onboarding
@@ -758,7 +767,7 @@ Fix::
 * The runtime uses the recorded store and never another. When the recorded OS store is unavailable at start or later (a locked collection), the credentials are unavailable: `pm-operator status` and the web app report it with the cause, and a step that needs a credential raises `precondition_unmet` with `facts.reason: credential_store_unavailable` and the fix; nothing is written to the file store in its place.
 * Changing the store is a move in both directions (OS to files and files to OS), as the variation of <<UC-ONB-7>> describes; `pm-operator credentials migrate` becomes that move.
 * The choice screen states what each store protects against: the macOS Keychain lets only `pm-mcpd` read without a prompt; the Linux Secret Service lets every process of the user read an unlocked collection; the file store lets every process of the user read the files (`0600`). The residual risks of `PM-SEC-5` stay as they are.
-Affects:: link:../requirements/07-credentials.adoc[PM-CRED-2, PM-CRED-3] (no automatic fallback), link:../specification/cli-and-security/02-credentials-and-operator.adoc#_os_keyring_backends_fallback_file_store[OS Keyring Backends & Fallback File Store], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store].
+Affects:: link:../requirements/07-credentials.adoc[PM-CRED-2, PM-CRED-3] (no automatic fallback), link:../specification/cli-and-security/02-credentials-and-operator.adoc#os-keyring-backends[OS Keyring Backends & Fallback File Store], link:../specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store].
 
 [#change-provider-defaults]
 === Machine Provider Defaults
