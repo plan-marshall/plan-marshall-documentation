@@ -15,6 +15,14 @@ Every state the excerpt defines is catalogued in the link:../state-catalogue/04-
 
 [source,text]
 ----
+---
+name: Finalize
+description: Settles, pushes, reviews, and merges the plan's change, then runs the post-run band and archives the plan.
+type: workflow
+modification_date: 2026-10-14
+version: 1.0.0
+author: plan-marshall
+---
 workflow finalize version 1 format 1
 scope plan
 start finalize.settle-commit

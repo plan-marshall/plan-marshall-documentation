@@ -85,13 +85,14 @@ The store, its codec, and the members the workflow engine owns (`format_version`
       "maxItems": 4,
       "items": {
         "type": "object",
-        "required": ["caller_workflow_id", "caller_state_id", "caller_phase", "subworkflow_id", "bound_args", "pushed_at"],
+        "required": ["caller_workflow_id", "caller_state_id", "caller_phase", "subworkflow_id", "entry", "bound_args", "pushed_at"],
         "additionalProperties": false,
         "properties": {
           "caller_workflow_id": { "type": "string" },
           "caller_state_id": { "type": "string" },
           "caller_phase": { "type": "string" },
           "subworkflow_id": { "type": "string" },
+          "entry": { "type": "string", "description": "The callee's entry the call went through (workflow-dsl.adoc, Interface Rules); not implemented yet." },
           "bound_args": {
             "type": "object",
             "description": "The call arguments bound at the push, keyed by sub-workflow param_name (identifiers.adoc, Free parameter name).",
