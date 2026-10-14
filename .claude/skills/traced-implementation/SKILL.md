@@ -187,7 +187,9 @@ plan corrects it; the code never diverges from the documents, and the plan does 
 - Watch items: the guarding test's Javadoc states the hazard in one or two sentences and uses the fixture
   verbatim, so the test explains itself after the watch document is gone. It names the requirement ID, not
   the `PM-WATCH-*` ID.
-- Log messages go to `PmMcpLogMessages` and `doc/LogMessages.adoc` as usual.
+- Log messages go to the holder of the module the change is in (`CoreLogMessages`, `RuntimeLogMessages`,
+  `WorkflowLogMessages`, or a provider's `<X>LogMessages`), at the next free identifier of the level, and to
+  `doc/LogMessages.adoc` as usual.
 
 ### 2.2 Write the documentation from the corpus
 

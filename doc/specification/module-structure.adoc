@@ -291,7 +291,7 @@ The packages of the modules that have more than one; every other module has the 
 |link:identifiers.adoc[Identifiers]
 
 |`de.planmarshall.core.log`
-|The one registry of log messages every module logs through (`PmMcpLogMessages`), so that the identifiers are numbered once (PM-IMPL-1).
+|The log messages of `pm-core` (`CoreLogMessages`, prefix `PM_CORE`), the one holder of another module that a module may log through. Every module that logs has its own holder in its own `log` package with its own prefix, so that the identifiers are numbered once per prefix (PM-IMPL-1, link:../LogMessages.adoc[Log Messages]).
 |<<modules>>
 
 |===
@@ -373,6 +373,10 @@ The packages of the modules that have more than one; every other module has the 
 |The plan-domain primitives, which implement the SPI of `pm-core`.
 |link:workflow-dsl/05-primitives.adoc[Workflow DSL § Primitive Interface & Transition Validation]
 
+|`de.planmarshall.workflow.log`
+|The log messages of `pm-workflow` (`WorkflowLogMessages`, prefix `PM_WORKFLOW`).
+|link:../LogMessages.adoc[Log Messages]
+
 |`de.planmarshall.workflow.unit`
 |The loader of the default workflow units, which are read from `classpath:/workflows/` and supplied by the assembly (this module carries none), the merge of the phase files into the plan unit, and the loader of a project's own units from `.marshall/config/`, which verifies them and returns every verified unit or every finding with its file and line.
 |link:workflow-dsl/02-units-jobs-decisions.adoc[Workflow DSL § Workflow Units, Implicit Links, Questions & Waivers] (Workflow Definition Units), link:workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL § Project-Owned Workflow Units & Compiled Invariants]
@@ -431,6 +435,10 @@ The packages of the modules that have more than one; every other module has the 
 |`de.planmarshall.runtime.lock`
 |Plan locking, the implementation of the locking interface of `pm-core`: the one lock manager of the runtime (`FileLockManager`, one in-process lock per key and at most one lock of the operating system per lock file), the liveness of a lease holder (`HolderLiveness`) and the stale lease sweep at runtime start (`StaleLeaseSweep`) (PM-IMPL-7, link:../developer/locks-and-leases.adoc[Developer Guide § Locks and Leases]). The assembly wires exactly one `FileLockManager`.
 |<<modules>>, link:store-schemas/13-leases-integrity-testing.adoc[Store Schemas § Leases, Integrity Invariants & Script Disposition]
+
+|`de.planmarshall.runtime.log`
+|The log messages of `pm-runtime` (`RuntimeLogMessages`, prefix `PM_RUNTIME`), and the messages of the assembly `pm-mcp-server` until it takes them over.
+|link:../LogMessages.adoc[Log Messages]
 
 |`de.planmarshall.runtime.worker`
 |The worker supervisor, one per project and role: starting, acknowledgement, silence and exit detection, recycling, ending and fencing of workers.
