@@ -5,7 +5,7 @@
 
 `pm-mcpd` must host an integrated build server that manages cross-session build concurrency via shared filesystem slot locks, parses build outputs natively, and tracks working-tree freshness deterministically.
 
-* The system must manage all project builds through an integrated build server within `pm-mcpd`, enforcing a machine-wide build-slot concurrency cap (`max_build_slots` in `<PM_MCP_BASE>/machine-config.json`; slot occupancy in `<PM_MCP_BASE>/state/build-slots.json` under its sibling lock `<PM_MCP_BASE>/locks/build-slots.lock`), execution policy, and audit logging across all enrolled projects and concurrent STDIO sessions.
+* The system must manage all project builds through an integrated build server within `pm-mcpd`, enforcing a machine-wide build-slot concurrency cap (`max_build_slots` in `<PM_MCP_BASE>/machine-config.json`; slot occupancy in `<PM_MCP_BASE>/state/build-slots.json` under its sibling lock `<PM_MCP_BASE>/locks/build-slots.lock`), execution policy, and audit logging across all enrolled projects and concurrent workers.
 * The system must resolve build commands server-side from project configuration and compiled domain support, invoking the project's wrapper or enrolled host tool within the plan's worktree without exposing command lines to the model.
 * The system must parse raw build outputs using native Java log parsers (supporting Maven Surefire/Failsafe, Gradle, npm errors, TypeScript, ESLint, Jest, TAP, pytest, ruff, mypy, and OpenRewrite, `PM-IMPL-6`) to produce structured results containing closed-enum status, test counts, and located error diagnostics.
 * The system must return `status: failed_unparsed` accompanied by the raw build log resource URI (`pm://plan/{plan_id}/builds/{job_id}/log`) whenever a build subprocess exits non-zero and yields no parsed diagnostic; a build ended by a signal, including a crash such as a segmentation fault, is `killed` with the signal recorded (link:specification/job-runtime/01-pipeline-and-subprocesses.adoc#outcome-derivation[Job Runtime Specification, Outcome Derivation]).
@@ -19,7 +19,7 @@ Implementation watch: link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-24
 [#PM-SVC-2]
 === PM-SVC-2: Warm Language Server Pool & Semantic Code Navigation
 
-The runtime must maintain a pool of warm language servers, shared by all host connections, per workspace and language over `stdio` pipes to provide low-latency semantic code navigation and refactoring.
+The runtime must maintain a pool of warm language servers, shared by all workers, per workspace and language over `stdio` pipes to provide low-latency semantic code navigation and refactoring.
 
 * The system must maintain a warm language server pool keyed by `(workspace, language)`, treating each plan worktree as an isolated workspace.
 * The system must start language server subprocesses through the job launcher `pm-exec` under the same confinement as jobs but without job records (after a runtime crash they end when their `stdin` closes), lazily upon first `pm_lsp` request and terminate them automatically after an idle timeout, when the owning plan worktree is removed, or when the runtime drains or stops, and must bound every language server start and request by a timeout that is reported, never answered with an empty result.
@@ -33,15 +33,14 @@ Implementation watch: link:implementation-watch/domain-extensions.adoc#PM-WATCH-
 [#PM-SVC-3]
 === PM-SVC-3: Selective Upstream MCP Proxy & Provenance Tagging
 
-The runtime must be the host's single MCP entry point: configured upstream MCP servers are connected once, centrally, and reached through PM-MCP instead of being wired into every host, while provenance tagging and credential isolation prevent trust laundering.
+Configured upstream MCP servers must be connected once, centrally, by the runtime and called only server-side by workflow steps, while provenance tagging and credential isolation prevent trust laundering.
 
-* The system must read the upstream allowlist (per server its id, its URL, its credential key `mcp-<server_id>`, and the tools re-exposed) exclusively from the closed object `upstream_mcp` of the operator-owned per-project file `<PM_MCP_BASE>/projects/<project_id>/local-config.json`, which only the operator verb `pm-operator upstream allow|deny` writes; repository content such as the team configuration under `.marshall/config/` must never add a server or a tool.
+* The system must read the upstream allowlist (per server its id, its URL, its credential key `mcp-<server_id>`, and the tools allowed) exclusively from the closed object `upstream_mcp` of the operator-owned per-project file `<PM_MCP_BASE>/projects/<project_id>/local-config.json`, which only the operator's act (`pm-operator upstream allow|deny`, or the same act in the web app) writes; repository content such as the team configuration under `.marshall/config/` must never add a server or a tool.
 * The system must connect to upstream MCP servers only as remote servers over HTTPS (`PM-TECH-2`) and must start no upstream server as a local subprocess.
-* The system must re-expose only allowlisted upstream tools to the host, as a pass-through surface separate from the core `pm_*` tools, named `up_<server_id>_<tool>` (link:specification/identifiers/02-registry-stores-to-web.adoc#id-upstream-tool-name[Identifier Registry]), optionally narrowing their parameter schemas to minimize client context overhead; the pass-through surface changes only when the operator changes the allowlist.
-* The system must let workflow steps call allowlisted upstream tools server-side, and must admit such results into plan stores only through the two-level guard for external text (`PM-SEC-1`).
-* The system must attach provenance metadata to all proxied upstream responses under the PM-MCP-prefixed `_meta` key `de.planmarshall.mcp/source` (MCP `_meta` key prefix convention) identifying the originating server, and must treat all upstream content as untrusted external input within the workflow engine.
+* The system must let workflow steps call only allowlisted upstream tools, server-side, and must admit such results into plan stores only through the two-level guard for external text (`PM-SEC-1`); no upstream tool is offered on the MCP surface of a worker.
+* The system must attach provenance metadata to all proxied upstream responses under the PM-MCP-prefixed `_meta` key `de.planmarshall.mcp/source` (MCP `_meta` key prefix convention) identifying the originating server, and must treat all upstream content as untrusted external input within the workflow engine (content from outside the machine, `PM-SEC-1`).
 * The system must never re-serve skills from upstream MCP servers as PM-MCP vocabulary skills.
-* The system must authenticate to each upstream MCP server using credentials configured specifically for that server in the PM-MCP credential store, strictly prohibiting the passthrough of tokens received from host clients or other servers.
+* The system must authenticate to each upstream MCP server using credentials configured specifically for that server in the PM-MCP credential store, strictly prohibiting the passthrough of tokens received from a worker's host or other servers.
 
 See the link:specification/mcp-tools.adoc[MCP Tools Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], and link:specification/identifiers.adoc[Identifier Registry] for implementation details.
 
@@ -52,7 +51,7 @@ Implementation watch: link:implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-19[
 
 Developer assistance services (`pm_build`, `pm_lsp`) must remain directly callable during implementation tasks without requiring or triggering hypermedia state transitions.
 
-* The system must allow the entry session (its `pm_lsp` limited to the read operations, as for `read_only` roles) and workers whose role's tool set includes them to invoke `pm_build` and `pm_lsp` directly at any point during task implementation or troubleshooting, independent of the transitions currently listed in the state representation's `links`.
+* The system must allow workers whose role's tool set includes them to invoke `pm_build` and `pm_lsp` directly at any point during task implementation or troubleshooting, independent of the transitions currently listed in the state representation's `links`.
 * The system must execute orthogonal `pm_build` and `pm_lsp` calls without mutating or advancing the plan's workflow phase or step state.
 * The system must automatically scope orthogonal service calls to the worktree of the specified `plan_id` and record build outcomes and working-tree hashes in the plan's change ledger so that subsequent verification gates can reuse fresh green build results.
 

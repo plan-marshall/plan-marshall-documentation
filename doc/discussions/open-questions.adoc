@@ -77,6 +77,35 @@ Options:: (1) Rely on GitHub's notification of the account that last changed the
 Recommendation:: check the notification once; 2 only if it does not arrive.
 Blocks:: nothing; without it the nightly build protects less than it seems to.
 
+== Use Cases
+
+[#harness-icons]
+=== Showing a Maker's Icon
+
+Question:: May the clients show the icon of a harness's maker at all, and which icons may be bundled with the release?
+Why it is open:: it is a legal question, kept with the business documents of the operator; the research is in link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/harness-icons.adoc#icons[Web App, Harness Icons].
+Options:: (1) Bundle the makers' icons where their terms allow it. (2) Bundle no maker's icon; every harness shows the neutral icon, and the operator may place an icon of their own on the machine.
+Recommendation:: 2 until the legal question is answered; the operator's own icon covers the need.
+Blocks:: the bundled icon set of the clients (link:../specification/client-profiles.adoc[Client Profiles Specification]).
+
+[#registry-credential]
+=== The Credential for the Organisation's Registry and the Form of a Release
+
+Question:: Which credential does the runtime present to the organisation's registry when it checks for and downloads a newer version, and in which form is a release published there?
+Why it is open:: a package of the private organisation needs authentication; either a provider credential of GitHub with read access to packages, or a credential of its own.
+Options:: (1) The GitHub provider credential the machine already keeps, with the scope to read packages. (2) A credential of its own for the registry, kept in the machine's credential store.
+Recommendation:: 1, with the native binaries per platform and their digests as the release's assets; one credential less to keep.
+Blocks:: the check for updates and the upgrade of the runtime (link:../specification/runtime-model/02-startup-recovery-drain.adoc[Runtime Model Specification, Startup, Recovery & Drain]).
+
+[#metrics-library]
+=== The Library of the Runtime's Metrics
+
+Question:: Which library implements the registry of the runtime's metrics?
+Why it is open:: it adds a dependency, and no dependency is added without the operator's approval.
+Options:: (1) The metrics library of the runtime's stack (Micrometer, as Quarkus integrates it). (2) A small registry of its own over the stores the runtime already keeps.
+Recommendation:: 1 if its native-image support holds for the runtime binary; otherwise 2.
+Blocks:: the metrics of the runtime (link:../specification/runtime-model.adoc[Runtime Model Specification]).
+
 [#recorded-elsewhere]
 == Recorded Elsewhere
 
