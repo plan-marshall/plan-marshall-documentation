@@ -161,6 +161,17 @@ _Accepted limitation:_ a profile an operator verified for a harness or a harness
 * [ ] Treat a submitted profile as a draft only: the intake validates it with the rules of link:specification/client-profiles/01-profile-schema.adoc#profile-hardening[Client Profiles Specification § A Profile Is Untrusted Input], a person reviews its launch arguments, and the release verifies it again on its reference machines with the same harness build before it ships; no claim of a submitted record is taken over
 * [ ] Match submissions by the tracked identities of the record (release and commit of the runtime, executable name, exact version and digest of the harness, platform), so that records of the same harness build can be compared and a record of an unknown build is recognisable as such
 
+[#L-17]
+=== L-17: A Model Watching a Worker
+
+_Deferred because:_ the signals of a worker off track are computed from its activity without a model (link:use-cases/03-plans.adoc#change-worker-off-track[A Worker Off Track]); whether a model's judgment adds to them can be told only once real activity is recorded, and a watching model reads untrusted text and costs a model call per check.
+
+_Accepted limitation:_ a worker that makes no progress in a way no signal catches (it works busily on the wrong thing) runs until its budget, its plan task's submission, or a later review shows it.
+
+* [ ] A `zero_tool` role `watch`, fresh, started only when a signal fires or at a bounded interval the role sets, never per turn: it receives the recent stretch of the task's activity after the screener's level 1 (link:specification/model-work/07-untrusted-text-screening.adoc#two-level-guard[Two-Level Guard]), the plan task, and its files, and chooses one of the server's actions of the signal (`show`, `nudge`, `yield`, `restart`) with its reason; it never ends a plan and never acts itself
+* [ ] Qualified like every role on a corpus topic of recorded activity with the operator's verdicts, injected text among them (link:specification/model-work/01-roles-and-configuration.adoc#qualification[Role Qualification])
+* [ ] Its cost and its catches compared with the signals alone on the recorded activity before it is shipped in a default role set
+
 == Repositories & Build
 
 === L-14: Immediate Downstream Builds at an Upstream Merge
