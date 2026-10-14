@@ -106,6 +106,15 @@ Options:: (1) The metrics library of the runtime's stack (Micrometer, as Quarkus
 Recommendation:: 1 if its native-image support holds for the runtime binary; otherwise 2.
 Blocks:: the metrics of the runtime (link:../specification/runtime-model.adoc[Runtime Model Specification]).
 
+[#message-format]
+=== The Message Format of the Catalogue
+
+Question:: The message catalogue lives in `pm-api`, which depends only on `jackson-core` streaming. How does it format a message with arguments (plurals, selections) in the two languages?
+Why it is open:: ICU4J would add a large dependency to the module every client and the runtime share; no dependency is added without the operator's approval.
+Options:: (1) Implement the small subset of the ICU message syntax the catalogue uses (arguments, `plural` and `select`) in `pm-api`. (2) Allow ICU4J in `pm-api`.
+Recommendation:: 1; the catalogue's texts use only that subset, and a test over every key proves it.
+Blocks:: the message catalogue (link:../specification/module-structure.adoc[Module Structure Specification]).
+
 [#recorded-elsewhere]
 == Recorded Elsewhere
 

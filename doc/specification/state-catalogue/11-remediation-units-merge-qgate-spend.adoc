@@ -1,4 +1,4 @@
-= State Catalogue: Remediation Units: Merge Conflict, Q-Gate Findings & Spend
+= State Catalogue: Remediation Units: Merge Conflict & Q-Gate Findings
 :toc: left
 :toclevels: 3
 :toc-title: Table of Contents
@@ -6,13 +6,13 @@
 :source-highlighter: highlight.js
 :nofooter:
 
-link:../../Specification.adoc[Specification] » link:../state-catalogue.adoc[State Catalogue] » Remediation Units: Merge Conflict, Q-Gate Findings & Spend
+link:../../Specification.adoc[Specification] » link:../state-catalogue.adoc[State Catalogue] » Remediation Units: Merge Conflict & Q-Gate Findings
 
 [#state-catalogue-remediation-continued]
-== Remediation Units: Merge Conflict, Q-Gate Findings & Spend
+== Remediation Units: Merge Conflict & Q-Gate Findings
 _See Requirement link:../../Requirements.adoc#PM-WF-16[PM-WF-16: Reusable Compound Sub-Workflows & Config-Driven Git Commit/Push]_
 
-The units of this part follow the conventions, the contract, the decision rules, and the generic states of xref:08-remediation-units.adoc#state-catalogue-remediation[Remediation Units]; every state declares `phase inherit`.
+The units of this part follow the conventions, the contract, the decision rules, and the generic states of xref:08-remediation-units.adoc#state-catalogue-remediation[Remediation Units]; every state has the phase of its caller.
 
 [#state-catalogue-remediation-merge]
 === `remediation.merge-conflict`
@@ -67,7 +67,7 @@ The unit's action set is `retry` and `fix`. A merge conflict is not waivable, so
 [#state-catalogue-remediation-qgate]
 === `remediation.qgate-findings`
 
-The unit's action set is `fix`; the Q-Gate findings are waivable, so `decide` also offers `request_waiver` while `remediation.waiver-requestable` holds. With the shipped bindings (`actions=[fix]`, waiver wait `0`) `decide` offers only `fix`, and the server takes it without a task.
+The unit's action set is `fix`; the Q-Gate findings are waivable, so `decide` also offers `request_waiver` while no request of the unit instance is pending or was declined. With the shipped bindings (`actions=[fix]`) `decide` therefore offers `fix` and `request_waiver`, and the unit's `choose` decides between them.
 
 [cols="2,1,1,2,3,2,2"]
 |===
@@ -103,31 +103,5 @@ The unit's action set is `fix`; the Q-Gate findings are waivable, so `decide` al
 |`remediation-qgate.choose` (`infeasible`, `lost`).
 |`auto remediation.conservative-end`: the conservative fallback of the unit, which binds no `retry` and has no `rerun`; its only outcome is `exhausted`, recorded with the task's reason (for example `role_unqualified`). Never routes to the operator.
 |`exhausted` -> `remediation-qgate.exhausted`.
-|link:../workflow-dsl/08-remediation-units.adoc#unit-template[Workflow DSL Specification, Unit Template]
-|===
-
-[#state-catalogue-remediation-spend]
-=== `remediation.spend`
-
-A degenerate unit: no `retry`, no `fix`, and no `decide`. The spend ceiling is not raisable: only a `met` waiver of the gate `spend` lets the plan pass, and `merge.gate-entry` is the single point that reads it; the unit's waiver wait, when bound, only waits for that waiver.
-
-[cols="2,1,1,2,3,2,2"]
-|===
-|State id |Phase value |Kind |Entered from |Offered links / outcomes |Exits to |Defined in
-
-|[[state-remediation-spend.gather]]`remediation-spend.gather`
-|inherit
-|`auto`
-|`call` (start state).
-|`remediation.gather-spend-report`: cumulative finalize spend (`finalize.spend-ratio`) against the `spend` ceiling; it performs no waiver lookup.
-|`within_ceiling` -> `remediation-spend.resolved`; `over` -> `remediation-spend.budget-check`.
-|link:../model-work/09-completion-usage-and-spend.adoc#spend-accounting-budget-anchors[Model Work Specification, Spend Accounting]
-
-|[[state-remediation-spend.budget-check]]`remediation-spend.budget-check`
-|inherit
-|`auto`
-|`remediation-spend.gather` (`over`); `remediation-spend.waiver-wait` (`raised`, `interrupted`).
-|`auto remediation.check-spend-budget`: the unit's own budget check, whose closed outcome set has no `budget_left` because the unit has no `decide` and the spend ceiling is not raisable.
-|`exhausted_wait` (`waiver_wait_seconds > 0`: the server files the waiver request of the gate `spend`) -> `remediation-spend.waiver-wait`; `exhausted` -> `remediation-spend.exhausted`.
 |link:../workflow-dsl/08-remediation-units.adoc#unit-template[Workflow DSL Specification, Unit Template]
 |===

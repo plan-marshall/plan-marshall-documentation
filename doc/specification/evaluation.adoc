@@ -24,7 +24,6 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-4[PM-WORK-4: Consultation through the Server]_
-* _See Requirement link:../Requirements.adoc#PM-WORK-5[PM-WORK-5: Interactive Session as Optional Worker]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-6[PM-WORK-6: Role Qualification]_
 
 == Status: REFERENCE
@@ -86,8 +85,8 @@ Harnesses: Claude Code 2.1.291 with `claude-haiku-4-5`, OpenCode 1.18.34 (with `
 
 |V7
 |Is usage attributable per task?
-|Claude Code and OpenCode report all four token components per turn; Antigravity reports no cache-creation figure.
-|Usage per task; Antigravity usage unmeasured.
+|Claude Code and OpenCode report all four token components per turn; Antigravity reports no cache-creation figure. OpenCode and Antigravity also report reasoning (thinking) tokens apart from their output (Gate 13, <<host-values>>).
+|Usage per task in five token components; Antigravity's cache creation declared not applicable, so its usage is measured (link:client-profiles/01-profile-schema.adoc#token-usage[Client Profiles, Tokens, Not Money]).
 
 |V8
 |Does injected text carry over to later tasks of a warm decision worker?
@@ -102,7 +101,7 @@ Harnesses: Claude Code 2.1.291 with `claude-haiku-4-5`, OpenCode 1.18.34 (with `
 |V10
 |Can the interactive session drive the loop?
 |No: Claude Code paused itself for up to 30 minutes and queued the operator's input; OpenCode stopped after 58 cycles and asked the operator.
-|The session is entry and viewer, never a driver.
+|Harnesses run only as headless workers the runtime starts; no interactive session drives the loop (link:workflow-dsl/02-units-jobs-decisions.adoc#clients-only[Workflow DSL, All Interaction in the Operator's Clients]).
 
 |E1
 |Does an acknowledgement separate a live worker from a lost one?
@@ -122,7 +121,7 @@ Harnesses: Claude Code 2.1.291 with `claude-haiku-4-5`, OpenCode 1.18.34 (with `
 |E4
 |Can the interactive session take tasks beside a headless fallback?
 |Every task taken once; the session took 15 of 16 (Claude Code) and 16 of 16 (OpenCode). On OpenCode the reply to the operator waits for the end of the loop, `/new` leaves the old loop running, and two loops under one identity each receive every task.
-|The session as optional worker with a new generation per session start (<<limits>>).
+|No interactive session takes tasks: a harness is a worker only (<<limits>>).
 
 |E5
 |Can a worker consult another role through the server?
@@ -221,7 +220,7 @@ Harnesses: Claude Code 2.1.291 with `claude-haiku-4-5`, OpenCode 1.18.34 (with `
 
 |Gate 14: host facts
 |Are the provisional host integration values, identity probes, and nested-host markers right?
-|Captured at `initialize` by a logging MCP server (Claude Code, OpenCode, Antigravity) and from documentation and source (Codex). Confirmed: Claude Code sets `CLAUDE_CODE_SESSION_ID` (equal to the session id) and `CLAUDECODE=1`, `clientInfo.name` `claude-code`; OpenCode sets `OPENCODE`, `OPENCODE_PID`, and `AGENT=1` but no session variable, `clientInfo.name` `opencode`; Antigravity reads `~/.gemini/config/mcp_config.json`; no host passes its model in the environment. Corrected: Antigravity has a project configuration `.agents/mcp_config.json` and a version probe (`agy --version`); Codex reports `codex-mcp-client` and passes only a fixed variable list to MCP servers, so its markers reach `pm-mcp enter` but never `pm-mcp serve`; OpenCode's command directories are plural; Codex skills live in `.agents/skills/`; version patterns per host. Claude Code inside OpenCode is attributed to OpenCode by the fixed precedence; only Claude Code sets `AI_AGENT`, and an inherited value survives into a nested host. `.agents/skills` is read by Codex, Antigravity, and OpenCode. Antigravity on the wire: `clientInfo.name` `antigravity-client`, `server/discover` with `2026-07-28`, capabilities elicitation and `roots.listChanged`; its tool calls add the `_meta` keys `antigravity.google/conversation_id` and `antigravity.google/artifacts_dir`. Corrected: Antigravity adds none of its `ANTIGRAVITY_*` variables to the environment of its MCP servers; they exist only in the environment of the commands it runs, so its markers reach `pm-mcp enter` but never `pm-mcp serve`.
+|Captured at `initialize` by a logging MCP server (Claude Code, OpenCode, Antigravity) and from documentation and source (Codex). Confirmed: Claude Code sets `CLAUDE_CODE_SESSION_ID` (equal to the session id) and `CLAUDECODE=1`, `clientInfo.name` `claude-code`; OpenCode sets `OPENCODE`, `OPENCODE_PID`, and `AGENT=1` but no session variable, `clientInfo.name` `opencode`; Antigravity reads `~/.gemini/config/mcp_config.json`; no host passes its model in the environment. Corrected: Antigravity has a project configuration `.agents/mcp_config.json` and a version probe (`agy --version`); Codex reports `codex-mcp-client` and passes only a fixed variable list to MCP servers, so its markers reach the commands it runs but never `pm-mcp serve`; OpenCode's command directories are plural; Codex skills live in `.agents/skills/`; version patterns per host. Claude Code inside OpenCode is attributed to OpenCode by the fixed precedence; only Claude Code sets `AI_AGENT`, and an inherited value survives into a nested host. `.agents/skills` is read by Codex, Antigravity, and OpenCode. Antigravity on the wire: `clientInfo.name` `antigravity-client`, `server/discover` with `2026-07-28`, capabilities elicitation and `roots.listChanged`; its tool calls add the `_meta` keys `antigravity.google/conversation_id` and `antigravity.google/artifacts_dir`. Corrected: Antigravity adds none of its `ANTIGRAVITY_*` variables to the environment of its MCP servers; they exist only in the environment of the commands it runs, so its markers reach those commands but never `pm-mcp serve`.
 |link:client-profiles/02-placeholders-and-detection.adoc#host-integration-table[Host Integration Table], link:client-profiles/02-placeholders-and-detection.adoc#host-identity-probes[Host Identity Probes].
 
 |Gate 9: relay start and termination
@@ -497,6 +496,8 @@ Native binaries in the staged release layout, with the Netty transport library b
 * *Antigravity as a worker is measured on macOS only*: unconfined, at 8,000 and 32,000 characters, with three trials per fault; its writable paths under Landlock, a worker restricted to the server's tools, and 128,000 characters are unmeasured.
 * *One machine per platform*: the runtime figures come from one `arm64` Mac and one shared `x86_64` workstation; the startup bound is load-sensitive there (55.2 ms under a load average of about 30). The Linux cost of the extracted Netty library was taken with a shell loop whose polling exceeds the difference measured; the 64 MB bound was measured in the clean idle state only, and JGit use was measured only on Linux.
 * *Sessionless HTTP and the listen behaviour are measured on macOS only* (Gate 10), the refused and the unanswered listen with Claude Code only and in the JVM layout; whether hosts skip `subscriptions/listen` when `tools.listChanged` is not advertised is untested; what a host does when a runtime restart ends its open listen stream is measured once each on Claude Code and Antigravity (Gate 10).
+* *Activity events not measured*: no harness's output stream was mapped onto activity kinds; whether each harness reports its model messages, tool calls, tool results, and changed files as events, and whether Antigravity's output streams its steps at all, is unmeasured (link:client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles, What a Worker Does]).
+* *Usage figures per harness version*: the usage fields of each harness were taken from one version each (Gate 13); a new harness or harness version is not covered by these figures.
 * *A worker's question was not measured*: E5 measured the consultation, in which the asker waits for a role's answer. Not measured are the questions a worker asks for the operator or a quorum: whether a worker asks through `ask` or `ask:TASK-NNN` with a valid question envelope rather than through its host's own question tool, in prose, or by guessing; whether it waits for the answer and continues in the same context (hold), or continues from its stored session with the answer (resume), and acknowledges the answer; what each costs against starting again; whether it stops after asking where it does not continue; whether the task that continues the work, served by another generation and possibly another harness, applies the answer from its facts without asking it again; and the votes of a quorum on real harnesses (work package link:https://github.com/plan-marshall/plan-marshall-mcp/blob/main/doc/plans/question-loop-verification.adoc[`question-loop-verification`]).
 * *Unconfined file lists on macOS are noisy*: without Landlock the files written during a headless run include writes by other processes, so the writable paths are those of the confined Linux run (Gate 13).
 * *Not exercised*: resource tools of headless workers (Gate 13); the native daemon against a real git remote and its footprint on macOS; the MCP skills extension; merge trains (not enabled on the free GitLab plan) and the merge-queue enqueue (the fixture has no queue); a CodeRabbit review seat for a bot author; `cuioss-review-bot`, which stayed silent under every identity.
@@ -505,4 +506,4 @@ Native binaries in the staged release layout, with the Netty transport library b
 [#corpus]
 == Verification Corpus
 
-The verified questions of E7 and E9, with references, accepted alternatives, and review status, are kept in the model verification corpus `test/model/verification/` (`validate.py` checks every item against its schema). Its README describes how a configuration of a role is graded: the role's topics run on a candidate configuration, warm and fresh, and the agreement with the references, the warm-fresh gap, cost, and time per item decide whether the configuration qualifies.
+The verified questions of E7 and E9, with references, accepted alternatives, and review status, are kept in the model verification corpus `test/model/verification/` (`validate.py` checks every item against its schema). Its README describes how a configuration of a role is graded: the role's topics run on a candidate configuration, warm and fresh, and the agreement with the references, the warm-fresh gap, the tokens used, and the time per item decide whether the configuration qualifies.

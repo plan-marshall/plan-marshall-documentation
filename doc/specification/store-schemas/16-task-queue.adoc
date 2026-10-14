@@ -11,24 +11,25 @@ link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store
 [#task-queue]
 == Task Queue (`<PM_MCP_BASE>/projects/<project_id>/queue/`)
 
-Every piece of model work of a project is a queue task, persisted in the project's task queue until a worker of its role has served it (`PM-WORK-2`). The protocol that moves a task (offer, acknowledgement, execution, consultation, submit, fencing) is specified in link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]; this part holds its records. The queue directory holds one queue task record per task (<<queue-task-record>>) and the session generation record of the project (<<session-generation-record>>).
+Every piece of model work of a project is a queue task, persisted in the project's task queue until a worker of its role has served it (`PM-WORK-2`). The protocol that moves a task (offer, acknowledgement, execution, consultation, submit, fencing) is specified in link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]; this part holds its records. The queue directory holds one queue task record per task (<<queue-task-record>>); the activity of a task's worker is journaled in the plan's store (<<activity-journal>>).
 
-* *One Queue per Project*: Tasks of every scope of the project (plans, epics, the workspace scope and its bootstrap entities) share the queue, ordered per role: consultation tasks first, then work tasks in creation order (link:../model-work/02-task-protocol.adoc#queue-task[Model Work Specification, Queue Task]). The queue is per project because a worker serves one project (its job record's scope is `project`, xref:10-job-and-lesson-records.adoc#job-record[Job Record]).
+* *One Queue per Project*: Tasks of every scope of the project (plans, epics, the workspace scope and the entries it hosts) share the queue, ordered per role: consultation tasks first, then work tasks in creation order (link:../model-work/02-task-protocol.adoc#queue-task[Model Work Specification, Queue Task]). The queue is per project because a worker serves one project (its job record's scope is `project`, xref:10-job-and-lesson-records.adoc#job-record[Job Record]). The tasks of the machine scope, which has no project, are kept the same way in the machine's own queue `<PM_MCP_BASE>/machine/queue/`, under its own queue lock (link:../workflow-dsl/01-grammar.adoc#machine-scope[Workflow DSL Specification, Machine Scope]).
 * *Lock and Write*: Every write runs under the queue lock `locks/queue.lock` (xref:13-leases-integrity-testing.adoc#lock-free-snapshot-reads[Lock-Free Snapshot Reads, Transaction Locks & Leases (`PM-IMPL-7`)]) as an atomic write-and-rename of the one record it changes (xref:01-format-and-session-log.adoc#format-versioning[Format Versioning & Atomic Write Discipline]). A transition that creates or settles a task holds its scope lock and takes the queue lock after it; the offer, the acknowledgement, the consultation, and the fence take the queue lock alone. Queue records are not part of a scope's transaction journal and not covered by a digest sidecar, like the job records.
 * *Two Authorities*: The scope store is authoritative for which tasks a model state owns and for how they ended (`active_tasks` of xref:02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Workflow State Store (`mcp/status.json`)]); the queue task record is authoritative for the delivery (lease, attempts, consultations). A creating transition writes `active_tasks` first and the queue record after it; a settling transition records the outcome in the scope and then closes the queue record.
 * *Recovery*: The project's recovery after a runtime start records every running worker `killed` and fences its generation (xref:10-job-and-lesson-records.adoc#job-record[Job Record]), then reconciles the queue: a held task's current attempt ends with `end: restart`, its lease is released, and the task is queued again without counting a re-offer; a task its scope lists closed is closed with the scope's outcome; a task its scope no longer lists is closed `lost` (reason `withdrawn`) without a re-offer; a task the scope lists without a queue record is created again `queued`. Each reconciliation appends one audit record.
-* *Retention*: A closed queue task record is a retention purge candidate with the job logs (`retention.job_logs_days`, link:../timeouts/03-retention-host-config.adoc#retention-days[Timeouts & Budgets Specification]) once its scope no longer lists it. Usage is never kept here: every task's usage is a metrics row of its scope keyed by its `queue_task_id` (xref:05-metrics-and-quality-report.adoc#metrics-store[Metrics Store (`metrics.json`)]).
+* *Removal*: A closed queue task record that its scope no longer lists is technical residue: the periodic sweep removes it after `retention.task_records_days` (link:../timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup]). Usage is never kept here: every task's usage is a metrics row of its scope keyed by its `queue_task_id` (xref:05-metrics-and-quality-report.adoc#metrics-store[Metrics Store (`metrics.json`)]).
 
 [#queue-task-record]
 === Queue Task Record (`queue/<queue_task_id>.json`)
 
 One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` state creates one per entity in the transaction that enters it (kind `work`); a `consult:<role>` link creates one for the consulted role (kind `consultation`, whose `queue_task_id` is the `consultation_id`, link:../model-work/05-consultation.adoc[Model Work Specification, Consultation]). The semantics of every field are those of link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]; this section fixes the record.
 
-* *Status*: `queued` (waiting for a generation of its role started with the role's current configuration digest, or for a matching session; matching: link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]), `offered` (leased, not yet acknowledged), `executing` (from the acknowledgement on, recorded as `lease.acknowledged_at`), `consulting` (an own consultation is open), `awaiting_answer` (its generation holds it for the answer to its question), `suspended` (no lease; the asking worker ended with its session stored, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]), `closed`. An attempt that ends without a result returns the task to `queued`, released at once, and the task is offered again within its re-offer budget (link:../timeouts/01-job-budgets-and-waits.adoc#task-reoffer-budget[Timeouts & Budgets Specification, Task Re-Offer Budget]).
+* *Status*: `queued` (waiting for a generation of its role started with the role's current configuration digest; matching: link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]; a task of a paused plan stays `queued` and is not offered until the operator starts the plan again), `offered` (leased, not yet acknowledged), `executing` (from the acknowledgement on, recorded as `lease.acknowledged_at`), `consulting` (an own consultation is open), `awaiting_answer` (its generation holds it for the answer to its question), `suspended` (no lease; the asking worker ended with its session stored, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]), `closed`. An attempt that ends without a result returns the task to `queued`, released at once, and the task is offered again within its re-offer budget (link:../timeouts/01-job-budgets-and-waits.adoc#task-reoffer-budget[Timeouts & Budgets Specification, Task Re-Offer Budget]).
 * *Outcome and Reason*: A closed task has exactly one of the outcomes `submitted`, `asked` (with its `question_id`), `infeasible`, or `lost`; a `lost` task names its `reason`: `attempts_spent` (its re-offers are spent), `role_undefined`, `class_mismatch`, `role_unqualified`, or `role_unavailable` (the model caller closed it before any attempt), `deadline_expired` (a vote task still open at the vote wait's expiry, link:../model-work/10-decision-quorum.adoc#adjudication[Model Work Specification, The Adjudication]), or `withdrawn` (its state or scope ended while the task was open). `form_downgraded` records that the caller ran a `warm` role `fresh` because only the fresh form qualifies.
-* *Lease*: `lease` names the generation the task is leased to, set in the transaction of the offer (for a fresh worker: at its spawn) and cleared at the submit that closes the attempt, at the fence of the generation, and at the withdrawal of an unacknowledged session offer. Every call on the task entity is checked against it.
-* *Attempts*: One entry per offer, with its generation, its worker (`null` for a session), the configuration digest the worker was started with (`null` for a session), its instants, and how it ended. `counts` is `false` for an attempt ended by a restart, a drain, a start failure of a fresh worker, or the withdrawal of a session offer, which spend no re-offer.
+* *Lease*: `lease` names the generation the task is leased to, set in the transaction of the offer (for a fresh worker: at its spawn) and cleared at the submit that closes the attempt, at the fence of the generation, and when the operator pauses the plan now. Every call on the task entity is checked against it.
+* *Attempts*: One entry per offer, with its generation, its worker, the configuration digest the worker was started with, its instants, and how it ended. `counts` is `false` for an attempt ended by a restart, a drain, a start failure of a fresh worker, or the operator's pause of the plan now (link:../runtime-model/04-sessions-and-workers.adoc#plan-pause[Runtime & Interaction Model Specification, Pausing and Starting a Plan]), which spend no re-offer; an attempt ended by the server's `restart` of a worker off track counts.
 * *Continuation*: A task that asked and continues records it in `continuation` (`null` otherwise): the `question_id`, the `form` in force (`hold` or `resume`), when the hold ends (`hold_until`), the stored session (`session_id`, `suspended_at`, `resume_until`, the configuration digest and the worktree head at the suspension), and, where it fell back, `fallback_reason` (`not_allowed`, `hold_expired`, `resume_expired`, `session_missing`, `configuration_changed`, `harness_changed`, `worktree_moved`, `resume_unacknowledged`). The attempt of a suspended worker ends `suspended` and spends no re-offer; the resumed generation's offer is a new attempt.
+* *Off-Track Signals*: every signal the runtime raised on the task's worker and the action it took (`show`, `nudge`, `yield`, `restart`) are listed in `signals[]` with the attempt, the measurement, and when (link:../model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work Specification, A Worker Off Track]); the same entry is written to the task's activity journal (<<activity-journal>>). A `yield` closes the attempt as the worker's own yield of its envelope would; a `restart` ends the attempt with `end: off_track`.
 * *Consultations*: The asking task lists its consultations in `consultations[]` (their limits: link:../model-work/05-consultation.adoc[Model Work Specification, Consultation]); the consultation task names its asker in `consultation_of`. The answer is recorded on the asker's entry when the consultation closes and delivered once, to the asking generation's next wait, or to the successor in the task's facts after a fence (`delivered_to`).
 
 [source,json]
@@ -38,10 +39,10 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
   "$id": "https://cuioss.de/plan-marshall-mcp/schemas/queue-task.json",
   "title": "QueueTaskRecord",
   "type": "object",
-  "required": ["format_version", "queue_task_id", "kind", "role", "class", "scope", "entity", "state_id", "session_first", "form_downgraded", "status", "lease", "continuation", "attempts", "consultations", "consultation_of", "outcome", "reason", "question_id", "created_at", "closed_at"],
+  "required": ["format_version", "queue_task_id", "kind", "role", "class", "scope", "entity", "state_id", "form_downgraded", "status", "lease", "continuation", "attempts", "signals", "consultations", "consultation_of", "outcome", "reason", "question_id", "created_at", "closed_at"],
   "additionalProperties": false,
   "$defs": {
-    "generation": { "type": "string", "pattern": "^(l-[0-9a-f]{16}|sg-[0-9a-f]{16})$" }
+    "generation": { "type": "string", "pattern": "^l-[0-9a-f]{16}$" }
   },
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
@@ -54,13 +55,12 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
       "required": ["type", "id"],
       "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["plan", "epic", "workspace"] },
-        "id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$", "description": "plan_id or epic_id; null for the workspace scope." }
+        "type": { "type": "string", "enum": ["plan", "epic", "workspace", "machine"] },
+        "id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$", "description": "plan_id or epic_id; null for the workspace and the machine scope." }
       }
     },
-    "entity": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$", "description": "The entity of the scope the task works on (for example envelope-3 or enrich-<module_id>); for a consultation task its consultation_id, equal to queue_task_id. The offer names it, and the worker passes it as entity to pm_state and pm_do with the scope; the key of the task in active_tasks." },
+    "entity": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$", "description": "The entity of the scope the task works on (for example envelope-3, enrich-<module_id>, or an entry_id hosted by the workspace scope); for a consultation task its consultation_id, equal to queue_task_id. The offer names it, and the worker passes it as entity to pm_state and pm_do with the scope; the key of the task in active_tasks." },
     "state_id": { "type": "string", "description": "The job llm state that created the task, or the asking task's state for a consultation." },
-    "session_first": { "type": "boolean", "description": "The role sets session_first, which only a read_only role may (PM-WORK-5); always false for a writer or zero_tool role." },
     "form_downgraded": { "type": "boolean" },
     "status": { "type": "string", "enum": ["queued", "offered", "executing", "consulting", "awaiting_answer", "suspended", "closed"] },
     "continuation": {
@@ -87,7 +87,7 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
       "additionalProperties": false,
       "properties": {
         "generation_id": { "$ref": "#/$defs/generation" },
-        "job_id": { "type": ["string", "null"], "pattern": "^l-[0-9a-f]{16}$", "description": "The worker holding the lease; null for an entry session." },
+        "job_id": { "type": "string", "pattern": "^l-[0-9a-f]{16}$", "description": "The worker holding the lease." },
         "leased_at": { "type": "string", "format": "date-time" },
         "acknowledged_at": { "type": ["string", "null"], "format": "date-time", "description": "The ack link followed on the offered entity; null until then." }
       }
@@ -102,13 +102,30 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
         "properties": {
           "attempt": { "type": "integer", "minimum": 1 },
           "generation_id": { "$ref": "#/$defs/generation" },
-          "job_id": { "type": ["string", "null"], "pattern": "^l-[0-9a-f]{16}$" },
-          "configuration_digest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The configuration digest the worker generation was started with (its job record's worker.configuration_digest), the role's current digest at the offer; null for a session attempt." },
+          "job_id": { "type": "string", "pattern": "^l-[0-9a-f]{16}$" },
+          "configuration_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The configuration digest the worker generation was started with (its job record's worker.configuration_digest), the role's current digest at the offer." },
           "offered_at": { "type": "string", "format": "date-time" },
           "acknowledged_at": { "type": ["string", "null"], "format": "date-time" },
           "ended_at": { "type": ["string", "null"], "format": "date-time" },
-          "end": { "type": ["string", "null"], "enum": ["closed", "worker_lost", "exited_without_submit", "waited_again", "budget", "start_failure", "session_withdrawn", "restart", "drain", "withdrawn", "deadline_expired", "suspended", null], "description": "closed: the attempt closed the task; suspended: the worker ended with its session stored and the task waits for its answer; withdrawn and deadline_expired: the task closed lost (reason withdrawn or deadline_expired) while the attempt held it; every other value returned the task to queued; null while it runs." },
+          "end": { "type": ["string", "null"], "enum": ["closed", "worker_lost", "exited_without_submit", "waited_again", "budget", "start_failure", "restart", "drain", "paused", "off_track", "withdrawn", "deadline_expired", "suspended", null], "description": "closed: the attempt closed the task; suspended: the worker ended with its harness session stored and the task waits for its answer; paused: the operator paused the plan now; off_track: the server restarted a worker off track; withdrawn and deadline_expired: the task closed lost (reason withdrawn or deadline_expired) while the attempt held it; every other value returned the task to queued; null while it runs." },
           "counts": { "type": "boolean", "description": "Whether the attempt spent a re-offer of the state's job_incomplete budget." }
+        }
+      }
+    },
+    "signals": {
+      "type": "array",
+      "description": "The off-track signals raised on the task's workers, with the action taken (model-work/03, A Worker Off Track); empty when none was raised.",
+      "items": {
+        "type": "object",
+        "required": ["signal", "attempt", "action", "measurement", "threshold", "at"],
+        "additionalProperties": false,
+        "properties": {
+          "signal": { "type": "string", "enum": ["repeating", "no_progress", "over_size", "outside_footprint"] },
+          "attempt": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string", "enum": ["show", "nudge", "yield", "restart"] },
+          "measurement": { "type": "number", "description": "The measured value: repeated calls in a row, turns without a link followed, the tokens spent on the plan task as a multiple of its predicted_cost_tokens, or the unplanned changes recorded." },
+          "threshold": { "type": "number", "description": "The threshold in force: the compiled one, or the lower one of the role artifact." },
+          "at": { "type": "string", "format": "date-time" }
         }
       }
     },
@@ -141,52 +158,51 @@ One record per task. A `job llm <entity_kind> role <role> [each <primitive>]` st
   },
   "allOf": [
     { "if": { "properties": { "status": { "const": "closed" } } }, "then": { "properties": { "lease": { "const": null }, "outcome": { "type": "string" }, "closed_at": { "type": "string" } } } },
-    { "if": { "properties": { "outcome": { "const": "lost" } } }, "then": { "properties": { "reason": { "type": "string" } } }, "else": { "properties": { "reason": { "const": null } } } },
-    { "if": { "properties": { "class": { "enum": ["writer", "zero_tool"] } } }, "then": { "properties": { "session_first": { "const": false } } } }
+    { "if": { "properties": { "outcome": { "const": "lost" } } }, "then": { "properties": { "reason": { "type": "string" } } }, "else": { "properties": { "reason": { "const": null } } } }
   ]
 }
 ----
 
-[#session-generation-record]
-=== Session Generation Record (`queue/session-generations.json`)
+[#activity-journal]
+=== Activity Journal (`tasks/activity/<queue_task_id>.jsonl`)
+_See Requirement link:../../Requirements.adoc#PM-WORK-7[PM-WORK-7: Worker Activity & Off-Track Signals]_
 
-The generations of the project's interactive sessions (`PM-WORK-5`). `pm-mcp enter`, the first binding of a session relay that finds no current generation, and every new host session the relay reports issue a new generation (`sg-` form, link:../identifiers/01-general-rules-and-registry.adoc#id-generation-id[Identifier Registry, `generation_id`]) for the session identity, which fences every earlier generation of that identity in the same transaction; a call of a fenced generation is refused `generation_fenced`. The identity, the relay's report of a new host session, and the host markers are specified in link:../runtime-model.adoc[Runtime & Interaction Model Specification] (relay) and link:../model-work/02-task-protocol.adoc[Model Work Specification, Task Protocol]. Written under the queue lock; fenced entries are removed by the periodic runtime sweep once they are older than the pending entry record maximum age (link:../timeouts/02-runtime-leases-operator-web.adoc#pending-entry-max-age[Timeouts & Budgets Specification]).
+What a worker does while it serves a task, one entry per activity, in an append-only journal per task in the store of the task's scope: `plans/<plan_id>/tasks/activity/<queue_task_id>.jsonl`, and the same below `epics/<epic_id>/`, `workspace/`, and the machine scope. The runtime maps each line of the worker's output stream onto one harness-neutral kind through the `headless.events` pointers of the harness's client profile and adds what it knows itself (link:../client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles Specification, What a Worker Does]); the off-track signals are computed from the journal (link:../model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work Specification, A Worker Off Track]).
 
-The record with the closed schema below and its strict codec, the issue of a generation that fences every earlier generation of its `session_key` in the same atomic write under the queue lock with a colliding id drawn again, the binding rules (`relay_start` returns the current generation of the key or issues one, `new_session` and `enter` always issue), the scope and working directory that the `start.create-scope` commit sets on a current generation, the check of the generation a call carries (current, fenced, superseded by an `enter`, or unknown), the lock-free read, and the removal of the fenced entries older than an instant are implemented (`PM-WORK-5`, https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-queue.adoc[Session Generations Developer Guide]). The record holds only `fenced_at`, not what fenced an entry: the issue instants of one `session_key` strictly increase (an issue whose clock has not moved past the latest issue of its key takes the next nanosecond), so exactly one generation of the key was issued at an entry's `fenced_at`, and the entry is superseded when that one was issued by `enter`; a request of a superseded generation is answered `generation_superseded` at the transport, every other call of a fenced generation `generation_fenced`. Not implemented yet: the callers that issue at `pm-mcp enter` and at the relay, the refusal and the transport answer themselves, and the writers of `delivered_skills` and `offers_suspended`.
+* *Written while the worker runs*: the runtime appends each entry as its line arrives, under the journal's own leaf lock taken on the file (like the plan mailbox's), outside the scope's transaction journal and digest sidecar, like a job log; a torn last line is ignored by a reader and repaired by the next writer (xref:01-format-and-session-log.adoc#format-versioning[Format Versioning & Atomic Write Discipline], item 6). Every text and target is masked like every job log before it is written (link:../job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime Specification]).
+* *Harness and server entries*: the harness's kinds are `text` (what the model wrote, cut to the compiled bound of 2,000 characters), `tool_call` (the tool's name and its target: a path, a command line, a server link with its id, never its whole arguments), `tool_result` (its size and whether it failed, never its content), `file_changed` (a path of the worktree), and `turn` (its usage, from the usage pointers). The server's kinds are `link` (a link of the task the worker followed: `ack`, `submit`, `ask`, `consult`, `yield`), `question` (a question the worker asked), `answer_ack` (its acknowledgement of an answer), `signal` (an off-track signal with the action taken), and `attempt_end` (how the attempt ended, with the count of the output lines that matched no mapping, which are counted and never shown). A harness whose profile declares `headless.events: null` has only server entries.
+* *Bounded per task*: a journal holds at most the compiled bound of 5,000 entries; an append beyond it rewrites the journal without its oldest `text` entries, never a server entry, by an atomic write-and-rename under the same leaf lock. `seq` is never reused, so a client's cursor stays valid and a gap in `seq` shows what gave way.
+* *Untrusted*: a text or a target may come from the project, a review comment, or a tool result: the clients show it as plain text, never as markup or a link they follow, and no model reads the journal as instructions (`PM-SEC-1`).
+* *Served to both clients*: the entries from a cursor and a live stream that a client opens only while it shows the task (link:../runtime-model/01-processes-and-transport.adoc#process-resource[Runtime & Interaction Model Specification, The Plan's Process as a Structure]).
+* *Kept with the plan*: the journal is archived with its plan and deleted with it, by `delete-plan` or by the cleanup (link:../timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup]); an epic's go with its machine store.
 
 [source,json]
 ----
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://cuioss.de/plan-marshall-mcp/schemas/session-generations.json",
-  "title": "SessionGenerationRecord",
+  "$id": "https://cuioss.de/plan-marshall-mcp/schemas/activity-entry.json",
+  "title": "ActivityEntry",
   "type": "object",
-  "required": ["format_version", "generations"],
+  "required": ["format_version", "seq", "attempt", "source", "kind", "at"],
   "additionalProperties": false,
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
-    "generations": {
-      "type": "object",
-      "propertyNames": { "pattern": "^sg-[0-9a-f]{16}$" },
-      "additionalProperties": {
-        "type": "object",
-        "required": ["session_key", "client", "client_session_id", "scope", "workdir", "issued_at", "issued_by", "session_tasks", "offers_suspended", "delivered_skills", "fenced_at"],
-        "additionalProperties": false,
-        "properties": {
-          "session_key": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the session identity that the relay and pm-mcp enter share; the generations of one key fence each other. With a null client_session_id the identity is the relay instance, so the key is the relay-instance key, and a generation pm-mcp enter issued is matched by no relay." },
-          "client": { "type": "string", "enum": ["claude", "opencode", "antigravity", "codex", "neutral"] },
-          "client_session_id": { "type": ["string", "null"], "pattern": "^[\\x21-\\x7E]{1,128}$" },
-          "scope": { "type": ["object", "null"], "required": ["type", "id"], "additionalProperties": false, "description": "The scope the session entered; a session is offered only tasks of that scope whose working directory equals workdir. null for a relay-issued generation until the session enters a scope; the start.create-scope commit of a bootstrap sets the committing generation's scope to the new scope.", "properties": { "type": { "type": "string", "enum": ["plan", "epic", "workspace"] }, "id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$" } } },
-          "workdir": { "type": ["object", "null"], "required": ["kind", "plan_id"], "additionalProperties": false, "description": "The working directory the session entered from (the plan worktree or the project checkout, in the shape of the job record's worker.workdir); a session is offered only tasks that run there. null while scope is null.", "properties": { "kind": { "type": "string", "enum": ["plan_worktree", "project_checkout"] }, "plan_id": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$", "description": "plan_worktree only: the plan; null otherwise." } } },
-          "issued_at": { "type": "string", "format": "date-time" },
-          "issued_by": { "type": "string", "enum": ["enter", "relay_start", "new_session"], "description": "enter: pm-mcp enter; relay_start: the first binding of a session relay that found no current generation; new_session: the relay observed a new host session (runtime-model/03, Generations at the Relay)." },
-          "session_tasks": { "type": "boolean", "description": "The client profile marks the host eligible for session tasks (worker.session_tasks); false means the session is never offered a task." },
-          "offers_suspended": { "type": "boolean", "description": "true after the relay reported a clear or compaction of the host session, until the session calls pm_wait again; the report also empties delivered_skills." },
-          "delivered_skills": { "type": "array", "description": "Skill delivery record of the generation (offers and pm_skill loads), as in the worker block of the job record (model-work.adoc, Skill Delivery Record).", "items": { "type": "object", "required": ["uri", "digest", "delivered_at"], "additionalProperties": false, "properties": { "uri": { "type": "string", "pattern": "^skill://pm/" }, "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "delivered_at": { "type": "string", "format": "date-time" } } } },
-          "fenced_at": { "type": ["string", "null"], "format": "date-time", "description": "Set when a newer generation of the same session_key was issued; null for the current generation." }
-        }
-      }
-    }
+    "seq": { "type": "integer", "minimum": 1, "description": "Position in the task's journal, one above the last ever written; never reused." },
+    "attempt": { "type": "integer", "minimum": 1, "description": "The attempt of the queue task (Queue Task Record, attempts[])." },
+    "source": { "type": "string", "enum": ["harness", "server"] },
+    "kind": { "type": "string", "enum": ["text", "tool_call", "tool_result", "file_changed", "turn", "link", "question", "answer_ack", "signal", "attempt_end"], "description": "harness: text, tool_call, tool_result, file_changed, turn; server: the others." },
+    "text": { "type": ["string", "null"], "maxLength": 2000, "description": "text only: what the model wrote, masked and cut; untrusted." },
+    "truncated": { "type": "boolean", "description": "text only: the text was cut to the bound." },
+    "tool": { "type": ["object", "null"], "required": ["name", "target"], "additionalProperties": false, "description": "tool_call only.", "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 128 }, "target": { "type": ["string", "null"], "maxLength": 1000, "description": "A path, a command line, or a server link with its id; masked; untrusted." } } },
+    "result": { "type": ["object", "null"], "required": ["bytes", "failed"], "additionalProperties": false, "description": "tool_result only.", "properties": { "bytes": { "type": "integer", "minimum": 0 }, "failed": { "type": "boolean" } } },
+    "path": { "type": ["string", "null"], "maxLength": 1000, "description": "file_changed only: a path relative to the worktree." },
+    "usage": { "type": ["object", "null"], "description": "turn only: the turn's token components, each a measured integer, unmeasured, or not_applicable (store-schemas/05, Usage Columns)." },
+    "link": { "type": ["object", "null"], "required": ["rel", "target"], "additionalProperties": false, "description": "link only.", "properties": { "rel": { "type": "string", "enum": ["ack", "submit", "ask", "consult", "yield", "infeasible"] }, "target": { "type": ["string", "null"], "maxLength": 128, "description": "The entity or role the link names, for example TASK-007 or a consulted role." } } },
+    "question_id": { "type": ["string", "null"], "pattern": "^Q-[0-9]{3,6}$", "description": "question and answer_ack only." },
+    "signal": { "type": ["object", "null"], "required": ["signal", "action"], "additionalProperties": false, "description": "signal only: the same entry as the queue task record's signals[].", "properties": { "signal": { "type": "string", "enum": ["repeating", "no_progress", "over_size", "outside_footprint"] }, "action": { "type": "string", "enum": ["show", "nudge", "yield", "restart"] } } },
+    "end": { "type": ["string", "null"], "description": "attempt_end only: the attempt's end (Queue Task Record, attempts[].end)." },
+    "unmapped_lines": { "type": ["integer", "null"], "minimum": 0, "description": "attempt_end only: output lines of the attempt that matched no mapping." },
+    "at": { "type": "string", "format": "date-time" }
   }
 }
 ----
@@ -194,7 +210,7 @@ The record with the closed schema below and its strict codec, the issue of a gen
 [#qualification-record]
 == Role Qualification Record (`<set>/qualification/<role>.json`)
 
-The record of one grading of a role's configuration by `pm-operator roles qualify` or the setup run's `setup.qualify-roles` (`PM-WORK-6`; grading, validity, and invalidation: link:../model-work/01-roles-and-configuration.adoc#qualification[Model Work Specification, Role Qualification]). Every record the operator makes lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/<role>.json`), whichever set holds the role's effective artifact; the shipped set carries the release's records, and the machine set holds none (lookup: project set first, then the set of the artifact; paths: link:../filesystem-layout/03-project-store.adoc#role-sets[Filesystem Layout Specification, Role Sets & Task Queue]). Written only by the runtime, by atomic write-and-rename; a new grading replaces the record. The record holds the measurements only and no pass flag: whether it qualifies a form is evaluated at every check against the project's current levels (`qualification.agreement_level`, `qualification.allowed_gap`, operator configuration, xref:08-project-configuration-local.adoc#local-config[Operator Local Configuration]). A record with an ungraded item (its judge task closed `lost`) qualifies no form; the next grading re-grades only those items while `qualification_digest` and `corpus_revision` are unchanged.
+The record of one grading of a role's configuration by the operator's grading in either client (`pm-operator roles qualify` in the terminal client) or the setup run's `setup.qualify-roles`, behind its consent to the model cost (`PM-WORK-6`; grading, validity, and invalidation: link:../model-work/01-roles-and-configuration.adoc#qualification[Model Work Specification, Role Qualification]). Every record the operator makes lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/<role>.json`), whichever set holds the role's effective artifact; the shipped set carries the release's records, and the machine set holds none (lookup: project set first, then the set of the artifact; paths: link:../filesystem-layout/03-project-store.adoc#role-sets[Filesystem Layout Specification, Role Sets & Task Queue]). Written only by the runtime, by atomic write-and-rename; a new grading replaces the record. The record holds the measurements only and no pass flag: whether it qualifies a form is evaluated at every check against the project's current levels (`qualification.agreement_level`, `qualification.allowed_gap`, operator configuration, xref:08-project-configuration-local.adoc#local-config[Operator Local Configuration]). A record with an ungraded item (its judge task closed `lost`) qualifies no form; the next grading re-grades only those items while `qualification_digest` and `corpus_revision` are unchanged.
 
 [source,json]
 ----
@@ -208,14 +224,14 @@ The record of one grading of a role's configuration by `pm-operator roles qualif
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
     "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
-    "qualification_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The qualification digest of the graded artifact (model-work/01, Role Qualification): the SHA-256 over exactly the graded members recorded in configuration; the record is valid only for an artifact with the same qualification digest. Members outside it (count, form, recycling, session_first, budget_floor_seconds, context_budget_tokens, description) never invalidate the record." },
+    "qualification_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The qualification digest of the graded artifact (model-work/01, Role Qualification): the SHA-256 over exactly the graded members recorded in configuration; the record is valid only for an artifact with the same qualification digest. Members outside it (count, form, recycling, off-track thresholds and actions, budget_floor_seconds, context_budget_tokens, description) never invalidate the record." },
     "configuration": {
       "type": "object",
       "required": ["harness", "harness_version", "model", "effort", "tools", "class", "skill_digests"],
       "additionalProperties": false,
       "description": "The graded members the qualification digest covers (PM-WORK-6).",
       "properties": {
-        "harness": { "type": "string", "enum": ["claude", "opencode", "codex"], "description": "client_id of the graded harness (identifiers.adoc, client_id); worker eligibility of its client profile, not this enum, gates a launch." },
+        "harness": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$", "description": "client_id of the graded harness (identifiers.adoc, client_id), an operator-added harness included; worker eligibility of its client profile gates a launch." },
         "harness_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$", "description": "major.minor of the enrolled harness version; a patch change keeps the record valid." },
         "model": { "type": "string", "minLength": 1 },
         "effort": { "type": ["string", "null"] },
@@ -242,14 +258,14 @@ The record of one grading of a role's configuration by `pm-operator roles qualif
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["item_id", "form", "answer", "score", "cost_usd", "duration_ms"],
+        "required": ["item_id", "form", "answer", "score", "total_tokens", "duration_ms"],
         "additionalProperties": false,
         "properties": {
           "item_id": { "type": "string", "minLength": 1 },
           "form": { "type": "string", "enum": ["fresh", "warm"] },
           "answer": { "type": ["string", "object", "null"], "description": "The submitted answer; null when the task closed lost." },
           "score": { "oneOf": [ { "type": "number", "minimum": 0, "maximum": 1 }, { "type": "string", "const": "ungraded" } ], "description": "The grade a task of the judge role gave the answer (model-work/01, Role Qualification); ungraded when that judge task closed lost." },
-          "cost_usd": { "oneOf": [ { "type": "number", "minimum": 0 }, { "type": "string", "const": "unmeasured" } ] },
+          "total_tokens": { "oneOf": [ { "type": "integer", "minimum": 1 }, { "type": "string", "const": "unmeasured" } ], "description": "The tokens the answer used (store-schemas/05, Usage Columns)." },
           "duration_ms": { "type": ["integer", "null"], "minimum": 0 }
         }
       }
@@ -258,12 +274,12 @@ The record of one grading of a role's configuration by `pm-operator roles qualif
   "$defs": {
     "formResult": {
       "type": "object",
-      "required": ["agreement", "items", "cost_usd", "duration_ms"],
+      "required": ["agreement", "items", "total_tokens", "duration_ms"],
       "additionalProperties": false,
       "properties": {
         "agreement": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percent of the graded topic items (review status draft or confirmed, ungraded items excluded) answered right in this form." },
         "items": { "type": "integer", "minimum": 0 },
-        "cost_usd": { "oneOf": [ { "type": "number", "minimum": 0 }, { "type": "string", "const": "unmeasured" } ] },
+        "total_tokens": { "oneOf": [ { "type": "integer", "minimum": 1 }, { "type": "string", "const": "unmeasured" } ], "description": "The tokens the form's items used, unmeasured when an item's are." },
         "duration_ms": { "type": "integer", "minimum": 0 }
       }
     }
@@ -274,7 +290,7 @@ The record of one grading of a role's configuration by `pm-operator roles qualif
 [#decision-calibration-record]
 === Decision Calibration Record (`qualification/decisions/<declaration-digest>.json`)
 
-The record of one calibration of a quorum declaration by `pm-operator roles qualify --decisions` or the setup run's role grading (`PM-WORK-6`; run, measurements, and validity: link:../model-work/10-decision-quorum.adoc#quorum-calibration[Model Work Specification, Quorum Calibration]), one file per declaration digest, so identical declarations of the project's adjudication unit and of the binary's default unit share one record. It lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/decisions/<declaration-digest>.json`); the shipped set carries the release's records for the quorum declarations of the default unit (`classpath:/roles/qualification/decisions/<declaration-digest>.json`). Adjudication reads the record of the declaration's digest from the project set, else from the shipped set. The subdirectory keeps the records apart from the role qualification records `qualification/<role>.json`. Written only by the runtime, by atomic write-and-rename; a new calibration of the declaration replaces the record. It holds measurements and no pass flag: whether the declaration decides is evaluated at every check against the declaration `max_false_auto_percent` of the unit whose declaration applies.
+The record of one calibration of a quorum declaration by the operator's calibration in either client (`pm-operator roles qualify --decisions` in the terminal client) or the setup run's role grading (`PM-WORK-6`; run, measurements, and validity: link:../model-work/10-decision-quorum.adoc#quorum-calibration[Model Work Specification, Quorum Calibration]), one file per declaration digest, so identical declarations of the project's adjudication unit and of the binary's default unit share one record. It lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/decisions/<declaration-digest>.json`); the shipped set carries the release's records for the quorum declarations of the default unit (`classpath:/roles/qualification/decisions/<declaration-digest>.json`). Adjudication reads the record of the declaration's digest from the project set, else from the shipped set. The subdirectory keeps the records apart from the role qualification records `qualification/<role>.json`. Written only by the runtime, by atomic write-and-rename; a new calibration of the declaration replaces the record. It holds measurements and no pass flag: whether the declaration decides is evaluated at every check against the declaration `max_false_auto_percent` of the unit whose declaration applies.
 
 [source,json]
 ----
@@ -309,7 +325,7 @@ The record of one calibration of a quorum declaration by `pm-operator roles qual
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["item_id", "votes", "decided", "agreed_option", "false_auto", "cost_usd", "duration_ms"],
+        "required": ["item_id", "votes", "decided", "agreed_option", "false_auto", "total_tokens", "duration_ms"],
         "additionalProperties": false,
         "properties": {
           "item_id": { "type": "string", "minLength": 1 },
@@ -317,7 +333,7 @@ The record of one calibration of a quorum declaration by `pm-operator roles qual
           "decided": { "type": "boolean" },
           "agreed_option": { "type": ["string", "null"] },
           "false_auto": { "type": "boolean", "description": "decided and the agreed option is neither the item's target answer nor an accepted alternative." },
-          "cost_usd": { "oneOf": [ { "type": "number", "minimum": 0 }, { "type": "string", "const": "unmeasured" } ] },
+          "total_tokens": { "oneOf": [ { "type": "integer", "minimum": 1 }, { "type": "string", "const": "unmeasured" } ] },
           "duration_ms": { "type": ["integer", "null"], "minimum": 0 }
         }
       }
@@ -331,7 +347,7 @@ The record of one calibration of a quorum declaration by `pm-operator roles qual
       "properties": {
         "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
         "qualification_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The role's qualification digest at the calibration (Role Qualification Record)." },
-        "harness": { "type": "string", "enum": ["claude", "opencode", "codex"], "description": "The harness of the qualification record the digest names (same enumeration)." },
+        "harness": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$", "description": "The harness of the qualification record the digest names." },
         "model": { "type": "string" }
       }
     }

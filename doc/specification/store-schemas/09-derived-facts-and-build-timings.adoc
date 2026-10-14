@@ -10,16 +10,17 @@ link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store
 
 [#derived-facts]
 == Derived Facts Store (`<PM_MCP_BASE>/projects/<project_id>/derived-facts.json`)
+_See Requirement link:../../Requirements.adoc#PM-EXT-6[PM-EXT-6: Configuration Split by Owner Class (Team, Operator, Server State)]_
 
 A value the server can observe is derived, never configured; an override exists only where a derivation input can be ambiguous (`project.json` `ci_provider` and `merge_method`, `domains.json`, `local-config.json` `envelope_budget_tokens`). The derived values are cached in one per-project store of owner class *cache*: deleting it only forces re-derivation. The store is written under its own lock `locks/derived-facts.lock`, which comes late in the total lock order (after the local configuration lock, xref:13-leases-integrity-testing.adoc#lock-free-snapshot-reads[Lock-Free Snapshot Reads, Transaction Locks & Leases (`PM-IMPL-7`)]), so a refresh triggered by a read inside a plan, epic, or workspace transaction (a guard evaluation included) takes it after the scope lock the transaction already holds.
 
 * *Local derivations* (inputs read from the repository or the machine) are recomputed whenever their `input_digest` (SHA-256 over the canonical derivation inputs) changes.
-* *Network derivations* (inputs read from a provider) hold for the validity period of link:../timeouts/03-retention-host-config.adoc#network-derivation-validity[Timeouts & Budgets Specification, Network Derivation Validity] and are additionally refreshed by the project-setup reconcile and by `pm-mcp enter`.
+* *Network derivations* (inputs read from a provider) hold for the validity period of link:../timeouts/03-retention-host-config.adoc#network-derivation-validity[Timeouts & Budgets Specification, Network Derivation Validity] and are additionally refreshed by the project-setup reconcile and at a plan's start (`start.open`), so that the validation of a landing variant and the start's gates read a current value.
 * *Failure*: A failed derivation keeps the last value with `state: stale` (or `failed` when no value was ever derived) and records `failure`; every gate or guard that depends on a `stale` or `failed` fact evaluates `indeterminate` (`COULD_NOT_EVALUATE`, the `guard_indeterminate` condition), never pass.
 * *Fact kinds* are a closed enumeration open for registration: a new kind is added to `kind` below and to the kind table together with its value schema, its class, and its inputs.
 * *Class per entry*: The entry's `source.class` records how its value was obtained. `ci_provider` is `local` when the remote host alone decides it and `network` when a provider probe did; `base_branch_default` is `network` once the provider's default branch confirmed the local `origin/HEAD`. A network entry follows the network validity rule.
-* *Provider derivations*: Network kinds are derived through the project's provider integration (`pm-provider-ci`, the variant selected for the provider) with the agent credential; a derivation the credential is not permitted to perform fails (`state: failed`, `failure.reason` naming the missing permission), and the dependent gates evaluate `indeterminate`.
-* *Operator-Only Facts*: `agent_identity` is operator-only: it is shown by `pm-operator status` and the operator CLI and used server-side (committer identity, setup checks), and it never appears in a model-facing representation, resource (including `pm://project/config`), or tool result (link:../hypermedia-format/01-representation-and-link-forms.adoc#model-facing-minimality[Hypermedia Format Specification, Model-Facing Minimality]).
+* *Provider derivations*: Network kinds are derived through the project's provider integration (`pm-provider-ci`, the effective variant of the provider, xref:08-project-configuration-local.adoc#local-config[Operator Local Configuration]) with the agent credential; a derivation the credential is not permitted to perform fails (`state: failed`, `failure.reason` naming the missing permission), and the dependent gates evaluate `indeterminate`.
+* *Operator-Only Facts*: `agent_identity` is operator-only: it is shown to the operator in both clients and used server-side (committer identity, setup checks), and it never appears in a model-facing representation, resource (including `pm://project/config`), or tool result (link:../hypermedia-format/01-representation-and-link-forms.adoc#model-facing-minimality[Hypermedia Format Specification, Model-Facing Minimality]).
 
 [source,json]
 ----
@@ -47,7 +48,7 @@ A value the server can observe is derived, never configured; an override exists 
       "properties": {
         "kind": {
           "type": "string",
-          "enum": ["base_branch_default", "push_remote", "ci_provider", "merge_methods_allowed", "merge_queue_enforced", "branch_up_to_date_required", "required_checks", "signed_commits_required", "checks_visible", "agent_identity", "git_native_capability", "domain_activation", "active_profiles", "module_discovery", "cost_calibration"]
+          "enum": ["base_branch_default", "push_remote", "ci_provider", "merge_methods_allowed", "merge_queue_enforced", "branch_up_to_date_required", "required_checks", "signed_commits_required", "base_branch_protected", "checks_visible", "agent_identity", "git_native_capability", "domain_activation", "active_profiles", "module_discovery", "cost_calibration"]
         },
         "value": { "description": "Kind-specific value, validated against the value schema registered for the kind; null only with state failed." },
         "source": {
@@ -83,7 +84,7 @@ A value the server can observe is derived, never configured; an override exists 
 
 |`base_branch_default`
 |local, confirmed by network
-|`origin/HEAD` symbolic ref of the enrolled root; confirmed by the provider's default branch (GitHub repository `default_branch`, GitLab project `default_branch`)
+|`origin/HEAD` symbolic ref of the enrolled root; confirmed by the provider's default branch (GitHub repository `default_branch`, GitLab project `default_branch`, Forgejo repository `default_branch`)
 |default of `project.base_branch`
 |`project.json` `base_branch`
 
@@ -95,13 +96,13 @@ A value the server can observe is derived, never configured; an override exists 
 
 |`ci_provider`
 |local, then network
-|remote host: `github.com` → `github`, `gitlab.com` → `gitlab`; another host is probed with the credential whose `url` origin is that host (`GET https://<host>/api/v3/meta` for GitHub Enterprise, `GET https://<host>/api/v4/version` for GitLab); no answer → `ci_provider_undetermined`, the override is required
+|remote host: `github.com` → `github`, `gitlab.com` → `gitlab`, `codeberg.org` → `forgejo`; another host is probed, with the credential whose `url` origin is that host where one exists (`GET https://<host>/api/v3/meta` for GitHub Enterprise, `GET https://<host>/api/v4/version` for GitLab, `GET https://<host>/api/v1/version` for Forgejo and Gitea); no answer → `ci_provider_undetermined`, the override is required
 |provider registry, `ci-verify`, `create-pr`, `branch-cleanup`
 |`project.json` `ci_provider`
 
 |`merge_methods_allowed`
 |network
-|GitHub repository `allow_merge_commit`, `allow_squash_merge`, `allow_rebase_merge`; GitLab project `merge_method` (`merge`, `rebase_merge`, `ff`) and `squash_option`
+|GitHub repository `allow_merge_commit`, `allow_squash_merge`, `allow_rebase_merge`; GitLab project `merge_method` (`merge`, `rebase_merge`, `ff`) and `squash_option`; Forgejo repository `allow_merge_commits`, `allow_squash_merge`, `allow_rebase`
 |default of `project.merge_method`
 |`project.json` `merge_method`
 
@@ -113,20 +114,26 @@ A value the server can observe is derived, never configured; an override exists 
 
 |`branch_up_to_date_required`
 |network
-|GitHub required status checks `strict` (ruleset `strict_required_status_checks_policy` or classic branch protection) of the base; GitLab `merge_method` `ff` or `rebase_merge`
+|GitHub required status checks `strict` (ruleset `strict_required_status_checks_policy` or classic branch protection) of the base; GitLab `merge_method` `ff` or `rebase_merge`; Forgejo branch protection `block_on_outdated_branch`
 |whether the merge path rebases the plan branch before merging
 |none
 
 |`required_checks`
 |network
-|GitHub required status check contexts of the base; GitLab every pipeline job not `allow_failure`
+|GitHub required status check contexts of the base; GitLab every pipeline job not `allow_failure`; Forgejo branch protection `status_check_contexts` while `enable_status_check`
 |`ci-verify`: a failing check outside the set is filed non-blocking; a required check the credential cannot see is never counted as passed
 |none
 
 |`signed_commits_required`
 |network
-|GitHub rule `required_signatures`; GitLab push rule `reject_unsigned_commits`
+|GitHub rule `required_signatures`; GitLab push rule `reject_unsigned_commits`; Forgejo branch protection `require_signed_commits`
 |`git_native_capability` (reason `signing_required`)
+|none
+
+|`base_branch_protected`
+|network
+|whether a direct push to the base branch is refused: GitHub branch rules of the base (`pull_request`, `update`, or `non_fast_forward` with no bypass for the agent identity) or classic branch protection with required reviews; GitLab protected branch push access level below the agent identity; Forgejo branch protection with `enable_push` false. Value `true` or `false`
+|the validation of `landing.main` at the project's setup and at a plan's start (link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]): `true` refuses it with the reason; a `stale` or `failed` fact refuses it as `indeterminate`; never read against the machine default
 |none
 
 |`checks_visible`
@@ -168,7 +175,7 @@ A value the server can observe is derived, never configured; an override exists 
 |`cost_calibration`
 |local
 |metrics population
-|Phase 4 cost sizing (link:../model-work/06-envelopes-questions-deadlines.adoc#cost-sizing[Model Work Specification])
+|envelope sizing (link:../model-work/06-envelopes-questions-deadlines.adoc#cost-sizing[Model Work Specification, Cost Sizing])
 |none
 |===
 
@@ -235,7 +242,7 @@ The value schemas of the two fact kinds `module_discovery` and `cost_calibration
 }
 ----
 
-*`cost_calibration`*: the calibrated size-to-token table of link:../model-work/06-envelopes-questions-deadlines.adoc#cost-sizing[Model Work Specification, Cost Sizing], recomputed by `record-metrics` from the measured `metrics.json` population of the project's completed plans; `input_digest` covers the ids and digests of the metrics stores in that population. Absent or `failed`, the compiled table applies with `basis: uncalibrated`; every figure derived from the table carries the basis of the table it used.
+*`cost_calibration`*: the calibrated size-to-token table of the envelope sizing (link:../model-work/06-envelopes-questions-deadlines.adoc#cost-sizing[Model Work Specification, Cost Sizing]), recomputed by `record-metrics` from the measured `metrics.json` population of the project's completed plans; `input_digest` covers the ids and digests of the metrics stores in that population. Absent or `failed`, the compiled table applies with `basis: uncalibrated`; every figure derived from the table carries the basis of the table it used.
 
 [source,json]
 ----
