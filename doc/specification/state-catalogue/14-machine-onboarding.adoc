@@ -57,9 +57,9 @@ Declared in `onboarding.pmwf` (`scope machine`, compiled only, frontmatter type 
 |[[state-onboard.next]]`onboard.next`
 |`machine`
 |`auto`
-|Every aspect call state (`done`); `onboard.auto-result` (`change`).
-|Router: `auto onboard.next` reads `onboard_run` and the aspect that returned. The first run and the automatic run take the aspects in the fixed order language, harnesses, models, role assignment, credential store, providers, plan defaults.
-|The next aspect's call state (first or automatic run); `completed` (the first run's last aspect) -> `onboard.completed`; `result` (the automatic run's last aspect) -> `onboard.auto-result`; `settings` (a later run) -> `settings.choose`.
+|Every aspect call state (`done`); `onboard.auto-result` (`change`, with the aspect).
+|Router: `auto onboard.next` reads `onboard_run` and the aspect that returned. The first run and the automatic run take the aspects in the fixed order language, harnesses, models, role assignment, credential store, providers, plan defaults. A _change_ on `auto.result` calls that one aspect as a later run (`onboard_run: reconfigure`, its current values as the proposal), and its return leads back to the result.
+|The next aspect's call state (first or automatic run, or the aspect a _change_ on `auto.result` opened); `completed` (the first run's last aspect) -> `onboard.completed`; `result` (the automatic run's last aspect, or the aspect a _change_ on `auto.result` ran) -> `onboard.auto-result`; `settings` (a later run) -> `settings.choose`.
 |link:../workflow-dsl/03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Workflow DSL Specification, Routing by Fact]
 
 |[[state-onboard.auto-result]]`onboard.auto-result`
@@ -92,8 +92,8 @@ States of `onboarding.pmwf`, reached from `onboard.completed` once the onboardin
 |`machine`
 |`operator_wait`
 |`onboard.completed` (`settings`); every aspect call state (`stepped_out`) and `onboard.next` (`settings`); `settings.withdraw` (`keep`), `settings.remove-consent`, `settings.record`, `settings.verify-providers`.
-|`facts`: what the machine recorded per aspect, the remembered consents, the documents mode, the cleanup's durations, the credentials with their status (an expired one, and the plans it holds), and the paired devices. Links: `reconfigure:<aspect>`; `withdraw:<consent>`; `documents_mode`; `cleanup_durations`; `credential:<key>`; `done`. The paired devices are acted on through their own endpoints (link:../cli-and-security/03-web-server.adoc#devices[CLI, Coordination & Security Specification, Devices in Both Clients]).
-|`reconfigure` -> the aspect's call state (`onboard_run: reconfigure`); `withdraw` -> `settings.withdraw`; `documents_mode` -> `settings.documents-mode`; `cleanup_durations` -> `settings.cleanup-durations`; `credential` -> `settings.credential`; `done` -> `onboard.completed`.
+|`facts`: what the machine recorded per aspect, the remembered consents, the documents mode, the cleanup's durations, the credentials with their status (an expired one, and the plans it holds), and the paired devices. Links: `reconfigure:<aspect>`; `withdraw:<consent>`; `documents_mode`; `cleanup_durations`; `credential:<key>`; `verify_providers` (check the providers again on request, link:../cli-and-security/02-credentials-and-operator.adoc#provider-verification[CLI, Coordination & Security Specification, Provider Verification]); `done`. The paired devices are acted on through their own endpoints (link:../cli-and-security/03-web-server.adoc#devices[CLI, Coordination & Security Specification, Devices in Both Clients]).
+|`reconfigure` -> the aspect's call state (`onboard_run: reconfigure`); `withdraw` -> `settings.withdraw`; `documents_mode` -> `settings.documents-mode`; `cleanup_durations` -> `settings.cleanup-durations`; `credential` -> `settings.credential`; `verify_providers` -> `settings.verify-providers`; `done` -> `onboard.completed`.
 |link:../../use-cases/01-onboarding.adoc#UC-ONB-10[UC-ONB-10]
 
 |[[state-settings.withdraw]]`settings.withdraw`
@@ -155,8 +155,8 @@ States of `onboarding.pmwf`, reached from `onboard.completed` once the onboardin
 |[[state-settings.verify-providers]]`settings.verify-providers`
 |`machine`
 |`call`
-|`settings.store-credential` (`stored`).
-|`call providers` at its entry `verify`, over every provider that uses the credential.
+|`settings.store-credential` (`stored`); `settings.choose` (`verify_providers`).
+|`call providers` at its entry `verify`, over every provider that uses the credential, or on request over every chosen provider.
 |`done` -> `settings.choose` (a plan held by the old credential goes on once its hold's retry observes the new one).
 |xref:19-onboarding-aspects-models-providers.adoc#state-catalogue-providers[Providers]
 |===
