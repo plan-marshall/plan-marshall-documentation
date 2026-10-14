@@ -341,7 +341,7 @@ A finding's disposition is refused when it contradicts the finding's own detail 
 |`false`
 |—
 |`prunable` (`linear_change`), on
-|`post_run_review: true`. Signal gate checks for unplanned changes, rework, findings, a fallback taken, or a recurring waiver (a gate identifier waived in three or more plans within the retained plans, Artifact Gate in xref:02-planning-lanes-phases-3-4.adoc#_planning_transition_guards_real_world_invariants[Planning Transition Guards & Real-World Invariants]); if triggered, creates a task of role `lessons` that submits candidate lessons through `submit:lesson` (the step completes `skipped` while the role is unqualified). A recurring waiver seeds a lesson naming the gate, the waiver reasons, and the plans that waived it.
+|`post_run_review: true`. Signal gate checks for unplanned changes, rework, findings, a fallback taken, or a recurring waiver (a gate identifier waived in three or more plans within the `waiver_waived` records of the audit log of the last 90 days, whatever the cleanup has deleted since, Artifact Gate in xref:02-planning-lanes-phases-3-4.adoc#_planning_transition_guards_real_world_invariants[Planning Transition Guards & Real-World Invariants]); if triggered, creates a task of role `lessons` that submits candidate lessons through `submit:lesson` (the step completes `skipped` while the role is unqualified). A recurring waiver seeds a lesson naming the gate, the waiver reasons, and the plans that waived it.
 
 |`992`
 |`plan-marshall`'s `finalize-step-preference-emitter`

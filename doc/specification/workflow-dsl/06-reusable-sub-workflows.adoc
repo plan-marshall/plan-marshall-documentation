@@ -298,10 +298,10 @@ Every call site routes the exit contract `done` / `stepped_out` (Rule 6); a site
 |`never`
 |Commits epic ledger updates in the shared epic worktree on the fixed epic branch, staging only `.marshall/epics/**` paths; entered from `epic.archive` with the epic's archive flag set, it also stages `.marshall/archived-epics/**`, so the ledger's move into the archive is committed and landed like every ledger write. Never commits on the primary checkout; ledger changes reach the default branch only through the epic landing (link:../model-work/08-epic-coordination.adoc#epic-landing[Model Work Specification]); `done` continues at `epic.next-work`; `stepped_out` returns to the watch `epic.active` (the write stays uncommitted).
 
-|`epic.pmwf` -> `epic.commit-decomposition`
+|`decomposition.pmwf` -> `decomposition.commit`
 |`step_or_fallback`
 |`never`
-|Commits the decomposition writes of `epic.decompose` (its `workstream`, `spec_section`, and `stage` writes) in the shared epic worktree on the fixed epic branch, staging only `.marshall/epics/**`. `done` continues at `epic.next-work`; `stepped_out` returns to the watch `epic.active` (the writes stay uncommitted and are committed with the next ledger write).
+|Commits the decomposition the operator agreed to in the review (the workstreams and the staged rows written to the ledger, with the epic's sources on the first run) in the shared epic worktree on the fixed epic branch, staging only `.marshall/epics/**`, and clears the draft (link:../state-catalogue/17-epic-decomposition-and-review.adoc#state-decomposition.commit[State Catalogue Specification, `decomposition.commit`]). `done` -> `decomposition.done`; `stepped_out` returns to `decomposition.review` (the draft kept; agreeing commits again).
 
 |`phase-6-finalize` (landing variant `landing.main`) -> `finalize.land-main`
 |`step_or_fallback`
@@ -324,7 +324,7 @@ Every call site routes the exit contract `done` / `stepped_out` (Rule 6); a site
 |A workflow unit placed or removed at project level (<<short-landings>>).
 |===
 
-The epic ledger (`epic.commit-ledger`, `epic.commit-decomposition`), the project setup's changes (`setup.land-changes`), and the short landings reach the base branch through the project's landing variant (xref:09-plan-instance.adoc#plan-axes[Plan Behaviour Axes]): with `landing.pull-request` through a branch and its pull request, with `landing.main` by a commit pushed onto the base branch, and with `landing.files` they stay uncommitted in the working tree.
+The epic ledger (`epic.commit-ledger`, `decomposition.commit`), the project setup's changes (`setup.land-changes`), and the short landings reach the base branch through the project's landing variant (xref:09-plan-instance.adoc#plan-axes[Plan Behaviour Axes]): with `landing.pull-request` through a branch and its pull request, with `landing.main` by a commit pushed onto the base branch, and with `landing.files` they stay uncommitted in the working tree.
 
 [#short-landings]
 === Short Landings (`git.land-removal`, `git.land-unit`)

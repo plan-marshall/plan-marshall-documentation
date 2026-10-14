@@ -144,7 +144,7 @@ A generic state is written `<phase>.x` and stands for one concrete state per uni
 |[[state-phase.awaiting_answers]]`<phase>.awaiting_answers`
 |the unit's phase value
 |`call`
-|The unit's authoring model state (first pass only) whose task's `submit` carried open `questions`; each becomes a part of one decision of class `clarification`.
+|The unit's authoring model state (first pass only) whose task's `submit` carried open questions in its optional `decision`; its parts form one decision of class `clarification`.
 |`call decision` (xref:16-decision.adoc#state-catalogue-decision[Decision]): the clarifications as one decision, asked in a single batch.
 |`answered` -> the authoring state's single second task: `refine.analyze`, `outline.deep`; `withdrawn` -> the authoring state's second task as well, with the operator's note in `facts` instead of answers.
 |link:../model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Envelopes & Questions]; link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas Specification, Question Record]
@@ -152,7 +152,7 @@ A generic state is written `<phase>.x` and stands for one concrete state per uni
 |[[state-state.asked]]`<state>.asked`
 |the asking state's phase value
 |`call`
-|The asking task state `<state>` (`asked`: its task followed the entity's `ask` link and did not continue after it, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]). Engine-made once per task state that declares `ask`, never declared in a unit (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Task States], item 8). The default units declare `ask` on no task state: the refine and outline authoring tasks ask through the `questions` of their `submit` (<<state-phase.awaiting_answers>>), an envelope task through `ask:TASK-NNN` (`execute.task-question`), and the re-planning, vote, and `zero_tool` tasks never ask; a project-owned unit may declare it.
+|The asking task state `<state>` (`asked`: its task followed the entity's `ask` link and did not continue after it, link:../model-work/06-envelopes-questions-deadlines.adoc#continuation[Model Work Specification, Continuing after a Question]). Engine-made once per task state that declares `ask`, never declared in a unit (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Task States], item 8). The default units declare `ask` on no task state: the refine and outline authoring tasks ask through the optional `decision` of their `submit` (<<state-phase.awaiting_answers>>), an envelope task through `ask:TASK-NNN` (`execute.task-question`), and the re-planning, vote, and `zero_tool` tasks never ask; a project-owned unit may declare it.
 |`call decision` over the question record of class `ask` the task created.
 |`answered`, `withdrawn` -> `<state>` (re-entered: a new task of the role with the answer, or the operator's note, in `facts.answers`; its `ask` link is offered within the link:../timeouts/01-job-budgets-and-waits.adoc#question-bound[question bound]).
 |link:../model-work/06-envelopes-questions-deadlines.adoc#question-record-creation[Model Work Specification, Record, Store & Creation]; link:../phase-workflows/07-questions-waivers-operator-influence.adoc#questions-waivers-operator-influence[Phase Workflows Specification, Questions, Waivers & Operator Influence]

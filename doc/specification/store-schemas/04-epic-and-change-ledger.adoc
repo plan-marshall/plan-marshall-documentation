@@ -127,7 +127,7 @@ _Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WAT
 
 One file per staged plan, created with `CREATE_NEW` and updated row-locally; the closed status vocabulary, the mapping of plan outcomes onto it, and the transfer rules are defined in link:../model-work/08-epic-coordination.adoc#git-distributed-epic-ledger[Model Work Specification, Git-Distributed Epic Ledger]. The row follows its plan's state: `pausing` and `paused` while the operator pauses it, `cancelled` when the operator cancels it, `abandoned` when the operator abandons it paused; a plan's outcome `released` changes no row (link:../model-work/08-epic-coordination.adoc#epic-informed[Model Work Specification, The Epic Is Told]).
 
-* *What a Row Waits For* is derived on read and never stored: `dependency` (a prerequisite has not shipped), `lock`, `scope` (the epic's `parallelization_scope` is full), or `overlap` (its declared surface shares more than the header's `overlap_max_files` files with a running plan's declared surface or realized changes; it names that plan and holds until that plan has ended), each since the row's last status change (`updated_at`); the epic's resource serves it (link:../runtime-model/01-processes-and-transport.adoc#epic-resource[Runtime & Interaction Model Specification, The Epic as a Resource]).
+* *What a Row Waits For* is derived on read and never stored: `dependency` (a prerequisite has not shipped), `lock`, `scope` (the epic's `parallelization_scope` is full), or `overlap` (its declared surface shares more than the header's `overlap_max_files` files with a running plan's declared surface or realized changes; it names that plan and holds until that plan has ended), each shown since the row's `updated_at` (its last write), so that no time of its own is recorded for a wait; the epic's resource serves it (link:../runtime-model/01-processes-and-transport.adoc#epic-resource[Runtime & Interaction Model Specification, The Epic as a Resource]).
 * *A Pausing or Paused Row Keeps Its Place*: it counts toward `parallelization_scope` like a `running` one.
 
 [source,json]
@@ -219,7 +219,7 @@ One file per staged plan, created with `CREATE_NEW` and updated row-locally; the
     },
     "staged_at": { "type": "string", "format": "date-time" },
     "started_at": { "type": ["string", "null"], "format": "date-time", "description": "Set by the start.create-scope transaction of the bootstrap of the plan started for the row (its source epic_row), by the epic itself or by the operator's Next plan, which sets the row running under the epic lock after the plan scope is written (or startup recovery from the plan's origin.epic_id, store-schemas/01, Transaction Journal, Writes outside the scope); null before." },
-    "updated_at": { "type": "string", "format": "date-time" }
+    "updated_at": { "type": "string", "format": "date-time", "description": "The row's last write; what the row waits for is shown since this time." }
   }
 }
 ----

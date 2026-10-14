@@ -54,7 +54,7 @@ The outcome transitions of a `job llm` state belong to the task's completion: wh
 
 |Single-submit entities (refine and outline authoring, the triage groups of a gather firing, architecture enrichment (kind `enrich-module`, entity `enrich-<module_id>`), the finalize reviews and `lessons-author`, epic `reground`, the epic `landing` entities)
 |Declared by the job state's unit, for example `submitted` -> the next state, and for refine and outline authoring `ask` -> the phase's question state
-|The entity runs the generic entity unit (<<entity-units>>); refine and outline authoring keep their `questions` list inside their one `submit`, and the phase's question state serves the records it created.
+|The entity runs the generic entity unit (<<entity-units>>); refine and outline authoring keep their open questions in the optional `decision` of their one `submit`, and the phase's question state serves the records it created.
 
 |Multi-submit entities (epic `decompose`, `message`, and `completion`, the task revision, the pull-request body, `lessons-review`)
 |Declared by the job state's unit: `submitted` -> the next state

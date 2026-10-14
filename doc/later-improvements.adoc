@@ -39,7 +39,7 @@ _Accepted limitation:_ Browsers authenticate with per-device bearer secrets obta
 * [ ] Sender-constrained tokens: non-extractable WebCrypto key in IndexedDB and signed requests (DPoP), so script injection can use but not steal the credential
 * [ ] A local certificate authority (mkcert-style, installed on paired devices) for the LAN listener, removing the self-signed certificate warning
 
-=== L-17: Tailscale Serve for Other Devices
+=== L-18: Tailscale Serve for Other Devices
 
 _Deferred because:_ a further device reaches the web app only through the LAN listener, with a self-signed certificate whose fingerprint the operator compares by eye. Tailscale Serve would give a certificate the browser trusts and reach only the operator's own devices, but it relies on a tool on the machine, and its requests carry the machine's Tailscale host name, which the web listener refuses.
 
