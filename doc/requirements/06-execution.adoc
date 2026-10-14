@@ -137,6 +137,13 @@ All version control and CI provider operations must execute through one contract
 
 See the link:specification/module-structure.adoc[Module Structure Specification], link:specification/job-runtime.adoc[Job Runtime Specification], and link:specification/store-schemas/12-machine-stores.adoc#provider-defaults[Store Schemas Specification, Machine Provider Defaults (`providers`, `<PM_MCP_BASE>/host-tools.json`)] for implementation details.
 
+Implementation (in part: the cache repository operations of the git contract that the corpus sources use, served natively in process on JGit with typed inputs and closed outcomes; the operations on a project repository, the CLI variants, the provider operations and the integration variants are not traced here): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/src/main/java/de/planmarshall/provider/git/GitOperations.java[GitOperations],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/src/main/java/de/planmarshall/provider/git/JGitOperations.java[JGitOperations]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/src/test/java/de/planmarshall/provider/git/JGitCacheRepositoryTest.java[JGitCacheRepositoryTest] (every outcome of the three operations against a fixture repository on disk, except `capability_missing` of the commit fetch, which no `file://` fixture reaches since its in-process transport runs no hook and no process)
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/doc/developer/provider-git.adoc[Cache Repository Operations Developer Guide]
+
 Implementation watch: link:implementation-watch/job-runtime.adoc#PM-WATCH-JOB-2[PM-WATCH-JOB-2], link:implementation-watch/domain-extensions.adoc#PM-WATCH-EXT-27[PM-WATCH-EXT-27], link:implementation-watch/cli-and-security.adoc#PM-WATCH-CLI-31[PM-WATCH-CLI-31]
 
 [#PM-EXEC-6]

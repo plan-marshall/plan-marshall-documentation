@@ -85,6 +85,25 @@ A role must run only on a configuration whose judgment has been shown to meet th
 
 See the link:specification/model-work.adoc[Model Work Specification], link:specification/evaluation.adoc[Evaluation Reference] (role grading method and measured results), link:specification/workflow-dsl.adoc[Workflow DSL Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/domain-extensions.adoc[Domain Extensions, Build Map & Configuration Split Specification], link:specification/filesystem-layout.adoc[Filesystem Layout Specification], link:specification/phase-workflows.adoc[Phase Workflows & Finalize Specification], link:specification/state-catalogue.adoc[State Catalogue], and link:specification/store-schemas.adoc[Store Schemas Specification] for implementation details.
 
+Implementation (in part: the corpus sources, the import of their items fetched at the pinned commits with its result, and the validation of the corpus in Java; the grading, the qualification records and their invalidation, the fallback of unqualified roles, the calibration, and the validation of the corpus in the build of the release are not implemented yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/CorpusImport.java[CorpusImport],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/ImportResult.java[ImportResult],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/CorpusValidator.java[CorpusValidator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/SourceManifest.java[SourceManifest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/SourceOverlay.java[SourceOverlay],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/ImportedItem.java[ImportedItem],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/role/corpus/ItemGenerator.java[ItemGenerator],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/src/main/java/de/planmarshall/provider/git/JGitSourceRepository.java[JGitSourceRepository],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/corpus/LfsBatchClient.java[LfsBatchClient]
+
+Verified by: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/role/corpus/CorpusImportTest.java[CorpusImportTest] (the complete, partial and failed imports),
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/role/corpus/CorpusValidatorTest.java[CorpusValidatorTest] (a negative fixture per rule and a matched valid corpus),
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/role/corpus/ProductCorpusValidationTest.java[ProductCorpusValidationTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/role/corpus/ItemGeneratorTest.java[ItemGeneratorTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/src/test/java/de/planmarshall/provider/git/JGitSourceRepositoryTest.java[JGitSourceRepositoryTest] (the import over fixture repositories on disk),
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/corpus/LfsBatchClientTest.java[LfsBatchClientTest] (the LFS download against a mock web server)
+
+Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-role-corpus.adoc[Corpus Sources Developer Guide], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-providers/pm-provider-git/doc/developer/provider-git.adoc[Cache Repository Operations Developer Guide], https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/doc/developer/runtime-corpus.adoc[Git LFS Download of the Corpus Sources Developer Guide]
+
 Implementation watch: link:implementation-watch/model-work.adoc#PM-WATCH-DISP-48[PM-WATCH-DISP-48], link:implementation-watch/model-work.adoc#PM-WATCH-DISP-51[PM-WATCH-DISP-51]
 
 [#PM-WORK-7]
