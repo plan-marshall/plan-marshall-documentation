@@ -90,7 +90,16 @@ Implementation (the scope identifier a primitive is handed with every execution,
 
 Verified by (the scope identifier of a primitive): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/PrimitiveContractTest.java[PrimitiveContractTest]
 
+Implementation (the engine side of the entity identifier of bullets 2 and 5, as far as the library modules carry it and not yet bound to `pm_state` and `pm_do`: an entity is addressed together with its scope, `NO_PLAN` naming the workspace scope, and resolved from persisted state within that scope only, a pending plan or epic bootstrap by its `entry_id` through the pending entry record; an entity of another scope or a consumed entry is `scope_not_found`. Not implemented yet: the request handling and the runtime's reader of the pending entry record): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/EntityAddress.java[EntityAddress],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/EntityAddressResolver.java[EntityAddressResolver],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/AddressResolution.java[AddressResolution],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/main/java/de/planmarshall/core/spi/PendingEntryReader.java[PendingEntryReader]
+
+Verified by (the entity addressing): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EntityAddressingTest.java[EntityAddressingTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/src/test/java/de/planmarshall/core/spi/EnginePortsTest.java[EnginePortsTest]
+
 Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc#_entity_addressing[Workflow Engine Developer Guide § Entity Addressing],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-core/doc/developer/core-store.adoc[Workflow State Store and Engine Ports Developer Guide],
 link:developer/primitive-spi.adoc#spi-contract[Developer Guide § The Contract of a Primitive]
 

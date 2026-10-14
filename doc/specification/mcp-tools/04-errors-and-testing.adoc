@@ -14,7 +14,7 @@ _See Requirement link:../../Requirements.adoc#PM-TOOL-4[PM-TOOL-4: Domain Failur
 
 _See Requirement link:../../Requirements.adoc#PM-TEST-4[PM-TEST-4: End-to-End Scenario & Worker Supervision Testing]_
 
-_Implementation watch: link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-11[PM-WATCH-TOOL-11]_
+_Implementation watch: link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-11[PM-WATCH-TOOL-11], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-22[PM-WATCH-TOOL-22]_
 
 A foundational invariant of PM-MCP is that *domain failures and transition rejections are workflow states, not MCP protocol errors*. Three response classes are distinguished:
 
