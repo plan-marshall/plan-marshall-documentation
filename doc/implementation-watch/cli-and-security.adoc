@@ -38,11 +38,12 @@ link:../Requirements.adoc#PM-DIST-4[PM-DIST-4]
 Hazard:: After the symlink switch the new `pm-operator` installed its bundles against the old runtime, the old installation
 directory was removed while the old runtime still started jobs through its own `pm-exec`, or a worker of the old runtime
 connected through the new release's relay.
-Guard:: Fixture with an old runtime running and the symlink switched to a new release: `pm-operator client update` is
-refused naming `pm-operator drain` and writes nothing; a job the old runtime starts after the switch runs through the old
-installation's `pm-exec` until the drain has completed; a worker the old runtime starts after the switch gets a composed
+Guard:: Fixture with an old runtime running and the symlinks switched to a new release (the runtime's own upgrade
+before its restart, or an upgrade by hand of a layout the runtime does not upgrade): `pm-operator client update` is
+refused with the version mismatch and writes nothing; a job the old runtime starts after the switch runs through the old
+installation's `pm-exec` until the old runtime has exited; a worker the old runtime starts after the switch gets a composed
 MCP configuration whose relay command is the old installation's `pm-mcp` by its absolute path (never a bare `pm-mcp`
-resolved through `PATH`, whose symlink names the new release); after the drain the next command starts the new `pm-mcpd`.
+resolved through `PATH`, whose symlink names the new release); after its exit the successor (or the next on-demand start) is the new `pm-mcpd`.
 Source:: design review.
 
 == Client Bundle Installer (`pm-operator client`)
@@ -73,21 +74,20 @@ matched control: a change that keeps or strengthens every `enforcement` rule, an
 under `--yes`.
 Source:: design review.
 
-== Entry Identity Recording (`pm-mcp enter`)
+== Plans Started from an Epic's Row
 
 [#PM-WATCH-CLI-1]
 === PM-WATCH-CLI-1: A plan started from its epic row is linked to its epic
 
-Anchor:: link:../specification/cli-and-security/01-cli-and-installer.adoc#_entry_identity_recording_pm_mcp_enter[CLI & Security § Entry Identity Recording],
-link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Model Work § Server-Started Plans] (Start transaction, Single Epic Pointer)
+Anchor:: link:../specification/model-work/08-epic-coordination.adoc#server-started-plans[Model Work § Server-Started Plans] (Start transaction, Single Epic Pointer)
 Hazard:: A plan whose source was a staged specification file of its epic was detected as epic-linked by one probe
 and reported `not_epic_pointer` by every transition probe.
 Guard:: Linkage test for a plan the server started through `source-epic-row` (the staged spec section of the queue row
 as request): `origin.epic_id` is set by the start transaction alone, and every surface (`pm-operator status`, the
-web app, the epic ledger, `outbox:send`, the landing step) reports the plan as linked from that one field; a session
-bootstrap whose derived `plan_id` equals a non-terminal queue row returns to `start.ready` with
-`epic_pointer_mismatch`, and `pm-mcp enter plan` never starts a plan of an epic; a start whose row is unknown or not
-launchable creates no plan and marks the row `held`.
+web app, the epic ledger, `outbox:send`, the landing step) reports the plan as linked from that one field; a start of a
+plan from other sources whose new `plan_id` equals a non-terminal queue row returns to `start.ready` with
+`epic_pointer_mismatch`, so only its epic starts that row's plan; a start whose row is unknown or not launchable
+creates no plan and marks the row `held`.
 Fixture:: ledger-decomposition `source_id` = `.plan/orchestrator/orchestrator-refactor/plans/PLAN-02-…md`: detection
 true, transition probe `not_epic_pointer` ×3.
 Source:: plan-marshall lesson 2026-09-23-15-001.
@@ -286,8 +286,8 @@ taken, or revokes a waiver that was already consumed.
 Guard:: `waive` with a gate outside the closed waivable grammar or on the non-waivable list (`not_waivable`), with
 `--raise` beyond the compiled hard cap (`raise_out_of_range`), for a plan whose fallback was taken or that ended
 (`plan_ended`), and `unwaive` of a consumed waiver (`already_consumed`) are each refused with no state change and an
-audit record; control: the `facts.operator_command` rendered in a waiver wait, run verbatim, writes a waiver that
-the wait consumes. No verb `decide`, `authorize-merge`, or `force-gate` exists (closed verb table test).
+audit record; control: the `waive` act of an open waiver request, from either client, writes a waiver that the
+request consumes and ends it `waived`. No verb `decide`, `authorize-merge`, or `force-gate` exists (closed verb table test).
 Source:: design review.
 
 [#PM-WATCH-CLI-24]
@@ -297,15 +297,14 @@ Anchor:: link:../specification/cli-and-security/02-credentials-and-operator.adoc
 link:../Requirements.adoc#PM-SEC-3[PM-SEC-3]
 Hazard:: The model runs `pm-operator waive` from its shell, or submits an operator choice (an integration
 variant, a waiver) as link arguments, and the runtime treats it as the operator's own act; a host deny rule that
-names sub-commands misses a verb added later, and one that also matches `pm-mcp` cuts the session off from its relay
-and its entry commands.
-Guard:: Tests: `pm-operator waive`, `unwaive`, and `abort` invoked with an agent environment marker or without a
+names sub-commands misses a verb added later, and one that also matches `pm-mcp` cuts a worker off from its job
+relay.
+Guard:: Tests: `pm-operator waive`, `unwaive`, and `plan cancel` invoked with an agent environment marker or without a
 terminal are refused before any request; every shipped bundle carries one `enforcement` rule that denies the whole
 binary `pm-operator` and names no sub-command (rule-matching test per host: every verb of `pm-operator` matches it,
-and `pm-mcp serve` and `pm-mcp enter` match no deny rule); no `pm_do` link accepts a waiver, an abort, or an
-operator-configuration value (link fuzzing over every catalogued state); an elicitation answer is accepted only on the
-session connection that declared elicitation support and only for a setup or bootstrap choice; matched control: the
-same verb from an interactive terminal writes the waiver.
+and `pm-mcp serve --job` matches no deny rule); no `pm_do` link accepts a waiver, a cancel, an answer of an operator
+wait, or an operator-configuration value (link fuzzing over every catalogued state), and no MCP request is taken as
+an operator act; matched control: the same verb from an interactive terminal writes the waiver.
 Source:: design review.
 
 [#PM-WATCH-CLI-23]
@@ -333,15 +332,18 @@ constant open: both projects create scopes.
 Source:: design review.
 
 [#PM-WATCH-CLI-29]
-=== PM-WATCH-CLI-29: A project release aborts its scopes, and re-enrolment reopens it
+=== PM-WATCH-CLI-29: A project release ends its scopes `released`, and re-enrolment reopens it
 
 Anchor:: link:../specification/cli-and-security/02-credentials-and-operator.adoc#enrolment-lifecycle-release[CLI, Coordination & Security § Enrolment, Lifecycle Gate & Release]
 Hazard:: A released project keeps plans and epics running that nobody follows any more, or a re-enrolled project stays
 closed for good.
-Guard:: Test: `pm-operator release-project` with a running plan and an active epic writes `released_at`, aborts both
-with the reason `project_released` (branches and stores kept readable), and appends an `operator` audit record; then
-`start.create-scope` refuses with `lifecycle_closed` and `pm-mcp enter` refuses the `plan` and `epic` kinds while the
-workspace scope stays available. Matched control: `pm-operator enrol` clears `released_at` (audited) and the lifecycle
+Guard:: Test: `pm-operator project release` with a running plan, a paused plan, an active epic, and a pending entry
+writes `released_at`, ends both plans with the outcome `released` (archived like a completed plan) and the epic with
+the `terminal_reason` `released` (archived in the machine store only, its ledger bytes unchanged and no commit),
+deletes the pending entry with its sources, touches no branch, and appends an `operator` audit record; then the
+opening of a start entry for a plan or an epic and `start.create-scope` refuse with `lifecycle_closed` while the
+workspace scope stays available; a release while a short landing of the project runs past its bound is refused
+`release_landing_pending` and ends nothing. Matched control: `pm-operator enrol` clears `released_at` (audited) and the lifecycle
 is offered again under the lifecycle gate.
 Source:: design review.
 
@@ -382,7 +384,8 @@ Hazard:: A validity cache in the runtime's web adapter, or an event stream authe
 revoked device working after the operator removed it.
 Guard:: With an open event stream, `pm-operator web devices revoke <id>` ends the device's stream within one event cycle
 and its next request is answered `401`; no cache exists to wait out; a device whose `last_used_at` lies 90 days back
-(clock fixture) is answered `401` and removed with `reason: idle_expired`, while one a minute short of it still works.
+(clock fixture) has its streams ended with `stream.closed` (`device_expired`), is answered `401`, and is removed
+with `reason: idle_expired`, while one a minute short of it still works.
 Source:: design review.
 
 [#PM-WATCH-CLI-18]
@@ -428,7 +431,7 @@ answered `401`; matched control: the runtime token on the Unix socket is accepte
 Source:: design review.
 
 [#PM-WATCH-CLI-21]
-=== PM-WATCH-CLI-21: The web listener exists only while enabled and never routes `/mcp`
+=== PM-WATCH-CLI-21: A web listener exists only while enabled and never routes `/mcp`
 
 Anchor:: link:../specification/cli-and-security/03-web-server.adoc#web-proxy[CLI & Security § API Access & Device Secret] (Route restriction),
 link:../specification/cli-and-security/03-web-server.adoc#web-server-lifecycle[CLI & Security § Lifecycle],
@@ -437,13 +440,13 @@ Hazard:: A second HTTP server that shares the routes of the Unix-socket listener
 normalization (`/api/v1/../../mcp`, `/api/v1/%2e%2e/mcp`, `//mcp`), puts the model's tool surface on a TCP listener; a
 listener that is open while `web.enabled` is false, or stays open after `pm-operator web disable`, exposes the
 runtime without the operator's decision.
-Guard:: Table test on the web listener over `/mcp`, `/mcp/`, encoded, double-encoded, dot-segment, duplicate-slash,
+Guard:: Table test on each web listener over `/mcp`, `/mcp/`, encoded, double-encoded, dot-segment, duplicate-slash,
 and case variants, and over every path the Unix-socket listener serves outside `/api/v1/`: each is refused with a
 valid device secret as with the runtime token, and a spy on the MCP endpoint records zero requests from the TCP
 listener; listener test: with `web.enabled` false a `pm-mcpd` whose local adapter runs on the Unix socket holds no
 listening TCP socket, across a restart too;
-`pm-operator web enable` opens exactly one, and a restart with `enabled` true reopens it; `pm-operator web disable`
-closes it and ends its open streams while `state/web-devices.json`, running plans, and running jobs stay untouched,
+`pm-operator web enable` opens exactly the loopback listener and `web enable --lan` the LAN listener beside it, a
+restart reopens each enabled one; `pm-operator web disable` closes both and ends their open streams while `state/web-devices.json`, running plans, and running jobs stay untouched,
 and a stream open on the Unix-socket listener keeps delivering across the open and the close.
 Source:: design review.
 Observation:: The native `WebListenerIT` and `WebListenerTest.shouldServeLanOverTls` failed intermittently with two

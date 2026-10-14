@@ -69,11 +69,11 @@ Source:: plan-marshall defect truthful-signals PLAN-TRUTH-151 D6.
 
 Anchor:: link:../specification/phase-workflows/07-questions-waivers-operator-influence.adoc#questions-waivers-operator-influence[Phase Workflows § Questions, Waivers & Operator Influence],
 link:../Requirements.adoc#PM-WF-12[PM-WF-12]
-Hazard:: A waiver text relayed by a model or a session (in an answer, a `request_waiver` rationale, or a task submit)
-is taken as the operator's override; a waiver set after the fallback was taken reopens an ended plan.
-Guard:: Scenario tests: an answer relayed through an `answer:<question_id>` link, a content answer given through
-elicitation, or a `request_waiver` rationale that contains "waive" writes nothing to `waivers.jsonl`; only the
-operator verb (CLI or paired web device) writes a waiver; a `waive` after the plan entered `plan.return` or
+Hazard:: A waiver text relayed by a model (in a `request_waiver` rationale or a task submit) or given as a content
+answer is taken as the operator's override; a waiver set after the fallback was taken reopens an ended plan.
+Guard:: Scenario tests: a content answer of a decision in either client, a chat message, or a `request_waiver`
+rationale that contains "waive" writes nothing to `waivers.jsonl`; only the operator's waiver act (the terminal
+client or a paired web device) writes a waiver; a `waive` after the plan entered `plan.return` or
 `finalize.hand-back` is refused with `plan_ended`; matched control: a `waive` given at plan start is consumed at the
 first evaluation of its gate and listed in the landing record.
 Source:: design review.
@@ -85,12 +85,12 @@ Anchor:: link:../specification/phase-workflows/01-planning-phases-1-2.adoc#_plan
 link:../Requirements.adoc#PM-TOOL-1[PM-TOOL-1]
 Hazard:: An issue that cannot be read (missing, inaccessible, provider down) creates a plan that waits for it or
 proceeds on an empty request.
-Guard:: The bootstrap source unit `source-issue` fetches the issue before the plan exists: a fixture per failure
-reason (`not_found`, `not_readable`, `provider_unavailable`) runs the unit's bounded `retry`, then ends the unit
-`stepped_out` with the reason and returns the entry to `start.choose`, and creates no plan directory, no status, and
-no audit plan record; no plan state waits for the fetch; matched control: a readable issue's
-title and body pass the level-1 validator and the screener, are stored in the pending entry record, and the bootstrap's
-`start.create-scope` transaction writes them into `request.md`.
+Guard:: The start's source unit `source-issue` fetches the issue before the plan exists: a fixture per failure
+reason (`not_found`, `not_readable`, `provider_unavailable`) enters `source-issue.failed` with the reason, an operator
+wait whose `retry` fetches again and whose removal ends the unit `stepped_out` back in `start.sources`; it creates no
+plan directory, no status, and no audit plan record, and no plan state waits for the fetch; matched control: a
+readable issue's title and body pass the level-1 validator and the screener, are stored in the entry's source
+directory, and the start's `start.create-scope` transaction writes them into the plan.
 Source:: design review.
 
 [#PM-WATCH-PHASE-2]
@@ -237,7 +237,7 @@ link:../specification/phase-workflows/02-planning-lanes-phases-3-4.adoc#adopt-la
 Hazard:: A plan adopts a pull request whose head lives in a fork the agent identity cannot push to; the whole
 verification loop runs and fails only at the first re-push.
 Guard:: The bootstrap source unit `source-pr` naming a fork head without push access fails with the reason
-`head_not_writable` before any plan directory, worktree, or branch exists, and the pending entry record stays; the
+`head_not_writable` before any plan directory, worktree, or branch exists, and the pending entry stays; the
 head is re-observed in the bootstrap's `start.create-scope` transaction; matched control: a writable head starts the
 plan in the `adopt` lane. `finalize.adopt-pr` never leaves a partially adopted worktree: fixture `pr_not_open` (a
 pull request closed, merged, or gone by the time it runs) hands the plan back at once without a retry and without
@@ -322,11 +322,11 @@ Anchor:: link:../specification/phase-workflows/01-planning-phases-1-2.adoc#_plan
 link:../Requirements.adoc#PM-WF-10[PM-WF-10]
 Hazard:: The lesson premise is checked only after the plan exists, so an obsolete lesson creates a plan, a branch, and
 a claim that must be unwound; or a lesson store with an unresolved integrity breach is used as a source.
-Guard:: Scenario on `source-lesson`: `retire` retires the lesson and ends the bootstrap `abandoned` with no plan
-directory and no claim; `continue` carries the premise evidence into `start.ready`; the implicit `step_out` returns
-to `start.choose`;
-while the lesson store has an unresolved integrity breach the source fails with `lesson_unavailable` naming
-`accept-edit`.
+Guard:: Scenario on `source-lesson`: `retire` retires the lesson (verdict `obsolete`) and adds nothing, with no plan
+directory and no claim, and the start goes on in `start.sources`; `use` carries the premise evidence into the plan
+as an `amendments[]` entry; `remove` adds nothing and leaves the lesson as it is;
+while the lesson store has an unresolved integrity breach the lesson is `unavailable` and the unit returns to
+`source-lesson.choose` with that reason, never using it.
 Source:: design review.
 
 [#PM-WATCH-PHASE-99]
@@ -349,7 +349,7 @@ Source:: design review.
 === PM-WATCH-PHASE-9: A survey-scope deliverable is not verification-only
 
 Anchor:: link:../specification/phase-workflows/03-q-gate-and-execute.adoc#_plan_vs_deliverable_scope_reconciliation_classification_validation[Phase Workflows § Plan-vs-Deliverable Scope Reconciliation],
-link:../specification/domain-extensions/05-recipes-and-extension-points.adoc#_tier_1_init_routing_deterministic_deliverable_generation[Domain Extensions § Tier-1 Init Routing]
+link:../specification/domain-extensions/05-recipes-and-extension-points.adoc#_tier_1_init_routing_deterministic_deliverable_generation[Domain Extensions § Recipe Workflows: Harvest, Deliverables & Parameters]
 Hazard:: Deliverables with empty `Affected files` but populated mutation scope were classified verification-only.
 Guard:: Deliverable classification uses harvested and mutation targets (recipe `target_harvester`) as well as
 `Affected files`; a `change_type_scope_disagreement` test with such a deliverable.
@@ -404,10 +404,11 @@ PLAN-PR-074 D8 amendment, PLAN-PR-030 (the self-review loop's three invisible bo
 Anchor:: link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#loop-back-bounds[Workflow DSL § Worktree-Constrained Loop-Back & Iteration Bounds],
 link:../specification/workflow-dsl/08-remediation-units.adoc#remediation-units[Workflow DSL § Remediation Policy Units],
 link:../Requirements.adoc#PM-WF-7[PM-WF-7]
-Hazard:: A verification layer without a cost ceiling consumed 81% of a 13.9M-token run: self-review ran 19 times and
+Hazard:: A verification layer without a bound on its repetitions consumed 81% of a 13.9M-token run: self-review ran 19 times and
 all 17 loop-backs were exhausted without converging; adversarial re-reviews of fixes drew further rounds on the
 fixes' own gaps.
-Guard:: Every model-invoking step declares a ceiling; per-step token usage is recorded; each loop-back iteration is
+Guard:: Every repeated model-invoking step is bounded by a count budget, never by a token limit; per-step token
+usage is recorded and reported; each loop-back iteration is
 recorded in `loop_backs[]` with `findings_raised` and `findings_self_seeded`, and the decision task's `facts` render
 the self-seeded share of the last iteration (a signal only; the `fix_budget` stays the loop's automatic bound). Every
 repeated remedy runs inside a remediation unit whose per-plan, per-class budgets bound it: a scenario test drives a
@@ -912,16 +913,15 @@ Fixture:: finding `e79ee5`: disposition `accepted`, detail "false positive".
 Source:: plan-marshall orchestrator-refactor epic Watches.
 
 [#PM-WATCH-PHASE-35]
-=== PM-WATCH-PHASE-35: Run cost anchors and finalize blow-up fixtures
+=== PM-WATCH-PHASE-35: Run usage anchors and finalize blow-up fixtures
 
-Anchor:: link:../specification/model-work/09-completion-usage-and-spend.adoc#spend-accounting-budget-anchors[Model Work § Spend Accounting & Budget Anchors],
-link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope],
+Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope],
 link:../Requirements.adoc#PM-TEST-4[PM-TEST-4]
-Hazard:: Nothing judged run cost against a reference; finalize loops were bounded by count, not cost, and repeatedly
-consumed half or more of a run.
-Guard:: Per-firing token figures and wall time are recorded per step and aggregated per self-review round; the
-benchmark suite uses the anchors below as operator-tunable regression thresholds (data, not normative text) and
-replays the finalize fixtures as baselines.
+Hazard:: Nothing compared a run's token usage against a reference; finalize loops repeated without visible effect
+and repeatedly consumed half or more of a run, unnoticed until after the merge.
+Guard:: Per-firing token figures and wall time are recorded per step and aggregated per self-review round and
+reported, never used as a limit of a plan; the benchmark suite of the tests uses the anchors below as its regression
+thresholds (test data, not normative text) and replays the finalize fixtures as baselines.
 Fixture:: Anchors: `multi_module` + `bug_fix` 2.0M tokens; `single_module` `bug_fix` warn 800K tokens / 60 min, error
 1.3M / 90 min; error anchor 1.6M. PLAN-CIS-049: 12 deliverables, 10.49M (5.2×, 874K per deliverable).
 verdict-staleness-scoping: 5,125,803 tokens, finalize 1,938,678 vs execute 1,950,288, 172 min, 4 loop-backs,
@@ -947,8 +947,7 @@ Hazard:: An unavailable build oracle rendered 0; build time was published as 0 f
 unmeasured-is-not-zero rule exists for tokens only.
 Guard:: `record-metrics` and every aggregate use an explicit `unavailable`/`unmeasured` state for each absent
 source; build totals derive from the change ledger `kind = "build"` `duration_ms`; a missing duration is
-`unmeasured`; test with a fixture ledger. A task row without token figures carries its `unmeasured_reason`; a task
-executed in the entry session by design records `session_task`, distinct from the other reasons, never zero tokens.
+`unmeasured`; test with a fixture ledger. A task row without token figures carries its `unmeasured_reason`, never zero tokens.
 Fixture:: 796 rows, `summed_rows 0` vs 37 logged builds; 28 builds totalling 3,975,160 ms (global logs: 123 calls,
 51.7% of script time). Per-step token evidence: 13 of 16 (PLAN-TRUTH-148) and 9 of 16 (PLAN-TRUTH-157) terminal
 steps had no evidence, which was read as inline execution.
@@ -1354,13 +1353,13 @@ Source:: design review.
 
 Anchor:: link:../specification/phase-workflows/06-finalize-re-entry-and-merge.adoc#merge-path[Phase Workflows § Merge Path] (items 1 and 5),
 link:../specification/phase-workflows/06-finalize-re-entry-and-merge.adoc#waiver-lookup[§ Waiver Lookup & Consumption]
-Hazard:: A waiver of one gate (a `spend` waiver, a `ci_check` waiver) is read as admitting another gate's failure at
+Hazard:: A waiver of one gate (an `analysis_gate` waiver, a `ci_check` waiver) is read as admitting another gate's failure at
 the barrier, so the barrier admits a missing review or red CI the operator never waived.
 Guard:: Table test over the waivable gate grammar: `waiver.lookup` at the barrier admits a failure only through a
 `met` waiver whose gate identifier matches the failing gate (`review_evidence[:<bot_kind>]`, `findings:<class>`); a
-`raise` waiver (`fix_budget:<policy>`, `retry_budget:<policy>`) never admits a failure; a `met` waiver of gate `spend`
-passes only the spend check at `merge.gate-entry`; a `ci_check:<name>` waiver never covers review evidence; scenario:
-with a `spend` waiver and review evidence still missing, the barrier ends
+`raise` waiver (`fix_budget:<policy>`, `retry_budget:<policy>`) never admits a failure; a `met` waiver of gate
+`analysis_gate:<provider>` passes only that provider's analysis gate; a `ci_check:<name>` waiver never covers review
+evidence; scenario: with an `analysis_gate` waiver and review evidence still missing, the barrier ends
 `evidence_missing` and calls `remediation.review-findings`.
 Source:: design review.
 
@@ -1375,9 +1374,10 @@ Guard:: Fixtures per observation at `finalize.archive-plan` after `finalize.hand
 `merge_outcome: handed_back`; closed -> `declined`; ejected -> `dequeued`; still queued -> `enqueued_not_landed`
 with the owed item `post_merge_cleanup`; each completes `default:branch-cleanup` as `failed` (on-entry rule) and
 runs the post-run band without the post-merge band; a `land` plan additionally owes `capture_ref_retained`. Ready
-form (barrier passed under `merge.auto_merge: false`): the open pull request is not a draft and archives with
-`merge_outcome: awaiting_human_merge`, and `default:branch-cleanup` completes `done`; matched control: with
-`merge.auto_merge: true` the same plan merges.
+form (barrier passed while the plan's asking variant leaves the merge to the operator, merge execution pruned with
+the reason `merge_by_operator`): the open pull request is not a draft and archives with
+`merge_outcome: awaiting_human_merge`, and `default:branch-cleanup` completes `done`; matched control: with an
+asking variant that lets the plan merge itself the same plan merges.
 Source:: design review.
 
 [#PM-WATCH-PHASE-83]
@@ -1421,13 +1421,12 @@ link:../Requirements.adoc#PM-WF-1[PM-WF-1]
 Hazard:: A fallback that ends the plan at once skips the post-run band (no landing, no metrics); two causes of the
 same fallback (a spent budget and a step-out) are indistinguishable in the record; begun steps stay open and later
 re-fire on an ended plan.
-Guard:: Scenario per cause (`exhausted`, `stepped_out`, `decided`, `infeasible`, `condition`, `question_expired`,
-`provider_refused`, `auto_merge_off`, `local_only`): the transaction entering `plan.return` or `finalize.hand-back` records every
+Guard:: Scenario per cause (`exhausted`, `stepped_out`, `decided`, `infeasible`, `condition`, `provider_refused`,
+`merge_by_operator`, `local_only`, `files_not_applicable`, `deliverable_removed`): the transaction entering `plan.return` or `finalize.hand-back` records every
 begun, unsettled step `failed`, writes one gap record with its cause and the spent budget, the server's step-out
 cause, or the decision task's reason and evidence, and composes the post-run-only instance version (event
 `fallback`); the plan then runs the post-run band and ends only through `finalize.archive-plan` in `returned` or
-`handed_back` (phase value `completed`, `outcome` authoritative); `remediation.spend` ending `exhausted` records
-`cause: exhausted` with the spend figures; a fallback taken because a task closed `lost` names the task's
+`handed_back` (phase value `completed`, `outcome` authoritative); a fallback taken because a task closed `lost` names the task's
 `queue_task_id` and `task_reason` (fixture: an unqualified `replan` role records `task_reason: role_unqualified`);
 no plan state offers a `hand_back` or `step_out` link.
 Source:: design review.
@@ -1450,7 +1449,7 @@ Source:: design review.
 Anchor:: link:../specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue across Ordering Bands] (`security-audit`, `pre-submission-self-review`)
 Hazard:: An in-branch `fix` of security-audit or self-review findings commits with `push_mode=always` before the
 pull request exists, so the branch is pushed before the push barrier and its quality gate (`INV-FIN-4`).
-Guard:: The compiled `finalize.pmwf` binds `actions=[loop_back]` and `retry_budget=0` at the Settle-band call sites
+Guard:: The compiled `phase-6-finalize.pmwf` binds `actions=[loop_back]` and `retry_budget=0` at the Settle-band call sites
 `finalize.remediate-security-audit` and `finalize.remediate-self-review`, so their `decide` state offers no
 in-branch `fix`; scenario: findings of each step route `fix_requested` ->
 `finalize.allocate-remediation` -> Phase 5, the fix commit is the exit-barrier commit (`settle_trigger` order `0`),
@@ -1525,7 +1524,7 @@ link:../Requirements.adoc#PM-MIG-5[PM-MIG-5]
 Hazard:: Undecided: the requirement counts link calls rejected with `invalid_link_args` or `link_not_available` and
 repeated identical rejected calls; the specification's Caller-Drift Rate counts every rejection of the failure class
 `caller_drift`, which also holds `missing_param`, `undeclared_param`, `stale_entity`, `already_answered`,
-`question_expired`, `phase_closed`, `operator_only`, `surface_overlap`, and the execution errors
+`phase_closed`, `operator_only`, `surface_overlap`, and the execution errors
 `invalid_arguments`, `section_not_found`, and `job_scope_mismatch`. Both are compared with the `plan-marshall`
 baseline of argument-shape failures per plan, so one implementation breaches the trigger on races and refusals the
 baseline never counted, the other misses argument-shape failures (`missing_param`, `undeclared_param`) the baseline
@@ -1570,7 +1569,7 @@ Source:: design review.
 
 Anchor:: link:../specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue] (`finalize-step-security-audit`)
 Hazard:: Undecided: the catalogue row states that a plan never merges without its security audit, but the step is
-`adversarial` (tier `full`): a project may omit adversarial steps from its `finalize.pmwf`, the posture resolution
+`adversarial` (tier `full`): a project may omit adversarial steps from its copy of `phase-6-finalize.pmwf`, the posture resolution
 prunes it, and a `workflow.json` `lane` override can switch it off; `plan-marshall` runs the audit only at posture
 `full`. The stated guarantee contradicts configuration the specification allows, so an implementation either enforces
 a rule the configuration cannot express or breaks the guarantee silently. Options: (1) a floor-immune security audit

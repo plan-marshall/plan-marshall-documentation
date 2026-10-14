@@ -34,7 +34,7 @@ Following it creates a queue task of the consulted role (kind `consultation`, xr
 [#consult-serving]
 === Serving the Consultation
 
-The consultation task goes through the model caller (xref:01-roles-and-configuration.adoc#model-caller[The Model Caller]) and the task protocol like every task: qualification and its fallback, the queue, offer, acknowledgement, re-offer, and fencing. Consultation tasks are offered before the work tasks of their role. The consulted role runs on its own artifact's harness and model, which may differ from the asker's.
+The consultation task goes through the model caller (xref:01-roles-and-configuration.adoc#model-caller[The Model Caller]) and the task protocol like every task: qualification and its fallback, the queue, offer, acknowledgement, re-offer, and fencing. Consultation tasks are offered before the work tasks of their role. The consulted role runs on its own effective harness and model, which may differ from the asker's.
 
 * *Facts*: The consultation entity carries the question, the asking role, and the facts of the asking task's state, which the server composes with the evidence the asked judgment rests on (xref:06-envelopes-questions-deadlines.adoc#decision-evidence[Evidence in Facts]).
 * *Depth one*: The consultation entity offers only its submit `submit:answer` (the answer, a text of `1` to `4000` characters) and no `consult`, `ask`, or infeasible link; a consulted task never consults.
@@ -58,4 +58,4 @@ Every submit link of an entity whose state declares consultations takes the para
 [#consult-accounting]
 === Accounting
 
-The usage of a consultation is accounted to the consultation task and its role, from the per-turn usage of the turns that served it (xref:04-worker-launch.adoc[Worker Launch]), and linked to the asking task through `consultation_of`; it is never added to the asking task's own usage. `pm-operator status` and the web app show an open consultation with both tasks.
+The usage of a consultation is accounted to the consultation task and its role, from the per-turn usage of the turns that served it (xref:04-worker-launch.adoc[Worker Launch]), and linked to the asking task through `consultation_of`; it is never added to the asking task's own usage. Both clients of the operator show an open consultation with both tasks.

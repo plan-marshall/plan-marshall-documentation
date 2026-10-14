@@ -22,19 +22,19 @@ sections mirror the specification. Item format and lifecycle: link:../Implementa
 Anchor:: link:../specification/client-profiles/01-profile-schema.adoc#_normative_client_profile_json_schema[Client Profiles § Normative Client Profile JSON Schema] (Writable paths)
 Hazard:: A `headless.writable_paths` entry that names a harness home as a whole, or a directory holding the settings,
 command, or skill file the bundle installed, puts that file into the Landlock write set of every worker: a worker
-rewrites the host's deny rules, entry commands, or shim skill, and the operator's next session runs without them.
+rewrites the host's deny rules or shim skill, and the host runs without them from then on.
 Guard:: Profile validation refuses a `headless.writable_paths` entry that equals, contains, or lies under a settings,
 command, or skill file the client's bundle manifest manages, or a shared configuration file in which the bundle owns
 an `enforcement` element; a build-time test runs the rule over every shipped profile against its own bundle
 manifest; negative fixture: a profile with the entry `~/.claude` and one with the path of the managed settings file
 are each refused naming the entry and the managed file; runtime control: a worker's write to the managed settings
 file fails.
-Hazard:: The `claude` harness cannot run headless without rewriting `~/.claude.json`, which also holds the
-user-scope MCP registration the bundle owns; with the file in the write set a worker can change or remove
-`mcpServers.plan-marshall`, and the operator's next session starts another command or none.
-Guard:: The bundle owns no `enforcement` element in a writable shared configuration file (build-time test over
-every shipped profile and manifest); a fixture worker that rewrites the owned key is reported `bundle_modified`
-with that key by the next `pm-mcp enter` and by `pm-operator client status`; a confined `claude` writer worker
+Hazard:: The `claude` harness cannot run headless without rewriting `~/.claude.json`, the harness's
+own state file; were an element the bundle owns held there, a worker with the file in its write set could change or
+remove it, and the host's enforcement would change without the operator.
+Guard:: The bundle owns nothing in a writable shared configuration file, `~/.claude.json` included (build-time test over
+every shipped profile and manifest); a fixture worker that rewrites a recorded owned element elsewhere is reported `bundle_modified`
+with that element by `pm-operator client status`; a confined `claude` writer worker
 runs with exactly the declared entries (not `~/.claude` as a whole) before the _(provisional)_ marker of its
 sub-paths is removed.
 Fixture:: Claude Code 2.1.291 under Landlock ABI 8: writes to `~/.claude.json` (a file rule; `$HOME` not needed),
@@ -43,15 +43,15 @@ Fixture:: Claude Code 2.1.291 under Landlock ABI 8: writes to `~/.claude.json` (
 Source:: design review; link:../specification/evaluation.adoc#results[Evaluation Reference], Gate 13.
 
 [#PM-WATCH-CLIENT-10]
-=== PM-WATCH-CLIENT-10: Open: connection values of `codex` and `neutral`
+=== PM-WATCH-CLIENT-10: Open: connection values of `codex`
 
 Anchor:: link:../specification/client-profiles/01-profile-schema.adoc#worker-block[Client Profiles § Worker Block] (connection values)
 Hazard:: Undecided: `idle_timeout_seconds`, `bounded_wait_seconds`, and `progress_resets_timeout` are required, but `codex`
-carries only "provisional" and `neutral` only "compiled default" (the bounded wait 240 is the only one with a
-value; validation then needs an idle timeout of at least 270 with progress `false`). The two profiles cannot be
-written as valid JSON, so they fail validation or ship guessed values. Options: (1) state provisional numbers (idle
-at least 270, progress `false`) for both; (2) define the neutral fallback in the host integration of Timeouts &
-Budgets. Recommendation: 1, measured before `codex` becomes eligible.
+carries only "provisional" (the bounded wait 240 is the only one with a value; validation then needs an idle
+timeout of at least 270 with progress `false`). The profile cannot be written as valid JSON, so it fails validation
+or ships guessed values. Options: (1) state provisional numbers (idle at least 270, progress `false`); (2) leave
+`codex` without connection values and not eligible until measured. Recommendation: 1, measured before `codex`
+becomes eligible.
 Guard:: The plan implementing this anchor decides the point (with the operator where it changes scope), records
 the result in the specification and the requirement it touches, and deletes this item.
 Source:: `client-profiles/01-profile-schema.adoc:242-269`, `:400-402`.
@@ -66,15 +66,15 @@ Hazard:: Antigravity runs every worker with all its host tools and beside the MC
 configuration (`tool_set: advisory`, `mcp_config.exclusive: false`). That is accepted for `writer` and `read_only`
 roles and fatal for the screener: a profile that declared `zero_tool` for it would hand untrusted text to a model
 with a shell. Beside that, three things were seen in its measurement and not yet tested under target conditions:
-the operator's global configuration holds the bundle's own `plan-marshall` entry, so a worker would start the
-session relay beside its job relay under the same server name; all `agy` processes share a tool schema cache per
+the operator's global configuration may hold an MCP entry named `plan-marshall`, so a worker would start it beside
+its job relay under the same server name; all `agy` processes share a tool schema cache per
 server name, while the tool list differs per role; and task inputs of 8,000 characters and more were read back with
 the host's `view_file` from its own step output, outside the server's resource tools. Its fault matrix passed only as
 a three-trial smoke run with unconfined workers on macOS.
 Guard:: Profile validation refuses a non-null `zero_tool` on a profile whose `mcp_config.exclusive` is `false`, and
 a fixture profile proves it. `worker.eligible` of `antigravity` becomes `true` only after: the ten-trial fault matrix
-with confined workers on Linux, with the bundle's global entry installed (the session relay exits inside a worker and
-no tool of it is listed); two workers of roles with different tool sets running at once, each listing exactly its own
+with confined workers on Linux, with a global `plan-marshall` MCP entry present in the operator's configuration (no tool of it is listed to the
+worker); two workers of roles with different tool sets running at once, each listing exactly its own
 tools; and its writable paths under Landlock, the step output it reads back included, recorded in
 `headless.writable_paths`.
 Source:: link:../specification/evaluation.adoc[Evaluation Reference] (Gates 13 and 16), design review.
@@ -100,21 +100,22 @@ full output saved under `~/.local/share/opencode/tool-output/`); the worker's `p
 `{"task_id":"unknown"}`. Claude Code 2.1.291 completed all three sizes.
 Source:: link:../specification/evaluation.adoc#results[Evaluation Reference], Gate 13.
 
-[#PM-WATCH-CLIENT-13]
-=== PM-WATCH-CLIENT-13: A host started inside another host is attributed to the outer one
+[#PM-WATCH-CLIENT-4]
+=== PM-WATCH-CLIENT-4: A host started inside another host is attributed to the outer one
 
 Anchor:: link:../specification/client-profiles/02-placeholders-and-detection.adoc#host-integration-table[Client Profiles § Host Integration Table] (Detection precedence, Nested hosts),
 link:../Requirements.adoc#PM-CLIENT-3[PM-CLIENT-3]
 Hazard:: Host markers are inherited, and no host clears another's: with a fixed precedence alone, Claude Code
-started inside OpenCode is detected as `opencode`, the entry is recorded with `identity_mismatch` although the
-declared client is right, and `AI_AGENT`, inherited from an outer Claude Code, names the wrong host in a host
-started inside it. Codex passes only a fixed variable list to its MCP servers, so a detection attempted in the
-relay never sees its markers.
+started inside OpenCode is detected as `opencode`, so the refusal of an operator verb names the wrong host, and
+`AI_AGENT`, inherited from an outer Claude Code, names the wrong host in a host started inside it. Codex and
+Antigravity pass their markers only to the commands they run, so a detection attempted anywhere but in
+`pm-operator` never sees them.
 Guard:: Table test of the host-detection table, read from the profile documents, over environments with the markers of one host, of both
 nestings of every pair of hosts (process tree fixtures with the process-id markers), and with an inherited
 `AI_AGENT`: the detected client is the host of the nearest ancestor, the fixed order decides only where no
-process-id marker resolves, and `AI_AGENT` never overrides a primary signal; detection runs in `pm-mcp enter`
-only, and `pm-mcp serve` computes no environment signature; the process-id marker of `claude` is verified against
+process-id marker resolves, and `AI_AGENT` never overrides a primary signal; detection runs only in the operator checks of `pm-operator`,
+whose refusal names the detected host, and `pm-mcp serve --job` computes no environment signature; a worker's
+environment carries none of the host markers; the process-id marker of `claude` is verified against
 a live host before its _(provisional)_ marker is removed.
 Fixture:: OpenCode inside Claude Code is attributed correctly by the fixed order; Claude Code inside OpenCode is
 attributed to `opencode`; Claude Code sets `AI_AGENT=claude-code_2-1-291_agent`, overwriting an inherited value.
@@ -191,7 +192,7 @@ Source:: plan-marshall defect instrumentation-substrate PLAN-08 deliverable 4 an
 Anchor:: link:../specification/client-profiles/02-placeholders-and-detection.adoc#_rendering_invariants[Client Profiles § Rendering Invariants],
 link:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2], link:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]
 Hazard:: A target emitter shipped a routing table whose referenced documents were not part of that target's unit.
-Guard:: Build-time test: every template is rendered for every built-in profile, `neutral` included, and fails on
+Guard:: Build-time test: every template is rendered for every built-in profile and fails on
 any unresolved or missing form (Profile Completeness); a `{{...}}` token that fails to resolve fails the rendering
 closed and logs a template defect, never emitting raw `{{...}}` syntax (Zero Unresolved Placeholders).
 Fixture:: an opencode unit whose routing table referenced 8 `workflow/` documents that were not emitted (also
@@ -213,21 +214,18 @@ Fixture:: `Bash(cp -r .plan/project-architecture/* /tmp/arch-snap)` and its fixe
 Source:: plan-marshall defect truthful-signals PLAN-TRUTH-165 D1.
 
 [#PM-WATCH-CLIENT-9]
-=== PM-WATCH-CLIENT-9: Bundle artifacts carry the `mcp-` command names and never a `plan-marshall` name
+=== PM-WATCH-CLIENT-9: Bundle artifacts never carry a `plan-marshall` name
 
-Anchor:: link:../specification/client-profiles/03-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles § Ownership & Digest Verification on Install/Update/Remove] (Side-by-Side with Legacy `plan-marshall`),
-link:../Requirements.adoc#PM-CLIENT-1[PM-CLIENT-1]
-Hazard:: A command or skill file whose name differs from the entry command the profile renders leaves
-`{{command:*}}` pointing at a command the host does not have; a bundle file named `plan-marshall`,
-`plan-orchestrator`, or `marshall-steward` shadows or is shadowed by the `plan-marshall` plugin's command in a mixed
-installation, so the user's entry runs the other system.
-Guard:: Bundle manifest test per client: every entry in `commands.entries` of the profile has exactly one command
-or skill file in the manifest whose name is the command name without its sigil (`mcp-plan-marshall`,
-`mcp-plan-orchestrator`, `mcp-marshall-steward`); the name compared is the `target_name` without its extension for a
-command file and the skill directory name (the first segment of `target_name`, for example
-`mcp-plan-marshall-skills` of `mcp-plan-marshall-skills/SKILL.md`) for an entry or shim skill; no compared name of
-any scope equals a `plan-marshall` command name (`plan-marshall`, `plan-orchestrator`, `marshall-steward`); control:
-a fixture manifest with an unprefixed command file or skill directory fails the build.
+Anchor:: link:../specification/client-profiles/03-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles § Ownership & Digest Verification on Install/Update/Remove] (Side-by-Side with Legacy `plan-marshall`)
+Hazard:: A bundle file or skill directory named like an artifact of the `plan-marshall` plugin (`plan-marshall`,
+`plan-orchestrator`, `marshall-steward`, a `plan-marshall` skill) shadows or is shadowed by the plugin's artifact in
+a mixed installation, so the host runs the other system's instructions; a command file or agent file in a bundle
+reintroduces an entry into a host, which is never a channel of the operator.
+Guard:: Bundle manifest test per client and scope: the bundle installs exactly the shim skill
+`mcp-plan-marshall-skills` and its permission rules, no command file and no agent file; no compared name (the
+`target_name` without its extension for a file, the first segment of `target_name` for a skill directory) equals a
+name the `plan-marshall` plugin installs; control: a fixture manifest with a command file, and one with an
+unprefixed skill directory, each fail the build.
 Source:: design review.
 
 [#PM-WATCH-CLIENT-13]

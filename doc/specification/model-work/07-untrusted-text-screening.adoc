@@ -17,9 +17,34 @@ Fetching, extracting, and guarding external content is server work; a model only
 1. *Level 1, the deterministic ingestion validator* of the server, which is the containment boundary (link:../job-runtime/03-parsers-and-gates.adoc#ingestion-validator[Job Runtime Specification, Ingestion Validator]).
 2. *Level 2, the screener*: a fresh `zero_tool` worker of the role `screener` that receives the cleaned text in-band and returns a closed verdict per item (<<screener>>). It can only restrict, never grant: it is defence in depth, never the boundary, and screened text is still delivered marked untrusted.
 
-*Surfaces*: Level 2 screens all externally authored free text: issue and pull-request titles and bodies, every review comment and bot finding text, analysis-provider messages, and upstream MCP results entering a store. CI logs and build excerpts are the server's own job output and pass level 1 only.
+*Surfaces*: Level 2 screens all externally authored free text: issue and pull-request titles and bodies, every review comment and bot finding text, analysis-provider messages, and upstream MCP results entering a store. CI logs and build excerpts are the server's own job output and pass level 1 only. What the operator wrote and what is on this machine is trusted and passes neither guard (<<local-trusted>>).
 
 There is no model that extracts from external text: no reader role exists, and a worker never fetches external content itself.
+
+[#local-trusted]
+=== What Is on This Machine Is Trusted
+_See Requirement link:../../Requirements.adoc#PM-SEC-1[PM-SEC-1: Two-Boundary Security Model & Untrusted Content Containment]_
+
+The guards separate what comes from outside the machine from what the operator and the project hold:
+
+* *Trusted*: what the operator wrote in a client (a description, an answer, the operator's own words in a decision, a reason) and what is on this machine (the project's checkout, documents the operator chose, a lesson, a recipe, the captured local changes). They are never screened and never marked untrusted; a model reads them as the operator's and the project's own, as it reads the code. A description is not searched for pasted third-party text: what the operator puts into a client is the operator's.
+* *Untrusted until screened*: what comes from outside the machine: issues, pull requests, review comments and bot findings, analysis-provider messages, and results of upstream MCP servers. They pass both guards (<<screen-stored>>), and stay marked untrusted after the screening.
+* *A pull request's changed files*: code from outside the machine, possibly from a fork. A pull request's source stores its head and marks its changed files untrusted unless the operator authored the pull request (the provider's author of the pull request is the operator's identity on that provider); no model reads them as instructions, they are never part of a screening batch, and the plan's own gates (its review, its integrity checks) apply to them.
+
+[#screen-stored]
+=== Screened Once Stored
+_See Requirement link:../../Requirements.adoc#PM-SEC-1[PM-SEC-1: Two-Boundary Security Model & Untrusted Content Containment]_
+
+Every external source of a start (an issue, a pull request, link:../state-catalogue/09-bootstrap-and-lessons.adoc#start-from-clients[State Catalogue, Starting from the Clients]) takes one order, the same for every source kind:
+
+. *Fetch*: a bounded job fetches it through the provider (link:../job-runtime.adoc[Job Runtime Specification]).
+. *Level 1*: the ingestion validator cleans its text (link:../job-runtime/03-parsers-and-gates.adoc#ingestion-validator[Job Runtime Specification, Ingestion Validator]).
+. *Store*: the server stores it in the entry's source directory and enters it in the manifest marked `unscreened` (link:../filesystem-layout/03-project-store.adoc#source-directory[Filesystem Layout Specification, The Source Directory]); a stored source is never changed.
+. *Screen*: the screener runs over the batch built from the stored files (<<batch-v1>>, <<screener>>), and the verdict (`clean` or `suspicious` with its spans) is written into the manifest beside the source.
+
+No model but the screener reads a source before its verdict is `clean` or the operator accepted it; a start offers its chat only once every external source of the entry is screened (link:../state-catalogue.adoc#chat[State Catalogue, Chat]). A source stored and not yet screened when the runtime stopped is screened from its stored copy at the next start of the runtime, never fetched again.
+
+*Fail closed*: a screener that fails (no valid output, a fate other than `succeeded`), and a role `screener` without a qualified configuration, leave the source `unscreened` with the cause, never marked `suspicious` in its place, so a failure never looks like a flagged source. The source's state of the source sub-workflow (`source-<kind>.unscreened`, link:../state-catalogue/09-bootstrap-and-lessons.adoc#state-catalogue-source[State Catalogue, Source States]) is an operator wait that shows the cause and offers _retry_, _remove_, and _accept as untrusted_; an acceptance is recorded with the operator's reason like an accepted flagged source, and the text stays marked untrusted.
 
 [#batch-v1]
 === Batch Format (`batch-v1`)
@@ -59,7 +84,7 @@ Every source step and every gather firing that ingests external text gathers its
 }
 ----
 
-The batch is persisted with the records it came from (the pending entry record for a bootstrap source, the findings records of a gather firing with their `batch_id`, link:../store-schemas/03-findings-and-review-records.adoc[Store Schemas Specification, Findings & Review Records]); it is never rendered into `facts` as a whole.
+The batch is persisted with the records it came from (the source manifest of an entry for a source of a start, built from the stored files; the findings records of a gather firing with their `batch_id`, link:../store-schemas/03-findings-and-review-records.adoc[Store Schemas Specification, Findings & Review Records]); it is never rendered into `facts` as a whole.
 
 [#screener]
 === Screener (role `screener`)
@@ -106,8 +131,8 @@ _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-
   }
 }
 ----
-* *Fail closed*: A missing, extra, duplicate, or unparseable item counts as `suspicious`; a screener worker that ends with any fate other than `succeeded`, or whose output does not validate, makes every item of its part `suspicious`. On a harness without schema output the final message is parsed against the same schema, with the same rule.
-* *Effect of `suspicious`*: In a bootstrap source step, the step enters a link state that shows the flagged spans and offers `accept` (the text is used, still marked untrusted, the acceptance audited) or the implicit `step_out` back to the choice. Inside a plan the text is withheld: only the item's structured fields and `withheld: flagged by screener` are delivered; a withheld finding stays pending, its unit ends through its budget and fallback, the hand-back report lists the withheld items, and a `met` waiver of that finding lets the plan proceed (link:../state-catalogue.adoc[State Catalogue]).
+* *Fail closed*: A missing, extra, duplicate, or unparseable item counts as `suspicious`. A screener worker that ends with any fate other than `succeeded`, or whose output does not validate, leaves every item of its part without a verdict: a source of a start stays `unscreened` with the cause (<<screen-stored>>), and a gathered item of a plan is withheld like a `suspicious` one. On a harness without schema output the final message is parsed against the same schema, with the same rule.
+* *Effect of `suspicious`*: In a source of a start, the source sub-workflow enters an operator wait that shows the flagged spans and offers _accept_ (the text is used, still marked untrusted, the acceptance audited with the operator's reason) or _remove_ (the source leaves the entry's list), and the screening of a stored source writes the report `source.flagged` (link:../runtime-model/01-processes-and-transport.adoc#reports[Runtime & Interaction Model Specification, Reports to the Operator]). Inside a plan the text is withheld: only the item's structured fields and `withheld: flagged by screener` are delivered; a withheld finding stays pending, its unit ends through its budget and fallback, the hand-back report lists the withheld items, and a `met` waiver of that finding lets the plan proceed (link:../state-catalogue.adoc[State Catalogue]).
 
 [#batched-triage]
 === Batched Triage (`triage-groups`)

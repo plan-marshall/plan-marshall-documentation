@@ -34,7 +34,7 @@ facts:
 links: []
 ----
 
-The representation is a view (xref:01-representation-and-link-forms.adoc#representation-kinds[Representation Kinds]): it shows the progress of the composite and offers no link. The constituent job identifiers (the CI job, the analysis jobs, and the review-bot job), the per-provider analysis results, the branch, and the elapsed wait time are recorded in the scope's `mcp/status.json` and the job records and shown by `pm-operator status` and the web app; they are never rendered (xref:01-representation-and-link-forms.adoc#model-facing-minimality[Model facing minimality]).
+The representation is a view (xref:01-representation-and-link-forms.adoc#representation-kinds[Representation Kinds]): it shows the progress of the composite and offers no link. The constituent job identifiers (the CI job, the analysis jobs, and the review-bot job), the per-provider analysis results, the branch, and the elapsed wait time are recorded in the scope's `mcp/status.json` and the job records and shown to the operator's clients in the plan's process; they are never rendered (xref:01-representation-and-link-forms.adoc#model-facing-minimality[Model facing minimality]).
 
 === Closed Status Enumerations in `finalize.concurrent-wait`
 _Implementation watch: link:../../implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-26[PM-WATCH-PHASE-26]_
@@ -100,7 +100,7 @@ A required bot that ends `unproven` is a review-evidence failure: the composite 
 === Deterministic Evaluation & Immediate Short-Circuit Matrix
 _Implementation watch: link:../../implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-27[PM-WATCH-PHASE-27], link:../../implementation-watch/hypermedia-format.adoc#PM-WATCH-HYP-8[PM-WATCH-HYP-8]_
 
-While the composite job runs, the daemon monitors the underlying jobs (the CI run, the analysis providers, and the review-bot wait) concurrently and settles the composite according to the following transition rules. Rows are evaluated top to bottom and the first matching row wins; together they cover every combination of constituent job fates, `ci_status`, `analysis_status`, and `bot_status`. The composite outcome column names the `finalize.watch-ci-and-bots` outcome declared in the `finalize.pmwf` excerpt (link:../workflow-dsl.adoc[Workflow DSL Specification]); _(keep waiting)_ means the composite job has not settled. Every failing class is handed to its remediation policy unit, one unit at a time in the fixed order CI -> analysis -> review findings, because a code fix for an earlier class invalidates the later observations anyway; the composite outcome of a later class is never evaluated while an earlier class fails.
+While the composite job runs, the daemon monitors the underlying jobs (the CI run, the analysis providers, and the review-bot wait) concurrently and settles the composite according to the following transition rules. Rows are evaluated top to bottom and the first matching row wins; together they cover every combination of constituent job fates, `ci_status`, `analysis_status`, and `bot_status`. The composite outcome column names the `finalize.watch-ci-and-bots` outcome declared in the `phase-6-finalize.pmwf` excerpt (link:../workflow-dsl.adoc[Workflow DSL Specification]); _(keep waiting)_ means the composite job has not settled. Every failing class is handed to its remediation policy unit, one unit at a time in the fixed order CI -> analysis -> review findings, because a code fix for an earlier class invalidates the later observations anyway; the composite outcome of a later class is never evaluated while an earlier class fails.
 
 [cols="1,1,1,1,2,3"]
 |===
@@ -111,7 +111,7 @@ While the composite job runs, the daemon monitors the underlying jobs (the CI ru
 |_Any_
 |`watch_interrupted` / `cancelled`
 |`finalize.restart-watch`
-|A constituent job ended with a fate other than success (`killed`, for example on a runtime restart, `timed_out`, `indeterminate`, `refused`, `failed`): `watch_interrupted`, carrying `{constituent, fate}`. A cancellation of the composite job by the engine (the plan's operator `abort`) settles it `cancelled`, routed to the same state. Every other constituent is cancelled, and the `auto` state `finalize.restart-watch` restarts the watch explicitly within the compiled restart budget (default 2 per wait-region firing); exhaustion enters `finalize.hand-back`.
+|A constituent job ended with a fate other than success (`killed`, for example on a runtime restart, `timed_out`, `indeterminate`, `refused`, `failed`): `watch_interrupted`, carrying `{constituent, fate}`. A cancellation of the composite job by the engine (an operator act that ends the plan) settles it `cancelled`, routed to the same state; a pause with the point _now_ cancels it without routing, and the start enters the wait again (link:../runtime-model/04-sessions-and-workers.adoc#plan-pause[Runtime & Interaction Model Specification, Pausing and Starting a Plan]). Every other constituent is cancelled, and the `auto` state `finalize.restart-watch` restarts the watch explicitly within the compiled restart budget (default 2 per wait-region firing); exhaustion enters `finalize.hand-back`.
 
 |`failed`
 |_Any_

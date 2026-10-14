@@ -19,8 +19,8 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |`5` for a runtime started on demand to answer an authenticated round trip.
 |fixed
 |—
-|every `pm-mcp` or `pm-operator` command that starts the runtime on demand (the `pm-mcp serve` relay included), which holds `locks/runtime-start.lock` until its authenticated round trip succeeds or this timeout expires; `pm-operator status` waiting for a live runtime's answer
-|The relay answers pending requests with the JSON-RPC error `runtime_unavailable` and retries on the next request; every other command fails with a diagnostic naming `logs/daemon.log`; `pm-operator status` reports "not responding".
+|every `pm-operator` command that starts the runtime on demand, which holds `locks/runtime-start.lock` until its authenticated round trip succeeds or this timeout expires; `pm-operator status` waiting for a live runtime's answer; a worker's relay waiting for the socket to accept connections; an exiting runtime waiting for the successor it started after a restart or an upgrade
+|The command fails with a diagnostic naming `logs/daemon.log`; `pm-operator status` reports "not responding"; the relay answers pending requests with the JSON-RPC error `runtime_unavailable` and retries on the next request; after an upgrade the exiting runtime terminates the successor, switches the links back, and starts the previous version (link:../runtime-model/02-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Model, The Runtime's Lifecycle]).
 |link:../runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime Model, Start Modes]; link:../runtime-model/04-sessions-and-workers.adoc#_failure_semantics[Runtime Model, Failure Semantics]
 
 |[[runtime-http-idle-timeout]]Runtime HTTP idle timeout
@@ -35,7 +35,7 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |`10` for a call addressing a project whose per-project recovery (lazy or background pass) has not finished.
 |fixed
 |—
-|every MCP call addressing a project (by scope or `PM-MCP-Workspace`) after a runtime start, and every Local API request addressing a project
+|every MCP call addressing a project (by the scope of the worker's leased task) after a runtime start, and every Local API request addressing a project
 |The call returns the retryable error `runtime_recovering` (`isError: true`; a Local API request: the same code of the `pm-api` error codes); the recovery continues, and a repeated call is served once it has finished. Nothing of the call is executed.
 |link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../mcp-tools.adoc[MCP Tools] (closed error codes); link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model, Local API]; implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/ProjectRecovery.java[ProjectRecovery] (`RECOVERY_WAIT`), link:../../concepts/runtime-lifecycle.adoc#per-project-recovery[Concepts § Per-Project Recovery]
 
@@ -43,33 +43,57 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |`600`
 |`drain_timeout_seconds` in `machine-config.json`
 |minimum `0` (`0` terminates running jobs at once), maximum `3153600000` (100 years of 365 days, so the deadline of the drain can always be represented); a negative, non-integer or larger value, and a `machine-config.json` that cannot be read or does not parse as one JSON object, is invalid: the default `600` applies and a warning names the file and the reason; the start and the drain never fail for it
-|running jobs at `SIGTERM`/`SIGINT` / `pm-operator drain`; the wait of `pm-operator drain` for the runtime's exit
+|running jobs at `SIGTERM`/`SIGINT` / `pm-operator drain` and at the operator's stop with `when: drain`, for which a stop with `when: now` cuts it to `0`; the wait of `pm-operator drain` for the runtime's exit
 |Remaining job groups are terminated (xref:01-job-budgets-and-waits.adoc#grace-period[Grace period]) and recorded `killed`, their build and model slots released, their job tokens revoked, the generations of workers fenced and their task leases released (the tasks stay `queued` for the next start), and `queued` jobs recorded `killed`; at the start of the drain no task is offered any more and every waiting worker is answered `end`, so only workers holding a task run into the drain timeout; warm language servers are shut down; merge-queue and review-bot leases are left in place and handled at the next start like those of a crash (<<leases>>); the runtime exits. `pm-operator drain` waits for the exit up to the drain timeout plus the xref:01-job-budgets-and-waits.adoc#grace-period[Grace period] plus a fixed `10`, then reports that the runtime is still draining.
-|link:../runtime-model/02-startup-recovery-drain.adoc#_drain_stop_upgrade[Runtime Model, Drain, Stop & Upgrade]; implemented on the runtime side: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/DrainTimeout.java[DrainTimeout], link:../../user/operator.adoc#drain-timeout-seconds[User Guide § drain_timeout_seconds]
+|link:../runtime-model/02-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Model, The Runtime's Lifecycle]; implemented on the runtime side: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/DrainTimeout.java[DrainTimeout], link:../../user/operator.adoc#drain-timeout-seconds[User Guide § drain_timeout_seconds]
 
 |[[stalled-threshold]]Stalled threshold
-|`600` since the last transition or task progress of a non-terminal scope that has no pending condition and awaits no event (the definition: link:../runtime-model/04-sessions-and-workers.adoc#stalled-plans[Runtime Model, Stalled Plans]).
+|`600` since the last transition or task progress of a non-terminal scope that is neither paused nor in an operator wait, has no pending condition, and awaits no event (the definition: link:../runtime-model/04-sessions-and-workers.adoc#stalled-plans[Runtime Model, Stalled Plans]).
 |fixed (compiled constant; the `plan_stalled` record feeds metrics, which must stay comparable across machines)
 |—
 |plans and epics
-|The scope is reported `stalled` in `pm-operator status`, the web app, and the epic view, and one `plan_stalled` audit record is appended per episode; nothing changes in a model-facing representation.
+|The scope is shown as the hold `stalled` in both clients of the operator, and one `plan_stalled` audit record is appended per episode; nothing changes in a model-facing representation.
 |link:../runtime-model/04-sessions-and-workers.adoc#stalled-plans[Runtime Model, Stalled Plans]
 
-|[[pending-entry-max-age]]Pending entry record maximum age
-|`86400`
-|fixed (compiled constant; no legitimate machine difference)
+|[[pending-entry-max-age]]Pending entry
+|No maximum age: a pending entry of a start or a project onboarding never expires and is never discarded by time; it stays among the project's open entries until it is started or abandoned, or deleted with the release of its project.
 |—
-|`<PM_MCP_BASE>/projects/<project_id>/pending/<entry_id>.json`, with the bootstrap state it holds (age since `created_at`)
-|Removed and audited, one audit record each, by the project's recovery sweep and by the <<periodic-sweep-interval>> (age is the only evidence; the runtime keeps no connections); the bootstrap ends without a terminal and a later call naming the `entry_id` is `scope_not_found`. The bootstrap does no age check of its own.
-|link:../runtime-model/02-startup-recovery-drain.adoc#per-project-recovery[Runtime Model, Per-Project Recovery]; link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]; the constant implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/PeriodicSweep.java[PeriodicSweep] (`PENDING_ENTRY_MAX_AGE`), link:../../concepts/runtime-lifecycle.adoc#periodic-sweep[Concepts § Periodic Sweep]
+|—
+|`<PM_MCP_BASE>/projects/<project_id>/pending/<entry_id>/`
+|Nothing expires; the periodic sweep removes only the directory of an entry already started or abandoned whose removal a stop cut off (link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]).
+|link:../state-catalogue/09-bootstrap-and-lessons.adoc#start-from-clients[State Catalogue, Starting from the Clients]
 
 |[[periodic-sweep-interval]]Periodic runtime sweep interval
 |`3600` between two runs of the runtime's periodic sweep over all enrolled projects.
 |fixed (compiled constant)
 |—
-|pending entry records older than the <<pending-entry-max-age>>; fenced entries of the session generation record older than the same maximum age
-|Each run removes the expired pending entry records, with one audit record each, and the expired fenced generations under the queue lock (link:../store-schemas/16-task-queue.adoc#session-generation-record[Store Schemas, Session Generation Record]).
+|the removal of technical residue, the measurement of the machine store's disk use, and the cleanup's check (its first pass after the start and the first of each new UTC day)
+|Each run removes the residue whose retention passed, one audit record each, under the evidence rules of the removal sweeps, records the disk use, and runs the cleanup's check where it is due (link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]).
 |link:../runtime-model/02-startup-recovery-drain.adoc#periodic-sweep[Runtime Model, Periodic Sweep]; implemented: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/PeriodicSweep.java[PeriodicSweep] (`INTERVAL`), link:../../concepts/runtime-lifecycle.adoc#periodic-sweep[Concepts § Periodic Sweep]
+
+|[[event-buffer]]Event buffer
+|The last `1000` events of each event stream are held for a reconnecting client.
+|fixed (compiled constant)
+|—
+|the event streams of the local API (link:../runtime-model/01-processes-and-transport.adoc#event-streams[Runtime Model, Events per Scope])
+|A client whose `Last-Event-ID` is older than the buffer receives `reset` and reads the scope's resources again; every runtime start begins with an empty buffer.
+|link:../runtime-model/01-processes-and-transport.adoc#event-streams[Runtime Model, Events per Scope]
+
+|[[metrics-event-interval]]Metrics event interval
+|At most one `system.metrics` event per second, and one `tokens.changed` event per scope per second, each carrying what changed since the last.
+|fixed (compiled constant)
+|—
+|the runtime-wide stream and the plan and epic streams
+|—
+|link:../runtime-model/01-processes-and-transport.adoc#runtime-metrics[Runtime Model, The Runtime's Metrics]
+
+|[[update-check-interval]]Update check interval
+|At most one check for a newer release per `86400`, only while the consent `check_updates` is remembered for the machine; the operator's _check_ runs at once.
+|fixed (compiled constant)
+|—
+|the runtime's check of the organisation's registry (link:../runtime-model/02-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Model, The Runtime's Lifecycle])
+|The next check runs; a failed check is recorded with its reason in the version state and never retried before the next interval.
+|link:../runtime-model/02-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Model, The Runtime's Lifecycle]
 
 |[[lsp-idle-timeout]]Language server idle timeout
 |`900` without a request to the instance.
@@ -160,12 +184,12 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |link:../store-schemas/16-task-queue.adoc#queue-task-record[Store Schemas, Queue Task Record]
 
 |[[job-token-lifetime]]Job token and worker generation lifetime
-|From the worker's spawn to the transaction that records its fate; no time expiry of its own. A session generation lives from its issue until the next `pm-mcp enter` or new host session of the same session identity fences it.
+|From the worker's spawn to the transaction that records its fate; no time expiry of its own. A generation is a worker's `job_id`; there is no other kind.
 |fixed
 |—
 |the job token of a worker (`PM-MCP-Job-Token`) and every `generation_id`
 |The token is revoked and the worker's generation fenced with the fate; every later request with the token is refused `job_ended`, and every call of a fenced generation `generation_fenced`.
-|link:../store-schemas/10-job-and-lesson-records.adoc#job-record[Store Schemas, Job Record]; link:../identifiers/02-registry-stores-to-web.adoc#id-job-token[Identifier Registry, Job Token]; link:../store-schemas/16-task-queue.adoc#session-generation-record[Store Schemas, Session Generation Record]
+|link:../store-schemas/10-job-and-lesson-records.adoc#job-record[Store Schemas, Job Record]; link:../identifiers/02-registry-stores-to-web.adoc#id-job-token[Identifier Registry, Job Token]
 
 |[[review-bot-window-claim]]Review-bot window claim
 |`reset_at` of the window (xref:01-job-budgets-and-waits.adoc#review-bot-windows[Review bot windows]).
@@ -192,6 +216,14 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |===
 |Name |Value / derivation |Configurable? |Floor / cap |Applies to |Behaviour on expiry |Defined for
 
+|[[operator-wait]]Operator wait
+|No time limit: a state that waits for the operator (a decision, a waiver request, a consent, an option asked when needed, a choice of a start, of a setup, or of the onboarding) ends only by an act of the operator through one of its operator links, or by an act that ends its scope.
+|—
+|—
+|every operator wait of every unit and scope
+|Nothing expires and nothing is decided by time; the wait halts its own scope only.
+|link:../workflow-dsl/02-units-jobs-decisions.adoc#operator-wait[Workflow DSL, Waiting for the Operator]
+
 |[[waiver-expiry]]Waiver
 |No time expiry and not bound to `HEAD`: a `met` waiver can be set until the gate's fallback is taken and applies to every later evaluation of its gate until the plan ends or `unwaive` revokes it (refused once consumed); a revoked `raise` lowers the ceiling from the next budget check.
 |—
@@ -201,19 +233,19 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 |link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-record[Store Schemas, Waiver Record]
 
 |[[waiver-request-expiry]]Waiver request
-|`expires_at = requested_at + waiver_wait_seconds` (xref:01-job-budgets-and-waits.adoc#waiver-wait[Waiver wait]).
-|as waiver wait
-|as waiver wait
+|No expiry: an open waiver request is an operator wait (xref:01-job-budgets-and-waits.adoc#waiver-wait[Waiver request]) until `waive` or `decline`.
+|—
+|—
 |`waiver_requests[]`
-|Recorded `expired`; the hand-back comment names it.
+|—; an act that ends the plan closes it `cancelled`.
 |link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-request-record[Store Schemas, Waiver Request Record]
 
 |[[integrity-pause]]Integrity pause
-|No expiry: an `integrity_breach` condition ends only by `accept-edit` (re-baseline and re-verification) or, for a plan or epic scope, the operator's `abort`; a workspace breach and a lesson breach end only by `accept-edit`; a breached pending entry record ends by `accept-edit` or by the pending-record sweep.
+|No expiry: an `integrity_breach` hold ends only by `accept-edit` (re-baseline and re-verification) or, for a plan or epic scope, by its cancel, the abort that ends a plan with the outcome `aborted` and an epic as `cancelled`; a workspace breach and a lesson breach end only by `accept-edit`; a breached pending entry record ends by `accept-edit` or by abandoning the entry.
 |—
 |—
 |plan, epic, and workspace scopes, single lessons, and single bootstrap entities (a tampered enrolment pauses every running plan of the project)
-|—; the deadlines of a pending question or waiver request are held and processed after the pause ends.
+|—; the deadline of a prerequisite wait is held and processed after the pause ends.
 |link:../cli-and-security/02-credentials-and-operator.adoc#operator-integrity-pause[CLI & Security, Integrity Pause]
 
 |[[access-grant-lifetime]]Access grant
@@ -237,7 +269,7 @@ link:../../Specification.adoc[Specification] » link:../timeouts.adoc[Timeouts &
 == Web Access
 _Implementation watch: link:../../implementation-watch/cli-and-security.adoc#PM-WATCH-CLI-15[PM-WATCH-CLI-15]_
 
-The runtime owns every value of this section: it serves web access itself, on its web listener (link:../runtime-model/01-processes-and-transport.adoc#_transport_endpoint[Runtime Model, Transport Endpoint]).
+The runtime owns every value of this section: it serves web access itself, on its web listeners (link:../runtime-model/01-processes-and-transport.adoc#_transport_endpoint[Runtime Model, Transport Endpoint]).
 
 [cols="2,3,2,2,2,3,2"]
 |===
@@ -247,7 +279,7 @@ The runtime owns every value of this section: it serves web access itself, on it
 |`300` from issue.
 |fixed (compiled constant)
 |—
-|the open pairing code of `pm-operator web pair` / `pm-operator web open`
+|the open pairing code of `pm-operator web pair`, `pm-operator web open`, and the entry of the terminal client, which replaces a redeemed code at once while it is open
 |Redemption yields `400` (`pairing_invalid`) and `web_pairing_failed`; the operator issues a new code.
 |link:../cli-and-security/03-web-server.adoc#web-pairing[CLI & Security, Pairing Protocol]
 
