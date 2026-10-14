@@ -166,7 +166,7 @@ A generic state is written `<phase>.x` and stands for one concrete state per uni
 |`awaiting_user`
 |The asking task state `<state>` (`asked`: its task followed the entity's `ask` link). Engine-made once per task state that declares `ask`, never declared in a unit (link:../workflow-dsl/02-units-jobs-decisions.adoc#model-job-states[Workflow DSL Specification, Task States], item 8). The default units declare `ask` on no task state: the refine and outline authoring tasks ask through the `questions` of their `submit` (<<state-phase.awaiting_answers>>), an envelope task through `ask:TASK-NNN` (`execute.task-question`), and the re-planning, vote, and `zero_tool` tasks never ask; a project-owned unit may declare it.
 |`question ask`: waits on the question record of class `ask` the task created. On expiry the question's stated default applies (`assumed`).
-|`answered`, `assumed` -> `<state>` (re-entered: a new task of the role with the answer, or its expiry, in `facts`).
+|`answered`, `assumed` -> `<state>` (re-entered: a new task of the role with the answer, or its expiry, in `facts.answers`; its `ask` link is offered within the link:../timeouts/01-job-budgets-and-waits.adoc#question-bound[question bound]).
 |link:../model-work/06-envelopes-questions-deadlines.adoc#question-record-creation[Model Work Specification, Record, Store & Creation]; link:../phase-workflows/07-questions-waivers-operator-influence.adoc#questions-waivers-operator-influence[Phase Workflows Specification, Questions, Waivers & Operator Influence]
 
 |[[state-phase.remediate-qgate]]`<phase>.remediate-qgate`

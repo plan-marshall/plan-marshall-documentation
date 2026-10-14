@@ -136,6 +136,11 @@ _Implementation watch: link:../../implementation-watch/hypermedia-format.adoc#PM
 
 While a sub-workflow is active (a `call` has made the sub-workflow's first state current, link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_stack_execution_persistence_semantics[Workflow DSL Specification, Call-Stack Execution]), a view and a session-driven state carry `facts.call_path`, the call-site state ids of the scope's call stack from the root frame outward (for example `call_path[1]: finalize.push-barrier`); it is absent at the root frame. In a session-driven state it states where the implicit `step_out` returns to (one frame up, <<question-waiver-and-exit-links>>). A task entity never carries it: the task's own `skill` and `facts` frame its one judgment.
 
+[#answers-facts]
+==== Answers to Earlier Questions (`facts.answers`)
+
+A worker that asked has ended its task (`asked`), and the task that continues the work may be served by another generation, harness, or model, which never saw the question. That task therefore carries every closed question it continues from as `answers[N]{question_id,plan_task_id,question_text,branch_key,label,text,closure}`: the task of `<state>` re-entered from `<state>.asked` the questions its state's earlier tasks asked in the same entry of the state, the envelope task after `execute.task-question` the questions of its plan tasks. `branch_key` and `label` are the chosen option (for `closure: assumed`, the applied default), `text` the answer's optional text, quoted as data, `plan_task_id` is set for class `task` only, and `closure` is `answered` or `assumed`, so the worker can tell an answer from a default. The record's channel, the answering device, and a quorum's votes are recorded, never rendered (link:../model-work/06-envelopes-questions-deadlines.adoc#answer-in-next-task[Model Work Specification, The Answer in the Next Task]).
+
 [#remediation-evidence-facts]
 ==== Remediation Evidence (`facts.failures`)
 

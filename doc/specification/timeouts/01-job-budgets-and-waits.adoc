@@ -357,6 +357,14 @@ The supervisor ends, recycles, and replaces workers by these values (link:../mod
 |No further `consult` link is offered; the task continues without consulting.
 |link:../model-work/05-consultation.adoc#consultation[Model Work, Consultation]
 
+|[[question-bound]]Question bound
+|`3` `ask` links per entry of a state; `3` `ask:TASK-NNN` links per plan task over all its envelope tasks.
+|fixed (compiled)
+|—
+|every task state that declares `ask`, and every envelope task
+|No further `ask` or `ask:TASK-NNN` link is offered; the worker decides on its own judgment or reports the task infeasible.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#question-bound[Model Work, Question Bound]
+
 |[[harness-start-spacing]]Start spacing of one harness
 |The next worker start of a harness waits until the previous worker of that harness made its first call or ended, at most `30`.
 |fixed
