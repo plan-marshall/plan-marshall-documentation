@@ -20,7 +20,7 @@ Work history goes only when the operator says so:: There is one cleanup of the m
 [#UC-SYS-1]
 == UC-SYS-1: Manage the Runtime
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client; stopping, restarting, and upgrading are privileged acts of the operator's channels: the terminal client, or a paired device (link:../specification/cli-and-security/03-web-server.adoc#web-operator-channel[Every Paired Device Is an Operator Channel]).
 Goal:: stop the runtime, start it, restart it, or upgrade it to a newer version, knowing what that does to the work that runs.
 Trigger:: the operator chooses one of these in a client's system view (<<UC-SYS-2>>), the clients show that a newer version is available, or the relay or a client reports a version mismatch after an installation by hand.
@@ -133,7 +133,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-SYS-2]
 == UC-SYS-2: See What the Runtime Is Doing
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see at a glance how the runtime is, what work it carries, and the tokens the models use, and get from a figure to what it counts.
 Trigger:: the operator opens the system view of a client, or comes to it from managing the runtime (<<UC-SYS-1>>).
@@ -189,7 +189,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-SYS-3]
 == UC-SYS-3: Clean Up
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client; deleting is a privileged act of the operator's channels, like the acts of <<UC-SYS-1>>.
 Goal:: get rid of the work history the operator no longer needs, all of it in one place, seeing what goes before it goes, and nothing deleted without the operator's word.
 Trigger:: the report that work history can be deleted (link:03-plans.adoc#UC-PLN-6[UC-PLN-6]), whose detail is the cleanup job; or the operator opens the cleanup from the system view (<<UC-SYS-2>>) or from the terminal client.

@@ -10,7 +10,7 @@ The operator works with running plans and epics: follows them down to the part t
 [#UC-PLN-1]
 == UC-PLN-1: Follow a Plan Down to Its Parts
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: follow a plan from its phases down to the step it is in, see at every level what is done, what runs, and what is still planned, and understand where it is and how it got there.
 Trigger:: the operator selects a plan in the overview of running work (<<UC-PLN-4>>), or names it.
@@ -37,7 +37,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PLN-2]
 == UC-PLN-2: Decide What a Plan Asks
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client (link:05-starting-work.adoc#change-clients-only[All Interaction in the Operator's Clients]).
 Goal:: learn at once that a plan, an epic, or a project's setup waits for a decision, understand what is asked and why, decide it with what is offered, or in the operator's own words, and never decide by accident.
 Trigger:: a decision of a plan, an epic, or a project's workspace scope (a question of its setup) is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it (its roles disagreed, one stayed below the declaration's confidence, or the quorum could not decide, link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
@@ -132,7 +132,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PLN-3]
 == UC-PLN-3: Design a Plan's Process
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app.
 Goal:: shape the process plans run, for example add a step to finalize or change how a remediation decides, by writing a workflow unit the operator may own; start it from a file, a pasted text, or a unit already installed; see before it is placed whether the server accepts it and what process it gives; and place it for this machine or for a project.
 Trigger:: the operator opens the designer in the web app: from the machine's settings or a project's (to design for the machine or for that project), or from a plan's process (<<UC-PLN-1>>), where the unit a phase or a sub-workflow comes from is one step away. This use case is bound to the web app by its nature: designing a process means reading and editing a unit of the workflow language beside its structure, which a terminal does not show well, so the terminal client offers no designer and points to the web app (as link:02-entry.adoc#UC-ENT-1[UC-ENT-1] is bound to the terminal client).
@@ -232,7 +232,7 @@ Design:: the terminal client offers none; the web app: link:https://github.com/p
 [#UC-PLN-4]
 == UC-PLN-4: See What Runs, Across Projects
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see at a glance, across every project, where plans and epics are running and which of them need the operator, and get from there to the one that needs attention, without wading through projects that have nothing running or plans that have ended.
 Trigger:: the operator opens the overview of running work; the client opens it where the operator left it.
@@ -258,7 +258,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PLN-5]
 == UC-PLN-5: Follow an Epic
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see an epic as a whole: what it starts from, how it is cut into workstreams and plans, where each plan is, what landed, what it found and watches, and what it waits for.
 Trigger:: the operator selects an epic in Running Work (<<UC-PLN-4>>), or names it.
@@ -283,7 +283,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PLN-6]
 == UC-PLN-6: Catch Up on What Happened
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: learn what happened in the projects, epics, and plans since the operator last looked (a plan started or ended, an epic started its next plan or found an overlap, a project onboarded), in a structured way, without having to act on any of it, and get from each to its details.
 Trigger:: the operator enters a client (logs in, opens the web app, starts the terminal client), which shows how many reports are unread and leads to them in one step; or a new report's notice while a client is open.

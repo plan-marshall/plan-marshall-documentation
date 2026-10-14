@@ -51,7 +51,7 @@ A grant is not a consent: reading the issues of another repository (link:05-star
 [#UC-ONB-1]
 == UC-ONB-1: Onboard a Machine
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: get from a freshly installed `PM-MCP` to a machine on which the first project can be set up, in one guided run.
 Trigger:: the operator enters on a machine that is not fully onboarded (link:02-entry.adoc#UC-ENT-1[UC-ENT-1]) and chooses to go on in the terminal or in the web app. A later run of one aspect starts from the machine settings of either client (<<UC-ONB-10>>).
@@ -95,7 +95,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-2]
 == UC-ONB-2: Onboard Automatically
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: an operator who does not want to weigh options, in the web app or in the terminal client.
 Goal:: get every setting of the onboarding decided in one go, and see afterwards what was decided.
 Trigger:: <<UC-ONB-1>>, `onboard.mode` with _automatic_, in the web app or in the terminal alike.
@@ -137,7 +137,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-3]
 == UC-ONB-3: Choose the Languages
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: choose the language the system speaks to the operator, and, separately, the language of the content a model writes and reads.
 Trigger:: <<UC-ONB-1>>, state `onboard.language`, the first step; or a later reconfiguration.
@@ -170,7 +170,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-4]
 == UC-ONB-4: Enrol the Harnesses
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: have every harness of this machine that the operator wants to work with enrolled, from one scan, with one of them the default the later steps of onboarding use.
 Trigger:: <<UC-ONB-1>>, state `onboard.harnesses`, or a later run of it from the machine settings (a harness installed since, or one to remove).
@@ -275,7 +275,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-5]
 == UC-ONB-5: Choose the Models for the Work
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client, advised by a model.
 Goal:: decide which models of the enrolled harnesses the server may use for the roles of every plan.
 Trigger:: <<UC-ONB-1>>, state `onboard.models`, or a later run of it.
@@ -319,7 +319,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-6]
 == UC-ONB-6: Assign Models to the Roles
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client, optionally advised by a model.
 Goal:: give every role a harness, a model, and an effort from the catalogue, starting from the default assignment.
 Trigger:: <<UC-ONB-1>>, state `onboard.assign-roles`, or a later reconfiguration.
@@ -373,7 +373,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-7]
 == UC-ONB-7: Choose Where Credentials Are Kept
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide, knowingly, whether the machine keeps its credentials in the operating system's credential store or in protected files, and keep that choice until the operator changes it.
 Trigger:: <<UC-ONB-1>>, state `onboard.credential-store`, or a later reconfiguration.
@@ -420,7 +420,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-8]
 == UC-ONB-8: Choose the Providers of the Machine
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide which providers (git hosting and CI, code analysis, review bots) this machine can reach, how (native or through a CLI tool), and with which credentials, as the default for every project and plan.
 Trigger:: <<UC-ONB-1>>, state `onboard.providers`, or a later reconfiguration.
@@ -480,7 +480,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-9]
 == UC-ONB-9: Choose How Plans Run by Default
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: decide once how a plan runs when its project and the plan itself say nothing else: how its work lands, how it works, and how often it asks the operator.
 Trigger:: <<UC-ONB-1>>, state `onboard.plan-defaults`, or a later reconfiguration.
@@ -524,7 +524,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-ONB-10]
 == UC-ONB-10: Change the Machine's Settings
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, a credential, the cleanup's durations, or the paired devices.
 Trigger:: the operator opens the machine settings of either client; or a credential has expired or is about to (reported by the status, or a plan held by it, link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).

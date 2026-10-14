@@ -20,7 +20,7 @@ Ending archives:: A plan that the operator cancels or abandons is archived, with
 [#UC-CTL-1]
 == UC-CTL-1: Control a Plan
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: stop a plan for a while, let it go on, end it, change its settings, or chat with its planning role about it, and know what that does to its work and to its epic.
 Trigger:: the operator selects a plan in Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]), in its plan view (link:03-plans.adoc#UC-PLN-1[UC-PLN-1]), or names it.
@@ -123,7 +123,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-CTL-2]
 == UC-CTL-2: Control an Epic
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: let an epic start its plans by itself or have it start its next plan now, end it, or archive it once it is through, review what it found and watches, and chat with its planning role about it.
 Trigger:: the operator selects an epic in Running Work, or names it.
@@ -229,7 +229,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-CTL-3]
 == UC-CTL-3: Review an Epic's Findings or Watches
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client, with the epic's planning role.
 Goal:: go through what the epic found (findings: what its landings and plans surfaced that no plan owns yet) or keeps under watch, and decide each item: keep it, drop it, make a plan of it, or reshape it with a model's help.
 Trigger:: the operator chooses _findings review_ or _watches review_ on an epic (<<UC-CTL-2>>), or follows the note that new findings wait.
@@ -321,7 +321,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-CTL-4]
 == UC-CTL-4: Resolve What Holds a Plan
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see why a plan, an epic, or a project's landing does not go on, when no decision is asked, and resolve it.
 Trigger:: Running Work marks a hold (link:03-plans.adoc#change-needs-operator[What Needs the Operator]), one of the kinds `stalled` (a plan stalled), `condition` (a condition that needs an operator act), `integrity_pause`, `held` (an item of an epic held), and `landing_failed` (a failed landing of an epic or of a move).
@@ -366,7 +366,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-CTL-5]
 == UC-CTL-5: Change a Plan's Settings
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: give one plan its own value of an aspect (how it lands, works, and asks; a role's harness, model, or effort; an integration's variant or an optional provider) without changing the project's or the machine's, and know from where it applies.
 Trigger:: the operator chooses _settings_ on a plan (<<UC-CTL-1>>), in any state until the plan has ended.

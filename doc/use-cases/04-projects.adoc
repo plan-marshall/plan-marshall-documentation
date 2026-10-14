@@ -10,7 +10,7 @@ The operator brings a project into `PM-MCP` and finds it again: onboarding a pro
 [#UC-PRJ-1]
 == UC-PRJ-1: Onboard a Project
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: get from a repository checkout to a project in which plans and epics can run, in one guided run: enrolled, set up for the team, and configured for the operator, starting from what the machine already provides and asking only for what the project needs of its own.
 Trigger:: the operator adds a project in the explorer (<<UC-PRJ-2>>); a client started in a checkout proposes that checkout. A later run of one aspect of a project starts from the project in the explorer.
@@ -142,7 +142,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PRJ-2]
 == UC-PRJ-2: Explore Projects
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: find a project among many quickly, see its state at a glance, and from it start an epic, start a plan, or look at its running work.
 Trigger:: the operator opens the projects of the machine.
@@ -163,7 +163,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 [#UC-PRJ-3]
 == UC-PRJ-3: Release a Project
 
-Status:: `DRAFT`
+Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: take a project out of `PM-MCP`'s work, for a while (release) or for good (unenrol), knowing what happens to its running work.
 Trigger:: the operator chooses _Release_ or _Unenrol_ in the project's setup (<<UC-PRJ-2>>).
