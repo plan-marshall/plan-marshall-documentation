@@ -31,8 +31,8 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client (link:../specification/workflow-dsl/02-units-jobs-decisions.adoc#clients-only[Workflow DSL & Engine Specification, All Interaction in the Operator's Clients]).
-Goal:: learn at once that a plan, an epic, or a project's setup waits for a decision, understand what is asked and why, decide it with what is offered, or in the operator's own words, and never decide by accident.
-Trigger:: a decision of a plan, an epic, or a project's workspace scope (a question of its setup) is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it (its roles disagreed, one stayed below the declaration's confidence, or the quorum could not decide, link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
+Goal:: learn at once that a plan, an epic, a project's setup, or a start waits for a decision, understand what is asked and why, decide it with what is offered, or in the operator's own words, and never decide by accident.
+Trigger:: a decision of a plan, an epic, a project's workspace scope (a question of its setup), or a start's entry is delivered to the operator: a worker asked (link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-envelope-schema[Question Envelope]), a server rule raised it, or a decision quorum escalated it (its roles disagreed, one stayed below the declaration's confidence, or the quorum could not decide, link:../specification/model-work/10-decision-quorum.adoc#decision-declarations[Decision Declarations]); or a worker files a waiver request.
 Preconditions:: the operator has a client open, or is reached by a notification of one, once the operator allowed it (how each client notifies is its design).
 Flow::
 +
@@ -45,10 +45,11 @@ Flow::
        │                       recommendation, the votes and dissent of a quorum
        ▼
   [S] decision.announce        every open client of the operator shows that it
-       │                       waits, with its subject (the plan, the epic, or
-       │                       the project's setup) and what it blocks; none
-       │                       takes the operator's focus, and nothing typed
-       │                       before it was shown answers it
+       │                       waits, with its subject (the plan, the epic,
+       │                       the project's setup, or a start's entry) and
+       │                       what it blocks; none takes the operator's
+       │                       focus, and nothing typed before it was shown
+       │                       answers it
        ▼
   [O] decision.answer          per part: choose an option, give a value, or
        │                       answer in the operator's own words, with an
