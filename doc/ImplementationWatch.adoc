@@ -142,7 +142,7 @@ item.
 
 |link:implementation-watch/store-schemas.adoc[Store Schemas]
 |`STORE`
-|51
+|50
 |link:specification/store-schemas.adoc[Store Schemas Specification]
 
 |link:implementation-watch/job-runtime.adoc[Job Runtime]
