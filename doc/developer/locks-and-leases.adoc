@@ -73,7 +73,7 @@ A lock of the operating system (`FileChannel.lock()`) excludes other processes b
 
 Both exist only while a thread uses them: the in-process lock of a key from the first thread that asks for the key until the last thread that holds or waits for it has given it back, and the channel of a lock file from the first holder until the last one has closed it. A thread enters a key before it waits, so a lock is never replaced under a waiting thread.
 
-`LockTransaction.acquire(key)` asserts the order and acquires in one call. A key that `LockOrder` refuses is logged (`PM_RUNTIME-202`, link:../LogMessages.adoc[Log Messages]), its audit record is handed to the `AuditSink`, nothing is acquired and no lock file is created, and the call throws `InternalFaultException`. `pm-core` names no wire error; mapping the exception to `internal_fault` is the job of the assembly.
+`LockTransaction.acquire(key)` asserts the order and acquires in one call. A key that `LockOrder` refuses is logged (`PM_RUNTIME-202`, link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/LogMessages.adoc[Log Messages]), its audit record is handed to the `AuditSink`, nothing is acquired and no lock file is created, and the call throws `InternalFaultException`. `pm-core` names no wire error; mapping the exception to `internal_fault` is the job of the assembly.
 
 A lock file below `locks/` is created with mode `0600`, its directories with mode `0700`. A leaf key names the append-only file itself (`logs/audit.jsonl`, a plan's `mcp/mailbox.jsonl`); the manager creates that file where it is absent, but never its directory, which belongs to the store. Opening an existing lock file changes neither its content nor its modification time.
 

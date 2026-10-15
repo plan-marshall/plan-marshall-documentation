@@ -27,7 +27,7 @@ One release delivers four native binaries, each with one direction (`PM-TECH-3`,
 
 |`pm-operator`
 |plain GraalVM native image, picocli
-|The terminal client and the operator CLI: the entry without a verb, the operator's views, waits, and acts, and the operator verbs (`enrol`, `credentials`, `waive`, `config`, `roles`, `web`, `client`, `runtime`, `cleanup`, `sweep`, `drain`, `status`, and the others of the command tree), without an `operator` sub-level. A client of the runtime's Local API; holds no store logic and writes no store. The client bundles deny the whole binary to every worker's model (link:cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[CLI, Coordination & Security Specification, Operator Channel Isolation]).
+|The terminal client and the operator CLI: the entry without a verb, the operator's views, waits, and acts, and the operator verbs (`enrol`, `credentials`, `waive`, `config`, `roles`, `web`, `client`, `runtime`, `cleanup`, `sweep`, `drain`, `status`, and the others of the command tree), without an `operator` sub-level. A client of the runtime's Local API; holds no store logic and writes no store. The client bundles deny the whole binary to every worker's model (link:cli-and-security/02-operator-channel.adoc#operator-channel-isolation[CLI, Coordination & Security Specification, Operator Channel Isolation]).
 
 |`pm-mcpd`
 |Quarkus native
@@ -35,12 +35,12 @@ One release delivers four native binaries, each with one direction (`PM-TECH-3`,
 
 |`pm-exec`
 |plain GraalVM native image
-|The job launcher: process group and, on Linux, confinement before `execve` (link:job-runtime/01-pipeline-and-subprocesses.adoc#_process_group_creation_via_the_pm_exec_launcher[Job Runtime Specification]). Started only by the runtime.
+|The job launcher: process group and, on Linux, confinement before `execve` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc#_process_group_creation_via_the_pm_exec_launcher[Job Runtime Specification]). Started only by the runtime.
 |===
 
 Web access is no binary and no process of its own: while the operator enabled it, the runtime serves the web app and the Local API to paired browsers on its web listeners, a loopback listener and, beside it, a LAN listener (link:cli-and-security.adoc[CLI, Coordination & Security Specification]). The web app and the terminal client are the operator's views of every plan, epic, worker, and task, and both are dependable. The binaries are installed side by side in `<PM_MCP_HOME>/bin/`; a binary starts a sibling by its path in that directory, never through `PATH`.
 
-All other specifications reference this document for process topology, transport, the relay, the local API with its resources and events, and the lifecycle of the runtime instead of restating them. The task protocol, roles, supervision, and consultation are specified in the link:model-work.adoc[Model Work Specification].
+All other specifications reference this document for process topology, transport, the relay, the local API with its resources and events, and the lifecycle of the runtime instead of restating them; the engine side of that lifecycle (the startup sequence, recovery, the periodic sweep, drain, stop, restart and upgrade, the pause of a plan, stalled plans, and the metrics) is specified in the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle.adoc[Runtime Lifecycle Specification]. The task protocol, roles, supervision, and consultation are specified in the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work.adoc[Model Work Specification].
 
 == Traceability
 
@@ -51,11 +51,10 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-ARCH-4[PM-ARCH-4: Stateless Requests & Explicit Scope Addressing]_
 * _See Requirement link:../Requirements.adoc#PM-ARCH-7[PM-ARCH-7: Runtime & Relay Lifecycle, Crash Recovery & Job Drain]_
 * _See Requirement link:../Requirements.adoc#PM-ARCH-8[PM-ARCH-8: Server-Driven Continuation & Connection Independence]_
-* _See Requirement link:../Requirements.adoc#PM-ARCH-9[PM-ARCH-9: Runtime Metrics]_
 * _See Requirement link:../Requirements.adoc#PM-ARCH-11[PM-ARCH-11: The Operator's Two Clients & Their Contract]_
-* _See Requirement link:../Requirements.adoc#PM-WF-20[PM-WF-20: Waiting for the Operator]_
-* _See Requirement link:../Requirements.adoc#PM-WF-21[PM-WF-21: Reports to the Operator]_
-* _See Requirement link:../Requirements.adoc#PM-WF-23[PM-WF-23: Operator Acts on Plans and Epics]_
+* _See Requirement link:../Requirements.adoc#PM-CLIENT-1[PM-CLIENT-1: Harnesses as Workers & Client Identity]_
+* _See Requirement link:../Requirements.adoc#PM-DIST-3[PM-DIST-3: Worker MCP Connection per Launch]_
+* _See Requirement link:../Requirements.adoc#PM-DIST-5[PM-DIST-5: Multi-Host Concurrent Coexistence on One Machine]_
 * _See Requirement link:../Requirements.adoc#PM-IMPL-4[PM-IMPL-4: Bounded Long-Poll & Progress-Reset Waiting Primitives]_
 * _See Requirement link:../Requirements.adoc#PM-IMPL-7[PM-IMPL-7: Data Store Invariants, Footprint Reconciliation & Lock Ordering]_
 * _See Requirement link:../Requirements.adoc#PM-SEC-3[PM-SEC-3: Operator Channel Isolation (Operator CLI & Paired Web Devices)]_
@@ -63,18 +62,14 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-SEC-7[PM-SEC-7: Optional Web Access, Device Pairing & Browser Channel Hardening]_
 * _See Requirement link:../Requirements.adoc#PM-TECH-1[PM-TECH-1: Java 25+ & Quarkus MCP Runtime Foundation]_
 * _See Requirement link:../Requirements.adoc#PM-TECH-3[PM-TECH-3: GraalVM Native Executable & Startup/Memory Bounds]_
+* _See Requirement link:../Requirements.adoc#PM-TEST-7[PM-TEST-7: Mock Runtime for Client Development & Tests]_
 * _See Requirement link:../Requirements.adoc#PM-TOOL-5[PM-TOOL-5: Tool Schema Stability & Context Budget Discipline]_
-* _See Requirement link:../Requirements.adoc#PM-DIST-1[PM-DIST-1: Single Version Authority & Embedded Client Bundles]_
-* _See Requirement link:../Requirements.adoc#PM-DIST-3[PM-DIST-3: Worker MCP Connection per Launch]_
-* _See Requirement link:../Requirements.adoc#PM-DIST-5[PM-DIST-5: Multi-Host Concurrent Coexistence on One Machine]_
-* _See Requirement link:../Requirements.adoc#PM-CLIENT-1[PM-CLIENT-1: Harnesses as Workers & Client Identity]_
+* _See Requirement link:../Requirements.adoc#PM-WF-13[PM-WF-13: Finalize Step Ordering Bands, Verdict Currency & Pre-Merge Barrier]_
+* _See Requirement link:../Requirements.adoc#PM-WF-20[PM-WF-20: Waiting for the Operator]_
+* _See Requirement link:../Requirements.adoc#PM-WF-21[PM-WF-21: Reports to the Operator]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-7[PM-WORK-7: Worker Activity & Off-Track Signals]_
-* _See Requirement link:../Requirements.adoc#PM-TEST-7[PM-TEST-7: Mock Runtime for Client Development & Tests]_
-* _See Requirement link:../Requirements.adoc#PM-ARCH-10[PM-ARCH-10: One Cleanup of Work History & Automatic Removal of Residue]_
-* _See Requirement link:../Requirements.adoc#PM-WF-13[PM-WF-13: Finalize Step Ordering Bands, Verdict Currency & Pre-Merge Barrier]_
-
 == Status: IN PROGRESS
 
 == Modules
@@ -82,7 +77,7 @@ _See Requirements:_
 Implemented in (link:module-structure.adoc[Module Structure Specification]):
 
 * link:module-structure.adoc#module-pm-mcp-server[`pm-mcp-server`]: parts 01, 04, and 06: the local adapter with the resources and event streams of the operator's clients, the web adapter with its listeners, the MCP endpoint, and the binding of worker connections
-* link:module-structure.adoc#module-pm-runtime[`pm-runtime`]: part 02: the runtime's start sequence, recovery, sweep, and lifecycle; of part 01 the per-user service unit of the start modes and the metrics registry
+* link:module-structure.adoc#module-pm-runtime[`pm-runtime`]: of part 01 the singleton, the runtime token, and the per-user service unit of the start modes; the start sequence, recovery, sweep, lifecycle, plan pause, stalled plans and metrics are specified in the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle.adoc[Runtime Lifecycle Specification]
 * link:module-structure.adoc#module-pm-api[`pm-api`]: the Local API contract with its representations, error codes, and event catalogue, the shared client over the Unix socket, the shared on-demand start procedure, and the codec of the direct file reads
 * link:module-structure.adoc#module-pm-relay[`pm-relay`]: part 03: the worker relay `pm-mcp serve --job`
 * link:module-structure.adoc#module-pm-operator[`pm-operator`]: the terminal client, `runtime`, `drain`, `status`, and the direct file reads of the operator CLI
@@ -90,9 +85,8 @@ Implemented in (link:module-structure.adoc[Module Structure Specification]):
 
 == Parts
 
-* link:runtime-model/01-processes-and-transport.adoc[Processes, Transport & Local Trust] — terminology, process topology, the runtime's responsibilities, singleton and discovery, the transport endpoint with the web listeners, runtime and job tokens, the Local API with its endpoints and error codes, start modes, the environment, and the resources of the operator's clients: events per scope, the plan's process, what needs the operator, the overview, the projects of the machine, the epic, ended work, reports, and the runtime's metrics
-* link:runtime-model/02-startup-recovery-drain.adoc[Startup, Recovery & Lifecycle] — the startup sequence, per-project recovery with the fencing of worker generations and the requeue of leased tasks, the periodic sweep, and the runtime's lifecycle: drain, stop, restart, and upgrade
+* link:runtime-model/01-processes-and-transport.adoc[Processes, Transport & Local Trust] — terminology, process topology, the runtime's responsibilities, singleton and discovery, the transport endpoint with the web listeners, runtime and job tokens, the Local API with its endpoints and error codes, start modes, the environment, and the resources of the operator's clients: events per scope, the plan's process, what needs the operator, the overview, the projects of the machine, the epic, ended work, and reports
 * link:runtime-model/03-relay.adoc[Relay] — the worker relay contract, the host protocol forms, connection metadata, the worker's generation at the relay, the relay rules, the request flow, messages from the runtime, and cancellation
-* link:runtime-model/04-sessions-and-workers.adoc[Workers, Operator Acts & Failure Semantics] — server-driven plans and epics, worker connections, the call cycle, continuation, pausing and starting a plan, stalled plans as a hold, connection-scoped rendering, failure semantics, client interaction, and verification
+* link:runtime-model/04-sessions-and-workers.adoc[Workers, Operator Acts & Failure Semantics] — server-driven plans and epics, worker connections, the call cycle, continuation, connection-scoped rendering, failure semantics, client interaction, and verification
 * link:runtime-model/05-mock-runtime.adoc[Mock Runtime] — the mock runtime that serves the local API from scenario files for the development and tests of the clients, the scenario format, the scenarios per flow, and their replay against the real runtime
 * link:runtime-model/06-event-catalogue.adoc[Event Catalogue] — the closed catalogue of named events with their payloads and streams

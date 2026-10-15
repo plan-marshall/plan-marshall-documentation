@@ -17,7 +17,11 @@ else is decided by the operator, one point at a time, and nothing is applied on 
 - **Scope** (default): `doc/Requirements.adoc` and `doc/Specification.adoc` as entry points, `doc/requirements/`
   and `doc/specification/` as the body (specifications are split: an index `doc/specification/<spec>.adoc` plus
   parts `doc/specification/<spec>/NN-<topic>.adoc`), `doc/roadmap.adoc`, `doc/ImplementationWatch.adoc` and
-  `doc/implementation-watch/`. An argument may narrow the scope or name a focus topic.
+  `doc/implementation-watch/`, and the same trees of `pm-mcp-core` checked out beside this repository
+  (`../pm-mcp-core/doc/Specification.adoc`, `doc/specification/`, `doc/ImplementationWatch.adoc`,
+  `doc/implementation-watch/`, `doc/Traceability.adoc`), which hold the specifications of the engine. An edit of
+  those is made on a branch of `pm-mcp-core` and lands there in its own pull request. An argument may narrow the scope
+  or name a focus topic.
 - **Ground truth**: the legacy implementation the concept replaces, default `/Users/oliver/git/plan-marshall`
   (read-only, never edited). An argument may name another path.
 - **Traceability rules**: Requirements ↔ Specification bidirectional (every requirement is specified, every

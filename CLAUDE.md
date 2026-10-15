@@ -9,10 +9,14 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 `doc/Requirements.adoc` (modules in `doc/requirements/`), technical specifications in `doc/Specification.adoc`
 (documents in `doc/specification/`), delivery staging in `doc/roadmap.adoc`, defect archetypes and fixtures to guard
 during implementation in `doc/ImplementationWatch.adoc` (documents in `doc/implementation-watch/`), and the concept,
-developer and user documentation of the implemented system. It holds no code and builds no artifact. The one exception to
+developer and user documentation of the implemented system. It holds no code and builds no artifact. Two exceptions to
 "every document": the design of the two clients (the terminal client, the web app, and what they share) is the specification
 of their implementation and lives with their code in `pm-mcp-clients` (`doc/design/`); the use cases it shows stay here,
-one set for both clients.
+one set for both clients. And the specifications of the engine, with their implementation watch and the traceability of
+the requirements it implements, live with its code in `pm-mcp-core` (`doc/Specification.adoc`, `doc/specification/`,
+`doc/ImplementationWatch.adoc`, `doc/implementation-watch/`, `doc/Traceability.adoc`), so that a work package there is
+one pull request; the requirements they trace to, the roadmap, the shared specifications (`module-structure.adoc` among
+them) and `implementation-watch/cross-cutting.adoc` stay here.
 
 The code lives in four repositories of the organisation `plan-marshall`: `plan-marshall-mcp` (the Quarkus daemon
 assembly `pm-mcp-server`, the end-to-end tests, the model verification corpus `test/model/verification/`),
@@ -63,15 +67,23 @@ lines).
 - Links inside `doc/` are relative.
 - A link from a document into code (`Implementation:`, `Verified by:`) is an absolute link
   `https://github.com/plan-marshall/<repository>/blob/main/<path>` to the repository that owns the file.
-- Code and the `CLAUDE.md` of a code repository link into this repository with an absolute link
-  `https://github.com/plan-marshall/plan-marshall-documentation/blob/main/doc/<path>`.
-- Check after every change: `python3 .claude/skills/doc-review/scripts/trace.py` must report `BROKEN LINKS 0` and
-  no undefined requirement or watch identifier. The workflow `links.yml` runs the same check and is the required
-  check of the repository.
+- A link into the specifications and watch documents of `pm-mcp-core` is an absolute link
+  `https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/<path>`; `trace.py` checks it, anchor included, against
+  the checkout of `pm-mcp-core` beside this one.
+- The documents of a code repository link into this repository with a relative sibling path
+  (`../plan-marshall-documentation/doc/<path>` from the repository root); code and its Javadoc name a requirement by
+  its identifier.
+- Check after every change: `python3 .claude/skills/doc-review/scripts/trace.py` (with `pm-mcp-core` checked out
+  beside this repository) must report `BROKEN LINKS 0` and no undefined requirement or watch identifier. The workflow
+  `links.yml` runs the same check over both trees and is the required check of the repository; `pm-mcp-core` runs it
+  as well.
 
 ### A change that spans code and documents
 
-An implementation changes code in a code repository and documents here. The plan that implements it makes both
+An implementation in `pm-mcp-core` changes its specification, watch and traceability there, in its own single pull
+request; it changes documents here only when it corrects a requirement, changes `cross-cutting.adoc` or a specification
+that stays here, and the concept and user documentation of the engine and the roadmap check-offs are written here once
+per milestone exit. Any other implementation changes code in a code repository and documents here. The plan that implements it makes both
 changes as part of its own work: it opens the pull request here beside the code pull request and merges it through
 the merge queue, without a separate approval, as soon as the code is on `main` of its repository and the required
 check is green, so that `main` here never describes code that is not on `main` there. Neither pull request has to

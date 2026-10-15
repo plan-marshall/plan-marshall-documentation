@@ -75,7 +75,7 @@ The server relies on delivery, not on request: a required skill reaches the mode
 
 A context can lose what it once received. The server therefore delivers a skill again wherever it has reason to doubt that the model still holds it: to a new generation, after a clear or compaction the harness reports, and when the skill itself changed. What the host does not report the server cannot see; the shim covers that case.
 
-What the server cannot enforce is that the model applies a skill. It checks every result against the link and schema the contract names, whatever the model made of the skill, and leaves the rest to measurement and to role qualification (xref:roles.adoc#qualification[Roles, Qualification]). The rules are specified in link:../../specification/model-work/04-worker-launch.adoc#skill-delivery[Model Work Specification, Skill Delivery].
+What the server cannot enforce is that the model applies a skill. It checks every result against the link and schema the contract names, whatever the model made of the skill, and leaves the rest to measurement and to role qualification (xref:roles.adoc#qualification[Roles, Qualification]). The rules are specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc#skill-delivery[Model Work Specification, Skill Delivery].
 
 [#shim]
 == The shim

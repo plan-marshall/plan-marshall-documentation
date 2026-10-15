@@ -12,7 +12,7 @@ link:../../Specification.adoc[Specification] » link:../runtime-model.adoc[Runti
 == Event Catalogue
 _See Requirement link:../../Requirements.adoc#PM-ARCH-11[PM-ARCH-11: The Operator's Two Clients & Their Contract]_
 
-The closed catalogue of the events the runtime streams to the operator's clients (link:01-processes-and-transport.adoc#event-streams[Events per Scope]). Every event has a name of the event name grammar (link:../identifiers/02-registry-stores-to-web.adoc#id-event-name[Identifier Registry, Event Name]), one payload schema in `pm-api`, and the streams it is sent on; the envelope (`event`, `at`, `scope`, the SSE `id`) is that of link:01-processes-and-transport.adoc#event-streams[Events per Scope] and is not repeated below. A payload carries identifiers, states, counts, and message keys with their arguments; text of a model, a provider, or a harness travels only in the entries of a task's activity stream, marked untrusted. A new event, a new payload field, or a new stream for an event is a change of `pm-api`, checked by the mock runtime's load validation and the drift replay (link:05-mock-runtime.adoc[Mock Runtime]).
+The closed catalogue of the events the runtime streams to the operator's clients (link:01-processes-and-transport.adoc#event-streams[Events per Scope]). Every event has a name of the event name grammar (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/identifiers/02-registry-stores-to-web.adoc#id-event-name[Identifier Registry, Event Name]), one payload schema in `pm-api`, and the streams it is sent on; the envelope (`event`, `at`, `scope`, the SSE `id`) is that of link:01-processes-and-transport.adoc#event-streams[Events per Scope] and is not repeated below. A payload carries identifiers, states, counts, and message keys with their arguments; text of a model, a provider, or a harness travels only in the entries of a task's activity stream, marked untrusted. A new event, a new payload field, or a new stream for an event is a change of `pm-api`, checked by the mock runtime's load validation and the drift replay (link:05-mock-runtime.adoc[Mock Runtime]).
 
 Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project's workspace scope's, *M* the machine scope's, *N* an entry's, *Rep* the reports stream, *A* a task's activity stream.
 
@@ -32,14 +32,14 @@ Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project
 |===
 |Event |Streams |Payload
 
-|`runtime.draining` |R |`asked_by` (`operator`, `signal`, `service_manager`), `withdrawable`, `then` (`exit`, `restart`), `deadline_at` (link:02-startup-recovery-drain.adoc#runtime-lifecycle-operations[The Runtime's Lifecycle])
+|`runtime.draining` |R |`asked_by` (`operator`, `signal`, `service_manager`), `withdrawable`, `then` (`exit`, `restart`), `deadline_at` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#runtime-lifecycle-operations[The Runtime's Lifecycle])
 |`runtime.drain_withdrawn` |R |—
 |`runtime.stopping` |R |`then`
 |`runtime.upgrading` |R |`version`, `step` (`fetching`, `verifying`, `unpacking`, `switching`, `draining`), `withdrawable`
 |`runtime.upgraded` |R |`from_version`, `to_version` (sent by the successor after its start)
 |`runtime.upgrade_failed` |R |`version`, `reason` (message key), `rolled_back`
-|`system.metrics` |R |the metrics that changed, each with its labels and value or `unavailable` (link:01-processes-and-transport.adoc#runtime-metrics[The Runtime's Metrics])
-|`cleanup.job_opened` |R |`job_id`, the counts per kind, the space it frees (link:../timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup])
+|`system.metrics` |R |the metrics that changed, each with its labels and value or `unavailable` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/03-runtime-metrics.adoc#runtime-metrics[The Runtime's Metrics])
+|`cleanup.job_opened` |R |`job_id`, the counts per kind, the space it frees (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup])
 |`cleanup.decided` |R |`job_id`, `decision` (`delete`, `remind`, `ignore`), `remind_at`
 |`cleanup.progress` |R |`job_id`, `done`, `failed`, `total`
 |`cleanup.done` |R |`job_id`, `deleted`, `failed`, `kept`
@@ -62,9 +62,9 @@ Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project
 |`activity.changed` |R, P, E |`plan_id`, `activity` (`running`, `pausing`, `paused`), the pause's `point`
 |`needs_operator.changed` |R, P, E, W |`kind` and `id` of the summarized scope or project, the new summary (link:01-processes-and-transport.adoc#needs-operator[What Needs the Operator])
 |`condition.raised`, `condition.cleared` |R, P, E, W |the scope, `condition`, `cleared_by` (`self`, `operator`)
-|`hold.opened`, `hold.changed`, `hold.cleared` |R, P, E, W, N |the scope, `hold_id`, `kind`, `cleared_by` (`act`, `self`) (link:../state-catalogue/01-conventions-generic-conditions.adoc#holds[State Catalogue Specification, Holds and Their Acts])
+|`hold.opened`, `hold.changed`, `hold.cleared` |R, P, E, W, N |the scope, `hold_id`, `kind`, `cleared_by` (`act`, `self`) (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue/01-conventions-generic-conditions.adoc#holds[State Catalogue Specification, Holds and Their Acts])
 |`epic.row_changed` |R, E |`epic_id`, `plan_id`, `status`, `waits_for` (`dependency`, `lock`, `scope`, `overlap`) with the plan it waits for
-|`task.off_track` |R, P, E |`plan_id` or `epic_id`, `queue_task_id`, `signal`, `action` (link:../model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work Specification, A Worker Off Track])
+|`task.off_track` |R, P, E |`plan_id` or `epic_id`, `queue_task_id`, `signal`, `action` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work Specification, A Worker Off Track])
 |===
 
 === States, Process & Decisions
@@ -80,7 +80,7 @@ Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project
 |`tokens.changed` |P, E |`total_tokens`, `tokens_in`, `tokens_out`, the coverage
 |`progress.changed` |P, M, W, N |`done`, `of` (the onboarding's steps, a plan's tasks)
 |`check.result` |M, W, N |`check_id`, `result` (`running`, `pass`, `fail`, `skipped`), `cause` and `fix` as message keys with their arguments
-|`decision.opened`, `decision.changed`, `decision.answered`, `decision.closed` |P, E, W, M, N |the address `<scope_id>/<question_id>`, `revision`, `channel` (on `answered`), `closure` (on `closed`) (link:../model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work Specification, The Decision Structure])
+|`decision.opened`, `decision.changed`, `decision.answered`, `decision.closed` |P, E, W, M, N |the address `<scope_id>/<question_id>`, `revision`, `channel` (on `answered`), `closure` (on `closed`) (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work Specification, The Decision Structure])
 |`source.added`, `source.removed`, `source.flagged` |N, E |`source_id`, the source kind
 |`entry.started` |N |the started scope's `kind` and `id`; the stream then ends with `stream.closed`
 |`entry.abandoned` |N |—
@@ -101,5 +101,5 @@ Streams: *R* the runtime-wide stream, *P* a plan's, *E* an epic's, *W* a project
 
 |`report.sent` |Rep |`report_id`, `kind`, `from` (link:01-processes-and-transport.adoc#reports[Reports to the Operator])
 |`report.read` |Rep |the `report_id` values read
-|`activity` |A |one entry of the task's activity journal, its fields as untrusted plain text (link:../client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles Specification, What a Worker Does])
+|`activity` |A |one entry of the task's activity journal, its fields as untrusted plain text (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles Specification, What a Worker Does])
 |===

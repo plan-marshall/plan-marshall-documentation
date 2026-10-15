@@ -1,0 +1,36 @@
+= Host Integration & Bundle Manifest Specification
+:toc: left
+:toclevels: 3
+:toc-title: Table of Contents
+:sectnums:
+:source-highlighter: highlight.js
+:nofooter:
+
+link:../Specification.adoc[Specification] » Host Integration & Bundle Manifest (link:../Specification.adoc[Back to Main Specification])
+
+== Overview
+
+This document specifies how *plan-marshall-mcp* (`PM-MCP`) meets the coding agents installed on a machine: the detection of a coding agent's environment for the operator checks, the Host Integration Table, the version probes, and the embedded client bundle with its `bundle-manifest.json` schema. The client profile schema and the placeholder rendering are specified in the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/client-profiles.adoc[Client Profiles Specification].
+
+== Traceability
+
+_See Requirements:_
+
+* _See Requirement link:../Requirements.adoc#PM-CLIENT-3[PM-CLIENT-3: Host Environment Detection]_
+* _See Requirement link:../Requirements.adoc#PM-DIST-2[PM-DIST-2: Embedded Bundle Extraction & Interactive Client Installer]_
+* _See Requirement link:../Requirements.adoc#PM-DIST-4[PM-DIST-4: Bundle Upgrade Detection & Atomic Reconciliation]_
+
+== Status: PLANNED
+
+== Modules
+
+Implemented in (link:module-structure.adoc[Module Structure Specification]):
+
+* link:module-structure.adoc#module-pm-api[`pm-api`]: part 01: the compiled host-detection table (detection signals and precedence, version probes)
+* link:module-structure.adoc#module-pm-mcp-server[`pm-mcp-server`]: part 02: the client bundles embedded in the runtime binary `pm-mcpd`, and their packaging in the release profile
+* link:module-structure.adoc#module-pm-operator[`pm-operator`]: parts 01 and 02: the operator checks against the host-detection table, and the `client` verbs with the drift checks of `pm-operator client status`
+
+== Parts
+
+* link:host-integration/01-host-detection.adoc[Host Environment Detection] — the detection of a coding agent's environment for the operator checks, the Host Integration Table, and the version probes
+* link:host-integration/02-bundle-manifest.adoc[Bundle Manifest] — the bundle content per host (permission rules, shim skill), the `bundle-manifest.json` schema, a concrete example, ownership and digest verification, and open host-bundle items

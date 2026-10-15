@@ -1,17 +1,27 @@
 """Traceability and link checker for the AsciiDoc concept (requirements, specifications, roadmap,
-implementation watch).
+implementation watch), over two trees: this repository's `doc/` and the checkout of `pm-mcp-core`, which holds the
+specifications and watch documents of the engine (`doc/specification/`, `doc/implementation-watch/`).
 
-Usage: python3 trace.py [DOC_ROOT]   (default: <git toplevel>/doc)
+Usage: python3 trace.py [DOC_ROOT [CORE_ROOT]]
+  DOC_ROOT   default: <git toplevel>/doc
+  CORE_ROOT  the root of the pm-mcp-core checkout; default: the sibling `../pm-mcp-core` of this repository
 
-Reports broken links/anchors (Asciidoctor auto-id rules), requirement <-> specification
-bidirectionality, the Specification.adoc index, roadmap coverage, and watch-item counts, gaps and
-backlinks. Run it once before editing (baseline) and after every edit batch; compare the two outputs:
-only findings that are new against the baseline are caused by the edits.
+Reports broken links/anchors (Asciidoctor auto-id rules) in both trees, requirement <-> specification
+bidirectionality, the two Specification.adoc indexes, roadmap coverage, and watch-item counts, gaps and backlinks.
+A link from this repository into pm-mcp-core is an absolute URL `https://github.com/plan-marshall/pm-mcp-core/blob/main/<path>`;
+it is checked against the checkout like a relative link. A link from pm-mcp-core into this repository is a relative
+sibling path (`../plan-marshall-documentation/doc/...` from the repository root). Run it once before editing
+(baseline) and after every edit batch; compare the two outputs: only findings that are new against the baseline are
+caused by the edits.
 
 A large specification may be split into parts: `specification/<spec>.adoc` stays the index (header,
 Overview, Traceability, Status, `== Parts`) and `specification/<spec>/NN-<topic>.adoc` hold the
 sections. A part belongs to its spec `specification/<spec>.adoc` for every check: a link to a part
-counts as a link to the spec, and the Traceability section is read from the index only.
+counts as a link to the spec, and the Traceability section is read from the index only. Specification names are
+unique across the two trees.
+
+File keys: a document of this repository is keyed by its path below DOC_ROOT (`requirements/01-architecture.adoc`);
+a document of pm-mcp-core by `core:` and its path below the repository root (`core:doc/specification/store-schemas.adoc`).
 """
 import re, os, sys, collections, subprocess
 if len(sys.argv) > 1:
@@ -19,23 +29,58 @@ if len(sys.argv) > 1:
 else:
     top = subprocess.run(['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True).stdout.strip()
     ROOT = os.path.join(top or os.getcwd(), 'doc')
+if len(sys.argv) > 2:
+    CORE = os.path.abspath(sys.argv[2])
+else:
+    CORE = os.path.normpath(os.path.join(ROOT, '..', '..', 'pm-mcp-core'))
+if not os.path.isdir(os.path.join(CORE, 'doc')):
+    sys.exit(f'pm-mcp-core checkout not found at {CORE}: pass it as the second argument')
+CORE_URL = 'https://github.com/plan-marshall/pm-mcp-core/blob/main/'
+SKIP_DIRS = {'.git', 'target', 'node_modules', '.plan', '.idea'}
+
 files = {}
 for dp, _, fns in os.walk(ROOT):
     for fn in fns:
         if fn.endswith('.adoc'):
             p = os.path.relpath(os.path.join(dp, fn), ROOT)
             files[p] = open(os.path.join(dp, fn), encoding='utf-8').read()
+for dp, dns, fns in os.walk(CORE):
+    dns[:] = [d for d in dns if d not in SKIP_DIRS]
+    for fn in fns:
+        if fn.endswith('.adoc'):
+            p = 'core:' + os.path.relpath(os.path.join(dp, fn), CORE)
+            files[p] = open(os.path.join(dp, fn), encoding='utf-8').read()
+
+def abspath(p):
+    return os.path.join(CORE, p[5:]) if p.startswith('core:') else os.path.join(ROOT, p)
+def key_of(ap_):
+    """file key of an absolute path, or None when it lies in neither tree"""
+    ap_ = os.path.normpath(ap_)
+    if ap_ == CORE or ap_.startswith(CORE + os.sep):
+        return 'core:' + os.path.relpath(ap_, CORE)
+    if ap_ == ROOT or ap_.startswith(ROOT + os.sep):
+        return os.path.relpath(ap_, ROOT)
+    return None
+def docrel(p):
+    """the path below the doc root of either tree (core module documents keep their `core:` key)"""
+    if p.startswith('core:doc/'):
+        return p[len('core:doc/'):]
+    return p
+def same_tree(p, rel):
+    """the key of `rel` (a path below a doc root) in the tree of `p`"""
+    return 'core:doc/' + rel if p.startswith('core:') else rel
 
 # a link to specification/<spec>.adoc or to one of its parts specification/<spec>/<part>.adoc
 SPEC_REF = re.compile(r'specification/([a-z-]+)(?:/[0-9a-z-]+)?\.adoc')
 def spec_refs(text):
     return {m + '.adoc' for m in SPEC_REF.findall(text)}
 def is_spec_index(p):
-    return p.startswith('specification/') and p.count('/') == 1
+    r = docrel(p)
+    return r.startswith('specification/') and r.count('/') == 1
 def spec_of(p):
-    """specification/<spec>/<part>.adoc -> specification/<spec>.adoc; other paths unchanged"""
-    m = re.match(r'^specification/([a-z-]+)/[^/]+\.adoc$', p)
-    return f'specification/{m.group(1)}.adoc' if m else p
+    """specification/<spec>/<part>.adoc -> specification/<spec>.adoc (in the same tree); other paths unchanged"""
+    m = re.match(r'^specification/([a-z-]+)/[^/]+\.adoc$', docrel(p))
+    return same_tree(p, f'specification/{m.group(1)}.adoc') if m else p
 
 def autoid(title):
     # Asciidoctor order: special characters become entities first, then inline quotes become tags;
@@ -51,13 +96,11 @@ def autoid(title):
     return '_' + t
 
 anchors = collections.defaultdict(set)
-section_of = {}  # (file, anchor) -> line
 for p, txt in files.items():
     lines = txt.split('\n')
-    pending = None
     for i, l in enumerate(lines):
         for m in re.finditer(r'\[#([^\],.]+)', l):
-            anchors[p].add(m.group(1)); pending = m.group(1)
+            anchors[p].add(m.group(1))
         for m in re.finditer(r'\[\[([^\],]+)', l):
             anchors[p].add(m.group(1))
         m = re.match(r'^(=+)\s+(.*)$', l)
@@ -67,11 +110,33 @@ for p, txt in files.items():
 # includes: Requirements.adoc includes requirements/*; anchors in included files resolvable via Requirements.adoc
 for p, txt in list(files.items()):
     for m in re.finditer(r'^include::([^\[]+)\[', txt, re.M):
-        inc = os.path.normpath(os.path.join(os.path.dirname(p), m.group(1)))
+        inc = key_of(os.path.join(os.path.dirname(abspath(p)), m.group(1)))
         anchors[p] |= anchors.get(inc, set())
 
+def link_base(p):
+    # requirement modules are included into Requirements.adoc: their links resolve against the doc root
+    return ROOT if p.startswith('requirements/') else os.path.dirname(abspath(p))
+
+def resolve(p, target):
+    """(key or None, absolute path or None) of a link target; (None, None) for a URL that is not checked"""
+    if target.startswith(CORE_URL):
+        ap_ = os.path.join(CORE, target[len(CORE_URL):])
+        return key_of(ap_), ap_
+    if target.startswith('http') or target.startswith('file:') or target.startswith('mailto:'):
+        return None, None
+    if target == '':
+        return p, abspath(p)
+    ap_ = os.path.normpath(os.path.join(link_base(p), target))
+    return key_of(ap_), ap_
+
+# document attributes (`:name: value`) a link target may start with, such as `{docs}` in a module document
+attrs = {p: dict(re.findall(r'^:([\w-]+): (.*)$', txt, re.M)) for p, txt in files.items()}
+def expand(p, target):
+    return re.sub(r'\{([\w-]+)\}', lambda m: attrs[p].get(m.group(1), m.group(0)), target)
+
 broken = []
-linkre = re.compile(r'(?:link:|xref:)([^\[\s>]*?)(?:#([^\[\s,>]+))?\[|<<([\w#/.:{][^,>\s]*)(?:,|>>)')
+linkre = re.compile(r'(?:link:|xref:)([^\[\s>]*?)(?:#([^\[\s,>]+))?\[|<<([\w#/.:{][^,>\s]*)(?:,|>>)'
+                    r'|(?<![\w:/])(' + re.escape(CORE_URL) + r'[^\s\[\]#]+)(?:#([^\[\s\]]+))?\[')
 for p, txt in files.items():
     if p.startswith('discussions/'): continue
     for ln, l in enumerate(txt.split('\n'), 1):
@@ -81,16 +146,20 @@ for p, txt in files.items():
                 if '#' in g: target, anc = g.split('#', 1)
                 elif g.endswith('.adoc'): target, anc = g, None
                 else: target, anc = '', g
+            elif m.group(4):
+                target, anc = m.group(4), m.group(5)
             else:
                 target, anc = m.group(1), m.group(2)
-            if target.startswith('http') or target.startswith('file:'):
+            target = expand(p, target)
+            if target.startswith('{'):
                 continue
-            if target == '' :
-                tp = p
-            else:
-                tp = os.path.normpath(os.path.join('' if p.startswith('requirements/') else os.path.dirname(p), target))
+            tp, ap_ = resolve(p, target)
+            if ap_ is None:
+                continue
+            if tp is None:
+                continue  # a sibling checkout other than the two trees (pm-mcp-clients, plan-marshall-mcp): not checked
             if not tp.endswith('.adoc'):
-                if not os.path.exists(os.path.join(ROOT, tp)):
+                if not os.path.exists(ap_):
                     broken.append((p, ln, 'missing-file', target))
                 continue
             if tp not in files:
@@ -105,11 +174,12 @@ for p in sorted(files):
     sp = spec_of(p)
     if sp != p:
         if sp not in files: print('PART WITHOUT INDEX', p)
-        elif f'link:{os.path.relpath(p, os.path.dirname(sp))}[' not in files[sp]: print('PART NOT LISTED IN INDEX', p)
+        elif f'link:{os.path.relpath(docrel(p), os.path.dirname(docrel(sp)))}[' not in files[sp]: print('PART NOT LISTED IN INDEX', p)
 for p in sorted(files):
     if is_spec_index(p):
         for m in re.finditer(r'^\* link:([a-z-]+/[^\[]+\.adoc)\[', files[p], re.M):
-            if os.path.normpath(os.path.join('specification', m.group(1))) not in files: print('INDEX LISTS MISSING PART', p, m.group(1))
+            if same_tree(p, os.path.normpath(os.path.join('specification', m.group(1)))) not in files:
+                print('INDEX LISTS MISSING PART', p, m.group(1))
 
 # requirement ids and titles
 reqs = {}
@@ -132,7 +202,7 @@ for r, s in req2spec.items():
 # spec traceability section
 spec2req = {}
 for p, txt in files.items():
-    if p.startswith('specification/'):
+    if docrel(p).startswith('specification/'):
         if is_spec_index(p):  # parts carry no Traceability section of their own
             m = re.search(r'== Traceability\n(.*?)\n== ', txt, re.S)
             spec2req[os.path.basename(p)] = set(re.findall(r'#(PM-[A-Z]+-\d+)\[', m.group(1))) if m else set()
@@ -148,10 +218,11 @@ for p in ['roadmap.adoc']:
         if rid in reqs and reqs[rid][1] != t:
             print('TITLE MISMATCH roadmap', rid, repr(t), '!=', repr(reqs[rid][1]))
 
-# index table in Specification.adoc (absent once the last specification is implemented and removed)
+# index tables of the two Specification.adoc (each absent once the last specification of its tree is removed)
 idx = {}
-for m in re.finditer(r'\|link:specification/([a-z-]+\.adoc)\[[^\]]+\]\n\|`[A-Z ]+`\n\|(.*?)\n', files.get('Specification.adoc', '')):
-    idx[m.group(1)] = set(re.findall(r'#(PM-[A-Z]+-\d+)\[', m.group(2)))
+for p in ('Specification.adoc', 'core:doc/Specification.adoc'):
+    for m in re.finditer(r'\|link:specification/([a-z-]+\.adoc)\[[^\]]+\]\n\|`[A-Z ]+`\n\|(.*?)\n', files.get(p, '')):
+        idx[m.group(1)] = set(re.findall(r'#(PM-[A-Z]+-\d+)\[', m.group(2)))
 print('\n== Spec traceability vs Specification.adoc index')
 for s in sorted(spec2req):
     a, b = spec2req[s], idx.get(s, set())
@@ -182,19 +253,25 @@ for m in re.finditer(r'\|`(PM-[A-Z]+)`\n\|[^\n]*\n\|[^\n]*\n\|([^\n]*)', files['
 rm = set(re.findall(r'Requirements\.adoc#(PM-[A-Z]+-\d+)', files['roadmap.adoc']))
 print('\nREQS NOT IN ROADMAP', sorted(set(reqs)-rm))
 
-# watch items
+# watch items: the numbering of an area is contiguous over both trees
 watch = {}
+area_nums = collections.defaultdict(list)
 for p, txt in files.items():
-    if p.startswith('implementation-watch/'):
+    if docrel(p).startswith('implementation-watch/'):
         ids = re.findall(r'^\[#(PM-WATCH-[A-Z]+-\d+)\]', txt, re.M)
         watch[os.path.basename(p)] = ids
-        # contiguous numbering / duplicates
-        nums = [int(i.rsplit('-',1)[1]) for i in ids]
-        if len(set(nums)) != len(nums): print('DUP WATCH', p)
-        if sorted(nums) != list(range(1, len(nums)+1)): print('GAPS WATCH', p, sorted(set(range(1, max(nums)+1)) - set(nums)))
+        for i in ids:
+            area, num = i.rsplit('-', 1)
+            area_nums[area].append(int(num))
+for area, nums in sorted(area_nums.items()):
+    if len(set(nums)) != len(nums): print('DUP WATCH', area)
+    if sorted(nums) != list(range(1, len(nums)+1)): print('GAPS WATCH', area, sorted(set(range(1, max(nums)+1)) - set(nums)))
 print('\n== Watch counts')
-counts_idx = dict(re.findall(r'\|link:implementation-watch/([a-z-]+\.adoc)\[[^\]]+\]\n\|`[A-Z]+`\n\|(\d+)', files.get('ImplementationWatch.adoc', '')))
-counts_spec = dict(re.findall(r'link:implementation-watch/([a-z-]+\.adoc)\[[^\]]+\] \((\d+) items?\)', files.get('Specification.adoc', '')))
+counts_idx, counts_spec = {}, {}
+for p in ('ImplementationWatch.adoc', 'core:doc/ImplementationWatch.adoc'):
+    counts_idx.update(re.findall(r'\|link:implementation-watch/([a-z-]+\.adoc)\[[^\]]+\]\n\|`[A-Z]+`\n\|(\d+)', files.get(p, '')))
+for p in ('Specification.adoc', 'core:doc/Specification.adoc'):
+    counts_spec.update(re.findall(r'link:implementation-watch/([a-z-]+\.adoc)\[[^\]]+\] \((\d+) items?\)', files.get(p, '')))
 for w, ids in sorted(watch.items()):
     print(w, len(ids), 'IW-index', counts_idx.get(w), 'Spec-index', counts_spec.get(w))
 
@@ -202,14 +279,15 @@ for w, ids in sorted(watch.items()):
 print('\n== Watch anchor backlink check')
 allwatch = {i for ids in watch.values() for i in ids}
 for p, txt in files.items():
-    if not p.startswith('implementation-watch/'): continue
+    if not docrel(p).startswith('implementation-watch/'): continue
     for m in re.finditer(r'^\[#(PM-WATCH-[A-Z]+-\d+)\]\n(.*?)(?=^\[#PM-WATCH|\Z)', txt, re.S | re.M):
         wid, body = m.group(1), m.group(2)
         am = re.search(r'^Anchor::(.*?)(?=^[A-Z][a-z]+::)', body, re.S | re.M)
         if not am: print('NO ANCHOR', wid); continue
-        for lm in re.finditer(r'link:([^\[#]+)(?:#([^\[]+))?\[', am.group(1)):
-            tp = os.path.normpath(os.path.join(os.path.dirname(p), lm.group(1)))
+        for lm in re.finditer(r'(?:link:)?((?:' + re.escape(CORE_URL) + r')?[^\[#\s]+)(?:#([^\[]+))?\[', am.group(1)):
+            tp, _ = resolve(p, lm.group(1))
             anc = lm.group(2)
+            if tp is None: continue
             if tp not in files: print('ANCHOR FILE MISSING', wid, tp); continue
             t = files[tp]
             if anc:
@@ -246,19 +324,27 @@ for p, txt in files.items():
             else:
                 if wid not in t: print('NO BACKLINK (file)', wid, '->', tp)
 
+# the identifier checks read the concept documents of both trees: the module documentation and the ADRs of
+# pm-mcp-core are records of their time and may name an identifier that was retired since
+def concept_doc(p):
+    return not p.startswith('core:') or (p.startswith('core:doc/') and not p.startswith('core:doc/adr/'))
+
 # referenced watch ids that do not exist
 refs = set()
 for p, txt in files.items():
+    if not concept_doc(p): continue
     for m in re.finditer(r'(PM-WATCH-[A-Z]+-\d+)', txt): refs.add(m.group(1))
 print('\nREFERENCED BUT UNDEFINED WATCH IDS', sorted(refs - allwatch))
 # watch items not referenced from any req/spec
 refd_outside = set()
 for p, txt in files.items():
-    if p.startswith('implementation-watch/') or p == 'ImplementationWatch.adoc': continue
+    if not concept_doc(p): continue
+    if docrel(p).startswith('implementation-watch/') or docrel(p) == 'ImplementationWatch.adoc': continue
     refd_outside |= set(re.findall(r'(PM-WATCH-[A-Z]+-\d+)', txt))
 print('WATCH ITEMS NOT REFERENCED FROM REQ/SPEC', sorted(allwatch - refd_outside))
 # referenced reqs undefined
 allreqrefs = set()
 for p, txt in files.items():
+    if not concept_doc(p): continue
     allreqrefs |= set(re.findall(r'\bPM-(?:ARCH|WF|SKILL|TOOL|SVC|EXEC|CRED|SEC|TECH|DIST|MIG|TEST|CLIENT|IMPL|EXT|WORK)-\d+\b', txt))
 print('UNDEFINED REQ IDS REFERENCED', sorted(allreqrefs - set(reqs)))
