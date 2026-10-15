@@ -137,38 +137,11 @@ Goal:: see at a glance how the runtime is, what work it carries, and the tokens 
 Trigger:: the operator opens the system view of a client, or comes to it from managing the runtime (<<UC-SYS-1>>).
 Preconditions:: the runtime runs.
 Flow::
-+
-[source,text]
-----
-  [S] system.open              a snapshot of the runtime's metrics:
-       │                       • the runtime: version and build, started
-       │                         at, uptime, memory (heap, resident), CPU
-       │                         where available, disk use of the machine
-       │                         store, the listeners (socket, web on
-       │                         loopback or LAN)
-       │                       • the work, across projects or per project:
-       │                         plans and epics running, waiting, held,
-       │                         paused; tasks queued and running; workers
-       │                         by role, harness, and model, busy or idle;
-       │                         jobs (builds, tests) running and queued,
-       │                         with their slots; locks held
-       │                       • the models, per model and per role: calls,
-       │                         tokens in and out and their total, errors
-       │                         and retries, over the
-       │                         last hour ←, today, or the last 7 days
-       ▼
-  [O] system.view              read; choose the window or the project, or
-       │                       follow a figure
-       ├── window, project ──► system.open with it
-       ├── a figure ─────────► what it counts: the running plans in
-       │                       Running Work (UC-PLN-4), a plan, an epic,
-       │                       the workers, the jobs
-       ▼ live
-  [S] system.update            the figures that changed, from the
-                               runtime's stream ─► system.view
-----
-+
-A figure leads to what it counts, the running plans to Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]); the acts on the runtime are <<UC-SYS-1>>.
+. *The runtime.* Its version and build, when it started and its uptime, its memory (heap, resident), CPU where the platform reports it, the disk use of the machine store, and its listeners (the socket, web access on loopback or LAN).
+. *The work*, across projects or for the one project the operator chooses: plans and epics running, waiting, held, and paused; tasks queued and running; workers by role, harness, and model, busy or idle; jobs (builds, tests) running and queued, with their slots; the locks held.
+. *The models*, per model and per role: calls, tokens in and out and their total, errors and retries, over the last hour (preselected), today, or the last 7 days. Choosing another window or a project reads the figures again for it.
+. *From a figure to what it counts*: the running plans lead to Running Work (link:03-plans.adoc#UC-PLN-4[UC-PLN-4]); a plan, an epic, the workers, and the jobs to their views. The acts on the runtime are <<UC-SYS-1>>.
+. *Live*: while the view is open, each figure that changes is updated from the runtime's stream.
 Variations::
 * *Live*: the view follows the runtime's stream and shows each figure as it changes; a client that loses the stream says so and reads the snapshot again when it is back.
 * *Under load*: the view is a read of kept figures and costs the runtime nothing that grows with the work; it never waits for a project's recovery, and a project still recovering is shown as such.

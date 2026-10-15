@@ -151,7 +151,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://project/config`
 |`text/toon`
 |Project
-|The project's effective configuration (link:../store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`compiled_default`, `derived`, `machine`, `team`, `operator`), file, and, for a derived value, the fact `state`; the project's workflow units (`units[]`) with the level in force (`project`, `machine`, or `default`), `derived_from`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; a model never reads the raw configuration files, and the operator reads the configuration with its origins over the local API.
+|The project's effective configuration (link:../store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`default`, `derived`, `machine`, `team`, `project`, `plan`), file, and, for a derived value, the fact `state`; the project's workflow units (`units[]`) with the level in force (`project`, `machine`, or `default`), `derived_from`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; a model never reads the raw configuration files, and the operator reads the configuration with its origins over the local API.
 
 |`pm://project/owed`
 |`text/toon`

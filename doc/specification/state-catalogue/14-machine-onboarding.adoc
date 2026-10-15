@@ -291,7 +291,7 @@ The scan, the probes, and a verification run the found programs as jobs, through
 |`machine`
 |`operator_wait`
 |`harness.icons-consent` (`no`), `harness.fetch-icons`; `harness.blocked` (`choose_again`); `harness.install-profile`; `harness.add` (`known`).
-|Every found harness with its version, supported or not, worker-eligible or not (a profile with `headless: null` or `worker.eligible: false` shown and never offered as a worker or the default), and what it reports of its token usage (`complete`, `partial` naming what is missing, `not_reported`); every supported one preselected, the first of them the default. `choose` (the chosen ones, one the default); `add`.
+|Every found harness with its version, supported or not, worker-eligible or not (a profile with `headless: null` or `worker.eligible: false` shown and never offered as a worker or the default), and what it reports of its token usage (`complete`, `partial` naming what is missing, `not_reported`); the harnesses listed in the order of their `client_id`; every supported worker-eligible one preselected, the first of them in that order the default. `choose` (the chosen ones, one the default); `add`.
 |`choose` -> `harness.probe-consent`; `add` -> `harness.add`.
 |link:../client-profiles/01-profile-schema.adoc#harness-scan[Client Profiles Specification, Harness Scan]; link:../client-profiles/01-profile-schema.adoc#token-usage[Tokens, Not Money]
 
