@@ -15,7 +15,7 @@ The system must model all plan and epic workflows as hypermedia state machines a
 
 See the link:specification/hypermedia-format.adoc[Hypermedia Format Specification], link:specification/state-catalogue.adoc[State Catalogue], link:specification/phase-workflows.adoc[Phase Workflows & Finalize Specification], and link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification] for implementation details.
 
-Implementation (the engine side of bullets 4 and 7, as far as the library module `pm-workflow` carries it and not yet wired into the runtime `pm-mcpd`: the deterministic interpreter runs only a unit that the static verifier passes together with every sub-workflow it calls; a sub-workflow is left early only with `stepped_out`, which pops exactly one call frame and is routed by the calling state, and a resting link state of a sub-workflow offers the step-out; a spent condition budget unwinds every call frame to the fallback state in one advance without taking a caller's `stepped_out` route; a top-level unit ends in its terminal with the outcome and class the terminal declares. Not implemented yet: the representations, the plan outcomes and their landing record, and the re-composition of a changed unit): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/WorkflowEngine.java[WorkflowEngine],
+Implementation (the engine side of bullets 4 and 7, as far as the library module `pm-workflow` carries it and not yet wired into the runtime `pm-mcpd`: the deterministic interpreter runs only a unit that the static verifier passes together with every sub-workflow it calls; a sub-workflow is left early only with `stepped_out`, which pops exactly one call frame and is routed by the calling state, and a resting link state of a sub-workflow offers the step-out; a spent condition budget unwinds every call frame to the fallback state in one advance without taking a caller's `stepped_out` route; a top-level unit ends in its terminal with the outcome and class the terminal declares. Not implemented yet: the representations, and the plan outcomes and their landing record): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/WorkflowEngine.java[WorkflowEngine],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/EngineStep.java[EngineStep],
 https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/engine/CallStack.java[CallStack]
 
@@ -27,8 +27,17 @@ https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java
 
 Verified by (the addressing of a bootstrap): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/engine/EntityAddressingTest.java[EntityAddressingTest]
 
+Implementation (the re-composition of a changed unit in bullet 6, as far as the library module `pm-workflow` carries it: a changed unit is composed into a new version of the plan's instance with the event `config_adopted`; the version is composed only when it verifies and contains the current state and every state of the call stack, and is otherwise refused as a value while the version in force stays; the composition log of the plan records every attempt with its result (`composed`, `identical_adopted`, `kept`, `refused`). Not implemented yet: the detection of a changed unit at the phase handshake, the `config_drift` condition with its decision and audit record, and the engine's switch to the adopted version): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/plan/PlanInstanceComposer.java[PlanInstanceComposer],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/plan/CompositionRequest.java[CompositionRequest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/plan/PlanInstanceStore.java[PlanInstanceStore],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/main/java/de/planmarshall/workflow/plan/CompositionRecord.java[CompositionRecord]
+
+Verified by (the re-composition of a changed unit): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/plan/PlanInstanceComposerTest.java[PlanInstanceComposerTest],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/src/test/java/de/planmarshall/workflow/plan/PlanInstanceStoreTest.java[PlanInstanceStoreTest]
+
 Documentation: https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc[Workflow Engine Developer Guide],
-https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc#_entity_addressing[Workflow Engine Developer Guide § Entity Addressing]
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-engine.adoc#_entity_addressing[Workflow Engine Developer Guide § Entity Addressing],
+https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-workflow/doc/developer/workflow-plan.adoc#_the_composition[Plan Instance Developer Guide § The Composition]
 
 Implementation watch: link:implementation-watch/workflow-dsl.adoc#PM-WATCH-DSL-14[PM-WATCH-DSL-14], link:implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-90[PM-WATCH-PHASE-90]
 

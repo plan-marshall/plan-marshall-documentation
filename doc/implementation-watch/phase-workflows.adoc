@@ -296,11 +296,9 @@ Anchor:: link:../specification/phase-workflows/02-planning-lanes-phases-3-4.adoc
 link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#composition-rules[Store Schemas § Composition Rules]
 Hazard:: A land plan's remediation offers `fix` or `loop_back`, so the model authors changes on the user's landed
 work, or a land plan is recaptured and the user's change is overwritten.
-Guard:: Composition test: a `land` plan instance binds every remediation call with `actions: [retry]` and prunes
-task allocation, `loop_back`, and in-branch fix links with reason `land_lane`; a scenario with a red gate creates no
-`decide` task: the server takes `retry` within the retry budget, and exhaustion ends the unit `exhausted` and hands
-the branch back with the failure documented and the capture ref retained (`capture_ref_retained`); no `recapture`
-link or state exists; matched control: a `request` plan with the same failure binds `fix` among its actions.
+Guard:: Scenario with a red gate: a `land` plan creates no `decide` task: the server takes `retry` within the retry
+budget, and exhaustion ends the unit `exhausted` and hands the branch back with the failure documented and the
+capture ref retained (`capture_ref_retained`); no `recapture` link or state exists.
 Source:: design review.
 
 [#PM-WATCH-PHASE-91]

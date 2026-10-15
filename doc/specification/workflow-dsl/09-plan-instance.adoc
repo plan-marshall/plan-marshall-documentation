@@ -11,7 +11,6 @@ link:../../Specification.adoc[Specification] » link:../workflow-dsl.adoc[Workfl
 [#plan-instance]
 == Plan Instance (`instance/plan.v<N>.pmwf` per Plan)
 _See Requirement link:../../Requirements.adoc#PM-IMPL-5[PM-IMPL-5: Declarative Workflow DSL & Automated Diagram Generation]_
-_Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-41[PM-WATCH-STORE-41]_
 
 _See Requirement link:../../Requirements.adoc#PM-EXT-7[PM-EXT-7: Configuration Versioning, Validation & Zero-CoT Upgrades]_
 

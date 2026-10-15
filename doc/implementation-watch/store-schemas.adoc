@@ -449,20 +449,6 @@ refused `already_answered`; an answer after the request was closed (`cancelled` 
 changes nothing.
 Source:: design review.
 
-[#PM-WATCH-STORE-41]
-=== PM-WATCH-STORE-41: A re-composition keeps the plan at a position the new version contains
-
-Anchor:: link:../specification/store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas § Plan Instance],
-link:../specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Workflow DSL § Plan Instance]
-Hazard:: A new instance version (a waiver, a configuration adoption, a fallback) prunes the state the plan is in or
-a frame of its call stack, so the plan points into a unit that does not contain it; a header serialized
-non-canonically changes the digest of an unchanged instance.
-Guard:: Composition tests: an adoption whose new version does not contain the current state or every frame of the
-call stack is refused with `position_not_contained` and the version is not written; a waiver event re-composes
-without moving the position; the `instance` header line is canonical JSON, and re-serializing an unchanged instance
-yields a byte-identical header and digest; every version appends one `composition.jsonl` event.
-Source:: design review.
-
 == Project Configuration (`.marshall/config/`, `local-config.json`)
 
 [#PM-WATCH-STORE-13]

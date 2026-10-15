@@ -11,7 +11,6 @@ link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store
 [#plan-instance]
 == Plan Instance (`instance/plan.v<N>.pmwf`, `instance/<unit>.v<N>.pmwf`, `instance/composition.jsonl`)
 _See Requirement link:../../Requirements.adoc#PM-WF-13[PM-WF-13: Finalize Step Ordering Bands, Verdict Currency & Pre-Merge Barrier]_
-_Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-41[PM-WATCH-STORE-41]_
 
 _See Requirement link:../../Requirements.adoc#PM-EXT-7[PM-EXT-7: Configuration Versioning, Validation & Zero-CoT Upgrades]_
 

@@ -121,6 +121,7 @@ Holder: `de.planmarshall.workflow.log.WorkflowLogMessages`.
 |===
 |ID |Component |Message |Description
 |PM_WORKFLOW-1 |ProjectUnitLoader |Units of project '%s' verified: %s units |Logged when a load of a project's units from `.marshall/config/` found no finding (`PM-IMPL-5`); names the project id and the number of verified units, the merged plan unit counting as one
+|PM_WORKFLOW-2 |PlanInstanceStore |Plan instance version %s of plan '%s' recorded for the event '%s' |Logged when a composed version of a plan instance is staged in the caller's scope transaction (`PM-IMPL-5`), together with its line of `instance/composition.jsonl` and the texts of the sub-units it is the first version to name; names the version, the plan id and the composition event. The files are written when the caller commits the transaction
 |===
 
 === WARN Level (100-199)
@@ -129,6 +130,7 @@ Holder: `de.planmarshall.workflow.log.WorkflowLogMessages`.
 |===
 |ID |Component |Message |Description
 |PM_WORKFLOW-100 |ProjectUnitLoader |Project unit '%s' refused at line %s by '%s', the plan lifecycle is refused with 'config_invalid' |Logged once for every finding of a load of a project's units (`PM-IMPL-5`); names the file below the project (for example `.marshall/config/finalize.pmwf`), the line (`0` for a file that could not be read) and the code of the finding (the parser refusal or verification rule, the wire id of an invariant such as `INV-GEN-1`, `format_newer`, `declaration_invalid`, a pipeline rule, `project_step_unbound`, `unit_missing` or `path_traversal_rejected`). The load returns no unit; no default unit stands in for the refused one
+|PM_WORKFLOW-101 |PlanInstanceStore |Composition '%s' of plan '%s' refused with '%s', the version in force is kept |Logged when a refused composition attempt is recorded in `instance/composition.jsonl` (`PM-IMPL-5`); names the composition event, the plan id and the refusal (`position_not_contained` or `invariant_failed`). No version file is written; the version in force stays
 |===
 
 === ERROR Level (200-299)
