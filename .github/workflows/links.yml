@@ -1,6 +1,7 @@
-# The required check of this repository: every link and anchor inside doc/ resolves, and no requirement or watch
-# identifier is referenced without being defined. It runs for pull requests and for the merge queue, which a
-# review bot's check cannot serve.
+# The required check of this repository: every link and anchor inside doc/ and inside the checkout of pm-mcp-core (which
+# holds the specifications of the engine) resolves, and no requirement or watch identifier is referenced without being
+# defined. It runs for pull requests and for the merge queue, which a review bot's check cannot serve. pm-mcp-core runs
+# the same check (its links.yml), so a change on either side that breaks a link of the other fails there.
 name: Links
 
 on:
@@ -21,10 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: plan-marshall-documentation
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: plan-marshall/pm-mcp-core
+          ref: main
+          path: pm-mcp-core
           persist-credentials: false
       - name: Check links and traceability
         run: |
-          python3 .claude/skills/doc-review/scripts/trace.py | tee trace.txt
+          python3 plan-marshall-documentation/.claude/skills/doc-review/scripts/trace.py plan-marshall-documentation/doc pm-mcp-core | tee trace.txt
           grep -qx "BROKEN LINKS 0" trace.txt || { echo "::error::broken links or anchors, see the list above"; exit 1; }
           grep -qx "REFERENCED BUT UNDEFINED WATCH IDS \[\]" trace.txt || { echo "::error::a watch identifier is referenced but not defined"; exit 1; }
           grep -qx "UNDEFINED REQ IDS REFERENCED \[\]" trace.txt || { echo "::error::a requirement identifier is referenced but not defined"; exit 1; }

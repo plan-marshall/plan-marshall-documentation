@@ -87,9 +87,12 @@ item.
 == Watch Documents
 
 [cols="3,1,1,4"]
+
+The watch documents of the specifications of the engine live with them in `pm-mcp-core` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/ImplementationWatch.adoc[its Implementation Watch]); an area code is shared where a specification was split between the two repositories, and the numbers of an area stay unique across both.
+
+[cols="3,1,1,4"]
 |===
 |Document |Area |Items |Mirrors
-
 |link:implementation-watch/module-structure.adoc[Module Structure]
 |`MOD`
 |7
@@ -97,12 +100,12 @@ item.
 
 |link:implementation-watch/runtime-model.adoc[Runtime Model]
 |`RUN`
-|18
+|12
 |link:specification/runtime-model.adoc[Runtime & Interaction Model Specification]
 
 |link:implementation-watch/cli-and-security.adoc[CLI & Security]
 |`CLI`
-|31
+|18
 |link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification]
 
 |link:implementation-watch/mcp-tools.adoc[MCP Tools]
@@ -110,50 +113,10 @@ item.
 |22
 |link:specification/mcp-tools.adoc[MCP Tool & Resource Surface Specification]
 
-|link:implementation-watch/hypermedia-format.adoc[Hypermedia Format]
-|`HYP`
-|10
-|link:specification/hypermedia-format.adoc[Hypermedia Format & TOON Encoding Specification]
-
-|link:implementation-watch/workflow-dsl.adoc[Workflow DSL]
-|`DSL`
-|32
-|link:specification/workflow-dsl.adoc[Workflow DSL & Engine Specification]
-
-|link:implementation-watch/phase-workflows.adoc[Phase Workflows]
-|`PHASE`
-|104
-|link:specification/phase-workflows.adoc[Phase Workflows & Finalize Specification]
-
-|link:implementation-watch/model-work.adoc[Model Work]
-|`DISP`
-|57
-|link:specification/model-work.adoc[Model Work Specification]
-
-|link:implementation-watch/domain-extensions.adoc[Domain Extensions]
-|`EXT`
-|36
-|link:specification/domain-extensions.adoc[Domain Extensions, Build Map & Configuration Split Specification]
-
-|link:implementation-watch/filesystem-layout.adoc[Filesystem Layout]
-|`FS`
-|6
-|link:specification/filesystem-layout.adoc[Filesystem Layout Specification]
-
-|link:implementation-watch/store-schemas.adoc[Store Schemas]
-|`STORE`
-|50
-|link:specification/store-schemas.adoc[Store Schemas Specification]
-
-|link:implementation-watch/job-runtime.adoc[Job Runtime]
-|`JOB`
-|37
-|link:specification/job-runtime.adoc[Job Runtime Specification]
-
-|link:implementation-watch/client-profiles.adoc[Client Profiles]
+|link:implementation-watch/host-integration.adoc[Host Integration]
 |`CLIENT`
-|13
-|link:specification/client-profiles.adoc[Client Profiles & Bundle Manifest Specification]
+|4
+|link:specification/host-integration.adoc[Host Integration & Bundle Manifest Specification]
 
 |link:implementation-watch/cross-cutting.adoc[Cross-Cutting]
 |`GEN`

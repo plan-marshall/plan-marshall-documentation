@@ -1,6 +1,6 @@
 ---
 name: traced-implementation
-description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc) and implementation watch items (doc/ImplementationWatch.adoc) and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, the same plan updates this repository directly: its documentation pull request, merged without a separate approval once the code is on main, writes the concept, developer and user documentation from the corpus, deletes the implemented specification sections and watch items, and links each requirement to its code, tests and documentation.
+description: Mandatory frame for every concrete implementation in plan-marshall-mcp. Planning traces each task to its requirements (doc/Requirements.adoc), specification sections (doc/Specification.adoc here, or of pm-mcp-core for the engine) and implementation watch items and assigns every specified statement its destination (code, tests, concept, developer or user documentation); after implementation, coverage is verified against all three; a requirement found wrong is corrected in the same plan; once verified, the implemented specification sections and watch items are deleted and each requirement is linked to its code, tests and documentation. For pm-mcp-core all of that is one pull request there (specification, watch and Traceability live beside the code); for the other repositories the plan also opens a documentation pull request here.
 user-invocable: true
 argument-hint: "[roadmap milestone | specification section | requirement IDs]"
 allowed-tools: Agent, Bash, Read, Edit, Write, Grep, Glob
@@ -19,13 +19,29 @@ behaviour. When a slice is implemented, that knowledge moves to where its reader
 - **Developer documentation**: how the implementation is built, extended and tested.
 - **User documentation**: how the system is installed, configured, operated and troubleshot.
 
-The documents live in this repository, `plan-marshall/plan-marshall-documentation`; the code lives in the code
-repositories of the organisation (`plan-marshall-mcp`, `pm-mcp-core`, `pm-mcp-clients`, `pm-mcp-parent`). An
-implementation therefore changes two repositories, and one plan makes both changes as part of its own work: the
-**code pull request** in the repository of the modules it changes, and the **documentation pull request** here.
-Updating the documents is an ordinary step of the plan, not a separate procedure: the two pull requests need not
-name each other, and the plan merges the documentation pull request itself (§ PR). Work with both repositories
-checked out side by side.
+The code lives in the code repositories of the organisation (`plan-marshall-mcp`, `pm-mcp-core`, `pm-mcp-clients`,
+`pm-mcp-parent`); where the documents of a slice live depends on the repository that implements it (§ Where the
+Documents Live). Work with the repositories checked out side by side.
+
+## Where the Documents Live
+
+- **A slice of `pm-mcp-core`** (the engine): its specifications and watch documents live beside the code, in
+  `pm-mcp-core` (`doc/Specification.adoc`, `doc/specification/`, `doc/ImplementationWatch.adoc`,
+  `doc/implementation-watch/`), together with `doc/Traceability.adoc`, which records what each requirement is
+  implemented by, verified by and documented in. The plan makes **one pull request** there: code, tests, the developer
+  documentation of the module (`{module}/doc/developer/`) and its ADRs, the deletion of the implemented specification
+  sections and watch items, and the lines of `doc/Traceability.adoc`. It opens a pull request here only when it
+  corrects a requirement (§ 1.3), deletes or changes a `cross-cutting.adoc` item, or changes a specification that
+  stays here; the concept and user documentation of the engine and the roadmap check-offs are written here once per
+  milestone exit (§ 2.2).
+- **A slice of another repository** (`plan-marshall-mcp`, `pm-mcp-clients`, `pm-mcp-parent`): the specifications it
+  implements live here (or, for the client design, in `pm-mcp-clients`), and the plan makes two pull requests: the
+  **code pull request** in the repository of the modules it changes, and the **documentation pull request** here.
+  Updating the documents is an ordinary step of the plan, not a separate procedure: the two pull requests need not
+  name each other, and the plan merges the documentation pull request itself (§ PR).
+
+The paths below name the documents of this repository (`doc/...`); for a slice of `pm-mcp-core` read the
+specification and watch paths as those of `pm-mcp-core`.
 
 An implementation goes through three stages, spread over those two pull requests:
 
@@ -72,15 +88,16 @@ document in `doc/` and its topic documents in a folder, like `Requirements.adoc`
 - Reference material is single-sourced: a table that restates values from code (configuration keys,
   defaults, CLI options, outcome enums, log messages) is generated from the code or guarded by a drift test
   that compares it with the code; otherwise the document links the source instead of copying it.
-  `doc/LogMessages.adoc` stays the log message reference.
+  `doc/LogMessages.adoc` of `pm-mcp-core` stays the log message reference.
 
 ## Inputs
 
 - **Slice**: what is implemented, given as an argument: a roadmap milestone (`doc/roadmap.adoc`), a
   specification document or section, or a list of requirement IDs. Without an argument, ask the user.
-- **Traceability checker**: `python3 .claude/skills/doc-review/scripts/trace.py` (broken links and anchors
-  across all of `doc/`, requirement ↔ specification links, index, roadmap coverage, watch counts and
-  backlinks).
+- **Traceability checker**: `python3 .claude/skills/doc-review/scripts/trace.py` of this repository (broken links
+  and anchors across all of `doc/` here and the whole checkout of `pm-mcp-core` beside it, requirement ↔
+  specification links, both indexes, roadmap coverage, watch counts and backlinks). It is the required check of both
+  repositories.
 - **Working files**: the session scratchpad (`trace-matrix.md`, `coverage.md`, `trace-baseline.txt`,
   `trace-after.txt`).
 
@@ -189,12 +206,17 @@ plan corrects it; the code never diverges from the documents, and the plan does 
   the `PM-WATCH-*` ID.
 - Log messages go to the holder of the module the change is in (`CoreLogMessages`, `RuntimeLogMessages`,
   `WorkflowLogMessages`, or a provider's `<X>LogMessages`), at the next free identifier of the level, and to
-  `doc/LogMessages.adoc` as usual.
+  `doc/LogMessages.adoc` of `pm-mcp-core` as usual.
 
 ### 2.2 Write the documentation from the corpus
 
 After the code tasks, the documentation tasks write the concept, developer and user documentation for the
-slice (§ Documentation Trees) from the matrix rows assigned to them:
+slice (§ Documentation Trees) from the matrix rows assigned to them. For a slice of `pm-mcp-core` the developer
+documentation is the module's (`{module}/doc/developer/{package}.adoc`), written in the slice's own pull request;
+its `concept` and `user` rows are carried by that developer documentation and the code until the milestone exit,
+when one documentation pull request here writes the concept and user documentation of the milestone's engine slices
+from them and checks off the roadmap items. The slice lists those rows in its pull request body as **Owed to the
+milestone exit**, so nothing is lost when the specification text goes:
 
 - **Source**: the specification sections and watch items of the slice, the requirements they trace to, and
   the corrections of § 1.3. The concepts (`doc/Concepts.adoc`) give the rationale, and reference
@@ -243,6 +265,11 @@ never removed from the specification or watch.
 Run `python3 .claude/skills/doc-review/scripts/trace.py > <scratchpad>/trace-baseline.txt` first.
 
 ### 3.1 Link the requirements to the implementation and its documentation
+
+For a slice of `pm-mcp-core`, the lines go into `doc/Traceability.adoc` of `pm-mcp-core`, under the requirement's
+section (created with its heading and its link to the requirement when absent), with links relative to that
+document (`link:../pm-workflow/src/main/java/...[StateRenderer]`); the requirement module here keeps its
+specification links and is not edited. For a slice of another repository:
 
 In the requirement module (`doc/requirements/NN-*.adoc`), each requirement in the slice gets (or extends)
 `Implementation:`, `Verified by:` and `Documentation:` lines where its "See the … Specification … for
@@ -316,7 +343,11 @@ branch of the code pull request.
 
 ## PR
 
-The code pull request contains code and tests. The documentation pull request contains the documentation, the
+For a slice of `pm-mcp-core` there is one pull request there, with the content of both lists below; its body
+contains the sections listed below, plus **Owed to the milestone exit**. A documentation pull request here that it
+needs (§ Where the Documents Live) is merged after it, like any documentation pull request.
+
+For a slice of another repository: the code pull request contains code and tests. The documentation pull request contains the documentation, the
 requirement links and the deletions. The same plan opens both; neither has to name the other. The code pull request
 is merged first. The plan then merges the documentation pull request itself, through the merge queue and without a
 separate approval, as soon as the code is on `main` of its repository and the required check `links / links` is

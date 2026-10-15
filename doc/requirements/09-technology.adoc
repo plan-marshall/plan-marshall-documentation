@@ -28,7 +28,7 @@ Outbound token-lane HTTPS communication, native git, Language Server Protocol in
 ** HTTP redirects must be followed only to HTTPS targets; any redirect attempting to downgrade to plain HTTP must be treated as a fatal connection error.
 ** Access tokens must be transmitted exclusively to the exact origin for which they were issued.
 
-See the link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/job-runtime.adoc[Job Runtime Specification], link:specification/mcp-tools.adoc[MCP Tools & Resources Specification], and link:specification/module-structure.adoc#forgejo[Module Structure Specification, Codeberg and Forgejo] for implementation details.
+See the link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime.adoc[Job Runtime Specification], link:specification/mcp-tools.adoc[MCP Tools & Resources Specification], and link:specification/module-structure.adoc#forgejo[Module Structure Specification, Codeberg and Forgejo] for implementation details.
 
 [#PM-TECH-3]
 === PM-TECH-3: GraalVM Native Executable & Startup/Memory Bounds
@@ -41,13 +41,7 @@ To ensure minimal host resource consumption and instant STDIO responsiveness of 
 * The native runtime `pm-mcpd` must keep its idle Resident Set Size (RSS) at <= 64 megabytes in the fresh state: started on a clean state, ready, and before any job, worker, git or provider operation, or language server has run, excluding child jobs and language servers. The idle RSS of a runtime that has worked is bounded separately by a larger limit, which must be set from measurement together with the job runtime; until that limit is set, the system must record the idle RSS after work with every release measurement and must not treat its growth as a violation of the fresh-state bound.
 * The system must register all persisted types, Jackson serialization targets, and domain models for reflection (`@RegisterForReflection`); it must supply native-image reachability metadata for the LSP4J JSON-RPC dynamic proxies (`[interface, Endpoint]`), and a library that cannot run under native image must be replaced, never the native deployment.
 
-See the link:specification/module-structure.adoc[Module Structure Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], and link:specification/job-runtime.adoc[Job Runtime Specification] for implementation details.
-
-Implementation (the third bullet in part: the start steps from the singleton lock to the runtime token, whose work does not grow with the number of enrolled projects; the native executables, the bind and every other bullet are not implemented here): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/main/java/de/planmarshall/runtime/start/StartupSequence.java[StartupSequence]
-
-Verified by (the JVM guard: the median of the start steps with 300 enrolled projects agrees with the median with none; the native cold-start figure is not measured yet): https://github.com/plan-marshall/pm-mcp-core/blob/main/pm-runtime/src/test/java/de/planmarshall/runtime/start/StartupColdStartIT.java[StartupColdStartIT]
-
-Documentation: link:concepts/runtime-lifecycle.adoc#startup[Concepts § Startup]
+See the link:specification/module-structure.adoc[Module Structure Specification], link:specification/runtime-model.adoc[Runtime & Interaction Model Specification], link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], and link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime.adoc[Job Runtime Specification] for implementation details.
 
 Implementation watch: link:implementation-watch/runtime-model.adoc#PM-WATCH-RUN-17[PM-WATCH-RUN-17]
 
@@ -61,4 +55,4 @@ The system must integrate natively with primary host operating systems, providin
 * The system must manage subprocess lifecycles using operating system process groups, providing clean process tree termination, `SIGTERM` graceful draining, and `SIGKILL` escalation upon timeout.
 * On Linux, the system must use Landlock (ABI >= 2, kernel >= 5.19; a lower ABI is recorded as `confinement: partial(abi=N)`, never as confined) and `PR_SET_NO_NEW_PRIVS` to confine jobs to read-only filesystem access outside `<PM_MCP_BASE>` (which jobs can neither read nor write, a model job's own job-private directory excepted) with explicit write access for the job's own project root and the other paths listed in `PM-SEC-5`.
 
-See the link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:specification/job-runtime.adoc[Job Runtime Specification], link:specification/module-structure.adoc[Module Structure Specification] (release platform matrix), and link:specification/timeouts/01-job-budgets-and-waits.adoc#grace-period[Timeouts & Budgets Specification] (termination grace period) for implementation details.
+See the link:specification/cli-and-security.adoc[CLI, Coordination & Security Specification], link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime.adoc[Job Runtime Specification], link:specification/module-structure.adoc[Module Structure Specification] (release platform matrix), and link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/01-job-budgets-and-waits.adoc#grace-period[Timeouts & Budgets Specification] (termination grace period) for implementation details.

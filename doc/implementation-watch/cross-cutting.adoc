@@ -20,7 +20,7 @@ guard or ships a test is exposed to them. Item format and lifecycle: link:../Imp
 === PM-WATCH-GEN-1: Every published figure names its population and provenance
 
 Anchor:: link:../Requirements.adoc#PM-WF-14[PM-WF-14], link:../Requirements.adoc#PM-EXEC-6[PM-EXEC-6],
-link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-quality-report[Phase Workflows § Post-Run Quality Report] (Instrument Contract)
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-quality-report[Phase Workflows § Post-Run Quality Report] (Instrument Contract)
 Hazard:: plan-marshall reported confident ratios over wrong, pooled or empty populations: `reviewer_coverage: 0/3`
 on a PR that had been split, a "measurable population 0" run graded anyway, a single-plan figure quoted as a
 corpus band ("76–85% everywhere" where the per-phase values were 57.2–85.4%), "all findings addressed" claims
@@ -55,7 +55,7 @@ epic Decisions (PLAN-05 sizing).
 [#PM-WATCH-GEN-2]
 === PM-WATCH-GEN-2: An empty population is not a clean result
 
-Anchor:: link:../specification/job-runtime/03-parsers-and-gates.adoc#_gate_honesty_verification[Job Runtime § Gate Honesty Verification],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/03-parsers-and-gates.adoc#_gate_honesty_verification[Job Runtime § Gate Honesty Verification],
 link:../Requirements.adoc#PM-EXEC-6[PM-EXEC-6]
 Hazard:: A query against a deleted worktree root returned `count 0, files_scanned 0` with clean coverage; the same
 query unscoped found 2 hits over 5361 files. A convergence probe reported "0 unconverged" from an empty firing
@@ -110,7 +110,7 @@ F-012(B); truthful-signals PLAN-TRUTH-154 (C-015), (quality-aspect) PLAN-206 D6.
 [#PM-WATCH-GEN-5]
 === PM-WATCH-GEN-5: One unmeasured vocabulary for every reader
 
-Anchor:: link:../specification/model-work/09-completion-usage-and-spend.adoc#post-completion-invariants[Model Work § Post-Completion Integrity Invariants]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/09-completion-usage-and-spend.adoc#post-completion-invariants[Model Work § Post-Completion Integrity Invariants]
 Hazard:: Two readers of one ledger parsed the same cells differently; one coerced a non-numeric cell to 0, a silent
 measured zero.
 Guard:: All readers of a measured field use one parser with the states `measured`, `unmeasured` and
@@ -140,7 +140,7 @@ Source:: plan-marshall defect code-intelligence-substrate PLAN-CIS-050 fold-0831
 [#PM-WATCH-GEN-8]
 === PM-WATCH-GEN-8: Two sources of one fact reconcile
 
-Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope] (Stall Rate & Ledger Divergence),
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope] (Stall Rate & Ledger Divergence),
 link:../Requirements.adoc#PM-WF-14[PM-WF-14]
 Hazard:: One artefact reported `build_count 0` while the change ledger held 315 builds; two spend ledgers of one run
 disagreed on 24 findings; a second instrument over the same corpus published different figures without citing
@@ -175,7 +175,7 @@ PLAN-CIS-039 D3, inbox other-approaches-001.
 [#PM-WATCH-GEN-10]
 === PM-WATCH-GEN-10: Check versions are orderable
 
-Anchor:: link:../specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue] (`plan-retrospective`, order 995)
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue] (`plan-retrospective`, order 995)
 Hazard:: Check versions were stamped `plan-10`, which is not orderable; one change altered 4 checks without bumping
 their stamps; a "since X" rule could not be evaluated from a checkout.
 Guard:: A report's check version is its `engine_version` (the runtime release that computed it) and its time bound
@@ -200,7 +200,7 @@ Source:: plan-marshall defect code-intelligence-substrate epic F11, PLAN-CIS-054
 [#PM-WATCH-GEN-12]
 === PM-WATCH-GEN-12: Tallies iterate the whole vocabulary
 
-Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-quality-report[Phase Workflows § Post-Run Quality Report] (Quality Chain)
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-quality-report[Phase Workflows § Post-Run Quality Report] (Quality Chain)
 Hazard:: A report derived its rows from the top N observed values, so a fixed vocabulary member with zero or few
 entries (`VERIFY`) vanished from the report.
 Guard:: Every tally over a closed enum is built from all enum values (e.g. an `EnumMap` pre-filled with zeros);
@@ -211,7 +211,7 @@ Source:: plan-marshall lesson 2026-09-23-05-005; plan-marshall defect post-run-q
 [#PM-WATCH-GEN-13]
 === PM-WATCH-GEN-13: Corrections append; measurements are never overwritten
 
-Anchor:: link:../specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Store Schemas § Metrics Store],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Store Schemas § Metrics Store],
 link:../Requirements.adoc#PM-SEC-6[PM-SEC-6]
 Hazard:: Historical records were "corrected" by writing today's number into the past, and re-measurements
 overwrote earlier values without a commit or round label.
@@ -224,7 +224,7 @@ Source:: plan-marshall defect code-intelligence-substrate PLAN-CIS-054 D6 correc
 [#PM-WATCH-GEN-14]
 === PM-WATCH-GEN-14: A post-merge instrument cannot validate itself
 
-Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope]
 Hazard:: An instrument landing in a post-merge step populated only its own finalize bucket on the plan that
 introduced it; earlier phases looked like measured zeros.
 Guard:: An instrument added to a post-merge step is validated on a later plan; phases before its introduction read
@@ -237,7 +237,7 @@ Source:: plan-marshall defect code-intelligence-substrate PLAN-CIS-036 D1.
 === PM-WATCH-GEN-15: One source per closed vocabulary
 
 Anchor:: link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5],
-link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#_build_time_drift_gate[Workflow DSL § Build-Time Drift Gate]
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#_build_time_drift_gate[Workflow DSL § Build-Time Drift Gate]
 Hazard:: Closed vocabularies restated in several places were fixed in one and stayed wrong in the others: gap
 classes, job outcomes, tool signatures, reason tokens and rule ids. Tests pinning literal membership or cardinality of an extensible registry went red
 on valid extensions while production was correct.
@@ -255,7 +255,7 @@ truthful-signals PLAN-TRUTH-153 D4 and D8, PLAN-TRUTH-155 D1, (quality-aspect) P
 [#PM-WATCH-GEN-16]
 === PM-WATCH-GEN-16: One field answers one question
 
-Anchor:: link:../specification/store-schemas/03-findings-and-review-records.adoc#_findings_ledger_record_findings_jsonl[Store Schemas § Findings Ledger Record]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/03-findings-and-review-records.adoc#_findings_ledger_record_findings_jsonl[Store Schemas § Findings Ledger Record]
 Hazard:: plan-marshall unified different questions under one field (severity vs blocking, refuted vs accepted), so
 no value could answer either question correctly.
 Guard:: A schema lint in CI over every JSON Schema the code implements fails when a closed `enum` lacks a
@@ -268,7 +268,7 @@ Source:: plan-marshall defect truthful-signals PLAN-TRUTH-146 D0.
 [#PM-WATCH-GEN-17]
 === PM-WATCH-GEN-17: One concept, one value type
 
-Anchor:: link:../specification/store-schemas/01-format-and-session-log.adoc#format-versioning[Store Schemas § Format Versioning & Atomic Write Discipline]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/01-format-and-session-log.adoc#format-versioning[Store Schemas § Format Versioning & Atomic Write Discipline]
 Hazard:: One verb took epoch seconds for an instant while its sibling verbs took ISO-8601 strings.
 Guard:: All persisted and transported instants are RFC 3339 `date-time` strings; durations are integers with the
 unit in the field name; a schema lint rejects numeric instants.
@@ -288,7 +288,7 @@ Source:: plan-marshall defect process-compliance PLAN-10 § Folded inbox materia
 [#PM-WATCH-GEN-19]
 === PM-WATCH-GEN-19: A rename is proven by a survivor sweep
 
-Anchor:: link:../specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#state-name-migration[Workflow DSL § State-Name Migration Registry],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/workflow-dsl/07-loop-back-diagrams-verification.adoc#state-name-migration[Workflow DSL § State-Name Migration Registry],
 link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]
 Hazard:: Renames were declared done on a green build while retired spellings survived in prose and untested sites;
 the sizing even measured the wrong population.
@@ -304,7 +304,7 @@ Source:: plan-marshall defect orchestrator-refactor PLAN-05 D7, epic Decisions (
 [#PM-WATCH-GEN-20]
 === PM-WATCH-GEN-20: Every consumed field has a production writer, every produced artifact a consumer
 
-Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#_build_time_startup_static_invariant_verification_finalizepipelinevalidator[Phase Workflows § Build-Time & Startup Static Invariant Verification],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#_build_time_startup_static_invariant_verification_finalizepipelinevalidator[Phase Workflows § Build-Time & Startup Static Invariant Verification],
 link:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]
 Hazard:: Report sections whose only writer was a test fixture never rendered in production; detectors read fields
 no producer wrote and were inert on every run; a declared log channel had no producer and was guaranteed zero; a
@@ -333,7 +333,7 @@ Constraints; truthful-signals PLAN-TRUTH-153 D5.
 [#PM-WATCH-GEN-21]
 === PM-WATCH-GEN-21: Single-writer claims are tested
 
-Anchor:: link:../specification/phase-workflows/03-q-gate-and-execute.adoc#_single_writer_change_type_contract[Phase Workflows § Single-Writer `change_type` Contract]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/03-q-gate-and-execute.adoc#_single_writer_change_type_contract[Phase Workflows § Single-Writer `change_type` Contract]
 Hazard:: A value claimed to be "written in exactly one place" had two writers.
 Guard:: Single-writer invariants (e.g. `change_type`, step completion) are enforced by an architecture test that
 finds all writers.
@@ -372,7 +372,7 @@ Source:: plan-marshall defect code-intelligence-substrate PLAN-CIS-050 F-012(A).
 === PM-WATCH-GEN-25: Success needs the producer's status
 
 Anchor:: link:../Requirements.adoc#PM-TOOL-4[PM-TOOL-4],
-link:../specification/phase-workflows/03-q-gate-and-execute.adoc#_phase_5_exit_barrier_dual_freshness_pending_tasks_gates[Phase Workflows § Phase 5 Exit Barrier]
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/03-q-gate-and-execute.adoc#_phase_5_exit_barrier_dual_freshness_pending_tasks_gates[Phase Workflows § Phase 5 Exit Barrier]
 Hazard:: Success was inferred from vacuous proxies: a self-healed artefact's presence, exit 0 on an error path,
 byte identity.
 Guard:: Success is the producer's reported closed-enum status and artefact presence together; never an exit code
@@ -492,7 +492,7 @@ Source:: plan-marshall defect code-intelligence-substrate epic F12 and standing 
 [#PM-WATCH-GEN-32]
 === PM-WATCH-GEN-32: Characterization corpora are enumerated from the live directory
 
-Anchor:: link:../specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness]
 Hazard:: Characterization suites listed their fixtures by hand and silently dropped new ones.
 Guard:: Differential and characterization suites enumerate fixtures from the directory, with explicit, justified
 exclusions.
@@ -559,7 +559,7 @@ Source:: plan-marshall defect post-run-quality PLAN-PRQ-09 D1.
 [#PM-WATCH-GEN-39]
 === PM-WATCH-GEN-39: Removal decides only on present evidence of PM-MCP's own
 
-Anchor:: link:../specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Store Schemas § Evidence-Based Removal Sweeps]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Store Schemas § Evidence-Based Removal Sweeps]
 Hazard:: A missing marker was read as "dead, safe to remove"; the inversion recurred inside its own fix. A marker
 written by a foreign system (Claude Code's plugin GC `.orphaned_at`) was nearly used as a removal signal.
 Guard:: Every sweep or retirement test includes a case where the evidence record is missing and asserts
@@ -571,7 +571,7 @@ Source:: plan-marshall defect orchestrator-refactor PLAN-03 Verify-first and Cla
 [#PM-WATCH-GEN-40]
 === PM-WATCH-GEN-40: Assessments are inputs, never back-filled
 
-Anchor:: link:../specification/store-schemas/03-findings-and-review-records.adoc#component-assessments[Store Schemas § Component Assessment Record] (server-stamped `recorded_at`),
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/03-findings-and-review-records.adoc#component-assessments[Store Schemas § Component Assessment Record] (server-stamped `recorded_at`),
 link:../Requirements.adoc#PM-EXEC-6[PM-EXEC-6]
 Hazard:: A validator's input population was synthesized from the data it measured, giving 100% coverage by
 construction; assessments were fabricated to satisfy an assessment-coverage check.
@@ -606,7 +606,7 @@ instrumentation-substrate PLAN-07 deliverable 4.
 [#PM-WATCH-GEN-42]
 === PM-WATCH-GEN-42: Relayed claims are hypotheses until verified
 
-Anchor:: link:../specification/model-work/08-epic-coordination.adoc#server-derived-landing-facts[Model Work § Server-Derived Landing Facts, Spec Re-Grounding & Cross-Plan Locks],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#server-derived-landing-facts[Model Work § Server-Derived Landing Facts, Spec Re-Grounding & Cross-Plan Locks],
 link:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]
 Hazard:: A false locale-defect claim travelled spec → execution report → security-audit report and nearly into a
 code comment; a sweep commit carried three false claims it authored itself; a comment claimed a value was
@@ -624,7 +624,7 @@ PLAN-PRQ-09 D5.
 [#PM-WATCH-GEN-43]
 === PM-WATCH-GEN-43: A nearby refutation is not a refutation
 
-Anchor:: link:../specification/store-schemas/03-findings-and-review-records.adoc#_findings_ledger_record_findings_jsonl[Store Schemas § Findings Ledger Record] (Server-Written Resolution),
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/03-findings-and-review-records.adoc#_findings_ledger_record_findings_jsonl[Store Schemas § Findings Ledger Record] (Server-Written Resolution),
 link:../Requirements.adoc#PM-TEST-3[PM-TEST-3]
 Hazard:: A refutation of the cwd-fallback path nearly struck a live pending-worktree defect, twice in four days.
 Guard:: The server writes `rejected` only on the verifier's refutation (`evidence.claim_refuted`, `evidence.class:
@@ -639,7 +639,7 @@ Source:: plan-marshall defect code-intelligence-substrate PLAN-CIS-050 D3(a), ep
 [#PM-WATCH-GEN-44]
 === PM-WATCH-GEN-44: An adversarial pass wins; a repeated question is no corroboration
 
-Anchor:: link:../specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue] (`ext-point-verify`)
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows § Normative Step Catalogue] (`ext-point-verify`)
 Hazard:: 37 of 37 audited plans were sound only after correction; three review rounds dismissed an unguarded read
 that a bot then overturned on "exits 0 regardless".
 Guard:: Review workflows let an adversarial refutation take precedence over a clean first pass; a refutation
@@ -650,7 +650,7 @@ Source:: plan-marshall defect code-intelligence-substrate epic §Ingest; truthfu
 [#PM-WATCH-GEN-45]
 === PM-WATCH-GEN-45: A verdict is scoped to what was evaluated
 
-Anchor:: link:../specification/domain-extensions/05-recipes-and-extension-points.adoc#self-review-surfacer[Domain Extensions § Pre-Submission Self-Review Surfacer Extension Point]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/domain-extensions/05-recipes-and-extension-points.adoc#self-review-surfacer[Domain Extensions § Pre-Submission Self-Review Surfacer Extension Point]
 Hazard:: Gate reports cited structural limits they never applied; review rounds declared "clean" while each round
 had asked a different class of proposition.
 Guard:: Each reported limit is backed by the evaluated rule id; a self-review verdict records the proposition
@@ -670,7 +670,7 @@ Source:: plan-marshall defect code-intelligence-substrate WS-05 charter.
 [#PM-WATCH-GEN-47]
 === PM-WATCH-GEN-47: Blocked work splits; it does not halt
 
-Anchor:: link:../specification/phase-workflows/03-q-gate-and-execute.adoc#_task_envelope_execution_independent_server_verification[Phase Workflows § Task Envelope Execution & Independent Server Verification]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/03-q-gate-and-execute.adoc#_task_envelope_execution_independent_server_verification[Phase Workflows § Task Envelope Execution & Independent Server Verification]
 Hazard:: A blocked run halted as a whole although half of it was derivable; its absence claim was never searched.
 Guard:: An envelope task that submits `infeasible:TASK-NNN` with evidence ends only that plan task `infeasible`;
 envelope tasks continue for every plan task that does not depend on it transitively through `depends_on`, and no
@@ -734,7 +734,7 @@ Source:: plan-marshall lessons 2026-09-22-07-005, 2026-09-22-08-001 and 2026-09-
 [#PM-WATCH-GEN-52]
 === PM-WATCH-GEN-52: Apply the convergent fix: delete
 
-Anchor:: link:../specification/phase-workflows/03-q-gate-and-execute.adoc#_q_gate_validation_loop[Phase Workflows § Q-Gate Validation Loop],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/03-q-gate-and-execute.adoc#_q_gate_validation_loop[Phase Workflows § Q-Gate Validation Loop],
 link:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]
 Hazard:: Rewording a drifted restatement instead of deleting it re-seeded the defect in the next round.
 Guard:: Triage vocabulary guidance: from round 2, own-run prose findings are fixed by deletion (replace a drifted
@@ -766,7 +766,7 @@ Source:: plan-marshall defect instrumentation-substrate PLAN-08 § Claim Labels,
 [#PM-WATCH-GEN-55]
 === PM-WATCH-GEN-55: Failures cluster by failing component
 
-Anchor:: link:../specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/05-finalize-review-metrics-descriptor.adoc#post-run-metrics-and-landing[Phase Workflows § Post-Run Metrics & Landing Envelope]
 Hazard:: Failures were clustered by the emitting component, collapsing three distinct failing notations into one
 forwarded cluster.
 Guard:: Metrics key failures by the failing primitive or the `rejected.reason`, never by the emitting component;
@@ -792,7 +792,7 @@ Source:: plan-marshall defect orchestrator-refactor PLAN-03 D0.
 [#PM-WATCH-GEN-57]
 === PM-WATCH-GEN-57: Every migration and converter names owner, floor and removal trigger
 
-Anchor:: link:../specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness],
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness],
 link:../Requirements.adoc#PM-EXT-7[PM-EXT-7]
 Hazard:: Shims without a recorded floor or trigger were never removed; replacing a prose trigger by a machine check
 made "never, while old archives persist" unstatable.
@@ -805,7 +805,7 @@ Source:: plan-marshall defect orchestrator-refactor PLAN-03 D1.
 [#PM-WATCH-GEN-58]
 === PM-WATCH-GEN-58: Structural refactors land after behaviour fixes
 
-Anchor:: link:../specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness]
+Anchor:: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/13-leases-integrity-testing.adoc#differential-harness[Store Schemas § Differential Equivalence Harness]
 Hazard:: A planned behaviour-preserving split would have frozen pre-fix state; line attribution had to be
 re-derived.
 Guard:: A refactor rebases after pending behaviour fixes to the same files; equivalence and golden tests are

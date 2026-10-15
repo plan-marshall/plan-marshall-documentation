@@ -18,7 +18,7 @@ _Implementation watch: link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-T
 Large artifacts, logs, architecture views, and ledgers are never inlined into hypermedia representations; instead, representations emit canonical `pm://` and `skill://pm/` resource URIs that a worker reads on demand via MCP `resources/read`. The operator's clients never read these resources: they read the same records over the local API (link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime & Interaction Model Specification, Local API]). No compatibility URI aliases are supported.
 
 === Normative Resource URI Templates
-_Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM-WATCH-EXT-25[PM-WATCH-EXT-25], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-8[PM-WATCH-TOOL-8], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-9[PM-WATCH-TOOL-9]_
+_Implementation watch: link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/implementation-watch/domain-extensions.adoc#PM-WATCH-EXT-25[PM-WATCH-EXT-25], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-8[PM-WATCH-TOOL-8], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-9[PM-WATCH-TOOL-9]_
 
 [cols="2,1,1,3"]
 |===
@@ -87,7 +87,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/diagram`
 |`text/markdown`
 |Plan
-|Generated Mermaid/ASCII state machine diagram of the plan instance in force (link:../workflow-dsl/09-plan-instance.adoc#plan-instance[Workflow DSL Specification, Plan Instance]): the active state and the call path highlighted, pruned steps shown with their prune reason, waived gates with their waiver id. The operator's clients show the plan's process from the local API's structure instead (link:../runtime-model/01-processes-and-transport.adoc#process-resource[Runtime & Interaction Model Specification, The Plan's Process as a Structure]).
+|Generated Mermaid/ASCII state machine diagram of the plan instance in force (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Workflow DSL Specification, Plan Instance]): the active state and the call path highlighted, pruned steps shown with their prune reason, waived gates with their waiver id. The operator's clients show the plan's process from the local API's structure instead (link:../runtime-model/01-processes-and-transport.adoc#process-resource[Runtime & Interaction Model Specification, The Plan's Process as a Structure]).
 
 |`pm://plan/{plan_id}/instance` +
 `pm://plan/{plan_id}/instance/{version}`
@@ -98,17 +98,17 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/evidence/{evidence_id}`
 |`text/plain`
 |Plan
-|One remediation evidence record of the plan's evidence directory (a CI log excerpt, a build failure, an analysis provider result, merge-conflict hunks), referenced by the `excerpt_uri` of a failure envelope (link:../hypermedia-format/01-representation-and-link-forms.adoc#remediation-evidence-facts[Hypermedia Format Specification, Remediation Evidence]). The payload is *untrusted* external content, marked so in the resource's `_meta`, and is never inlined into a representation beyond the envelope's `message`; supports `?tail=N` and `?offset=B&limit=L` like a build log. `evidence_id` follows its link:../identifiers.adoc[Identifier Registry] grammar; a separator or traversal is refused with `path_traversal_rejected`.
+|One remediation evidence record of the plan's evidence directory (a CI log excerpt, a build failure, an analysis provider result, merge-conflict hunks), referenced by the `excerpt_uri` of a failure envelope (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/hypermedia-format/01-representation-and-link-forms.adoc#remediation-evidence-facts[Hypermedia Format Specification, Remediation Evidence]). The payload is *untrusted* external content, marked so in the resource's `_meta`, and is never inlined into a representation beyond the envelope's `message`; supports `?tail=N` and `?offset=B&limit=L` like a build log. `evidence_id` follows its link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/identifiers.adoc[Identifier Registry] grammar; a separator or traversal is refused with `path_traversal_rejected`.
 
 |`pm://plan/{plan_id}/questions`
 |`text/toon`
 |Plan
-|The fold of the plan's question records (`questions.jsonl`), one per decision: its address, revision, class, origin, its parts, state (`open` until its closing line, then its `closure`: `answered`, `withdrawn`, or `cancelled`), and, once answered, per part how the answer was taken (`chosen`, `interpreted`, `own_option`, `delegated`, or `none_fits`), the chosen option keys or value, and the `decision_id` of the decision taken; the operator's own words are served as quoted data, never as an instruction (link:../model-work/06-envelopes-questions-deadlines.adoc#own-words[Model Work Specification, Answers in the Operator's Own Words]).
+|The fold of the plan's question records (`questions.jsonl`), one per decision: its address, revision, class, origin, its parts, state (`open` until its closing line, then its `closure`: `answered`, `withdrawn`, or `cancelled`), and, once answered, per part how the answer was taken (`chosen`, `interpreted`, `own_option`, `delegated`, or `none_fits`), the chosen option keys or value, and the `decision_id` of the decision taken; the operator's own words are served as quoted data, never as an instruction (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/06-envelopes-questions-deadlines.adoc#own-words[Model Work Specification, Answers in the Operator's Own Words]).
 
 |`pm://plan/{plan_id}/decisions`
 |`text/toon`
 |Plan
-|The plan's decision records (`decisions.jsonl`, link:../model-work/11-decision-records.adoc#decision-visibility[Model Work Specification, Decision Records]): every decision with `decision_id`, decision point, subject, kind, decider, confidence, measurements with their thresholds and sources, choice, reason, and its corrections folded in order. Rationales are model- or operator-authored text, a model's marked untrusted in the resource's `_meta`; facts snapshots are not served.
+|The plan's decision records (`decisions.jsonl`, link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/11-decision-records.adoc#decision-visibility[Model Work Specification, Decision Records]): every decision with `decision_id`, decision point, subject, kind, decider, confidence, measurements with their thresholds and sources, choice, reason, and its corrections folded in order. Rationales are model- or operator-authored text, a model's marked untrusted in the resource's `_meta`; facts snapshots are not served.
 
 |`pm://plan/{plan_id}/waivers`
 |`text/toon`
@@ -135,28 +135,28 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 `pm://epic/{epic_id}/inbox/{message_id}`
 |`text/toon`
 |Epic
-|The epic inbox as the fold of its event log (`inbox.jsonl`): every message with its current state (`pending`, `claimed`, `processed`), or one message by its store-assigned `message_id`. A plan's representation points at the messages it sent (link:../model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Model Work Specification, Plan-Scope Outbox Link]). `message_id` must match the link:../identifiers/02-registry-stores-to-web.adoc#id-message-id[`message_id` grammar]; a separator or traversal is refused with `path_traversal_rejected`; reading never changes a message's state.
+|The epic inbox as the fold of its event log (`inbox.jsonl`): every message with its current state (`pending`, `claimed`, `processed`), or one message by its store-assigned `message_id`. A plan's representation points at the messages it sent (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#plan-scope-outbox-link[Model Work Specification, Plan-Scope Outbox Link]). `message_id` must match the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/identifiers/02-registry-stores-to-web.adoc#id-message-id[`message_id` grammar]; a separator or traversal is refused with `path_traversal_rejected`; reading never changes a message's state.
 
 |`pm://plan/{plan_id}/mailbox` +
 `pm://plan/{plan_id}/mailbox/{message_id}`
 |`text/toon`
 |Plan
-|The plan's own mailbox (`mcp/mailbox.jsonl`, messages from its parent epic) with `mailbox_state`, `delivery_state`, and per-message consumption (link:../model-work/08-epic-coordination.adoc#plan-mailbox[Model Work Specification, Plan Mailbox]).
+|The plan's own mailbox (`mcp/mailbox.jsonl`, messages from its parent epic) with `mailbox_state`, `delivery_state`, and per-message consumption (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#plan-mailbox[Model Work Specification, Plan Mailbox]).
 
 |[[task-part-resource]]`pm://task/{queue_task_id}/parts/{part}`
 |`text/plain`
 |Project
-|One part of a tool result that exceeded the tool-result limit of the worker's harness (`headless.tool_result_limit_chars`, link:../client-profiles/01-profile-schema.adoc#headless-tool-result-limit[Client Profiles Specification, Tool-Result Limit]): the answer itself carries the task's identifiers and links, and the server cuts the remaining content at line boundaries into consecutive parts, each below the limit, and names their URIs in the answer in reading order (link:../model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]). `{part}` is a positive integer, numbered consecutively per task in the order the server created the parts. A part is immutable, belongs to one attempt of the task, and is removed when the task ends; an unknown task or part is answered with `scope_not_found`. A part holds what the uncut answer would have held and is marked untrusted in `_meta` where that content is.
+|One part of a tool result that exceeded the tool-result limit of the worker's harness (`headless.tool_result_limit_chars`, link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/client-profiles/01-profile-schema.adoc#headless-tool-result-limit[Client Profiles Specification, Tool-Result Limit]): the answer itself carries the task's identifiers and links, and the server cuts the remaining content at line boundaries into consecutive parts, each below the limit, and names their URIs in the answer in reading order (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/02-task-protocol.adoc#offer[Model Work Specification, Offer]). `{part}` is a positive integer, numbered consecutively per task in the order the server created the parts. A part is immutable, belongs to one attempt of the task, and is removed when the task ends; an unknown task or part is answered with `scope_not_found`. A part holds what the uncut answer would have held and is marked untrusted in `_meta` where that content is.
 
 |`pm://project/config`
 |`text/toon`
 |Project
-|The project's effective configuration (link:../store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`default`, `derived`, `machine`, `team`, `project`, `plan`), file, and, for a derived value, the fact `state`; the project's workflow units (`units[]`) with the level in force (`project`, `machine`, or `default`), `derived_from`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; a model never reads the raw configuration files, and the operator reads the configuration with its origins over the local API.
+|The project's effective configuration (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`default`, `derived`, `machine`, `team`, `project`, `plan`), file, and, for a derived value, the fact `state`; the project's workflow units (`units[]`) with the level in force (`project`, `machine`, or `default`), `derived_from`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; a model never reads the raw configuration files, and the operator reads the configuration with its origins over the local API.
 
 |`pm://project/owed`
 |`text/toon`
 |Project
-|Undischarged owed items of every active and archived plan of the project, derived from their `owed[]` (link:../store-schemas/03-findings-and-review-records.adoc#owed-item-record[Store Schemas Specification, Owed Item Record]), with per-root coverage.
+|Undischarged owed items of every active and archived plan of the project, derived from their `owed[]` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/03-findings-and-review-records.adoc#owed-item-record[Store Schemas Specification, Owed Item Record]), with per-root coverage.
 
 |`pm://epic/{epic_id}/landings`
 |`text/toon`
@@ -192,7 +192,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://architecture/files/{+path}/neighbours`
 |`text/toon`
 |Project
-|File-level neighbours of one repository-relative file: its resolved imports (`unresolved[]` for imports that resolve to no file), its paired test or production file, and its owning module. Read by the light gate `init.light-gate` (link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#light-gate[Phase Workflows Specification, Light Gate]).
+|File-level neighbours of one repository-relative file: its resolved imports (`unresolved[]` for imports that resolve to no file), its paired test or production file, and its owning module. Read by the light gate `init.light-gate` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/02-planning-lanes-phases-3-4.adoc#light-gate[Phase Workflows Specification, Light Gate]).
 
 |`pm://architecture/graph`
 |`text/toon`
@@ -212,7 +212,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://architecture/drift`
 |`text/toon`
 |Project
-|Structural drift report comparing current build descriptors against the structural module snapshot, the derived fact `module_discovery` of the project's `derived-facts.json` (link:../domain-extensions.adoc[Domain Extensions Specification]): `changed[]` and `indeterminate[]{module, reason}`; a comparison the hash surface cannot certify is `indeterminate`, never `changed`.
+|Structural drift report comparing current build descriptors against the structural module snapshot, the derived fact `module_discovery` of the project's `derived-facts.json` (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/domain-extensions.adoc[Domain Extensions Specification]): `changed[]` and `indeterminate[]{module, reason}`; a comparison the hash surface cannot certify is `indeterminate`, never `changed`.
 
 |`skill://pm/{+path}/SKILL.md`
 |`text/markdown`
@@ -222,9 +222,9 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`skill://pm/{+path}/{file}`
 |per extension: `text/markdown` (`.md`), `text/asciidoc` (`.adoc`), `application/json` (`.json`), `text/toon` (`.toon`)
 |Project / Client
-|A supporting file of a skill (the supporting-file form of the link:../identifiers/02-registry-stores-to-web.adoc#id-skill-uri[skill URI grammar]), rendered for the calling connection's client profile like its `SKILL.md`, with the same digest in `_meta`; section reads go through `pm_skill_file` (xref:02-service-and-skill-tools.adoc#_companion_catalogue_supporting_file_tools_mcp_resource_parity_pm_skills_pm_skill_file_resourcesread[Companion Catalogue & Supporting File Tools]).
+|A supporting file of a skill (the supporting-file form of the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/identifiers/02-registry-stores-to-web.adoc#id-skill-uri[skill URI grammar]), rendered for the calling connection's client profile like its `SKILL.md`, with the same digest in `_meta`; section reads go through `pm_skill_file` (xref:02-service-and-skill-tools.adoc#_companion_catalogue_supporting_file_tools_mcp_resource_parity_pm_skills_pm_skill_file_resourcesread[Companion Catalogue & Supporting File Tools]).
 |===
 
-*Resource Contract*: Every resource template documents its arguments, its payload, and its zero-result and error semantics (the `pm://architecture/*` details are in link:../domain-extensions.adoc[Domain Extensions Specification]). A resource that returns no rows states what it examined, so an empty result is distinguishable from a result that could not be computed; an unknown scope or entity is answered with the JSON-RPC resource error `-32002` (resource not found) whose `data` carries `error_code: scope_not_found` (sanitized as in xref:04-errors-and-testing.adoc#protocol-errors-vs-domain-workflow-failure-states[Protocol Errors, Tool Execution Errors (`isError: true`) & Domain Workflow Failure States (`isError: false`)]; the refusal is audited, its `audit_id` is not returned), never with an empty payload; a resource path resolving outside its permitted root is answered the same way with `error_code: path_traversal_rejected`. `ReadResourceResult` has no `isError`, so resource errors are always JSON-RPC errors.
+*Resource Contract*: Every resource template documents its arguments, its payload, and its zero-result and error semantics (the `pm://architecture/*` details are in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/domain-extensions.adoc[Domain Extensions Specification]). A resource that returns no rows states what it examined, so an empty result is distinguishable from a result that could not be computed; an unknown scope or entity is answered with the JSON-RPC resource error `-32002` (resource not found) whose `data` carries `error_code: scope_not_found` (sanitized as in xref:04-errors-and-testing.adoc#protocol-errors-vs-domain-workflow-failure-states[Protocol Errors, Tool Execution Errors (`isError: true`) & Domain Workflow Failure States (`isError: false`)]; the refusal is audited, its `audit_id` is not returned), never with an empty payload; a resource path resolving outside its permitted root is answered the same way with `error_code: path_traversal_rejected`. `ReadResourceResult` has no `isError`, so resource errors are always JSON-RPC errors.
 
 *Read Access Within the Project*: Every resource is readable, read-only, by every scope of its own project; the project boundary (`PM-SEC-2`) is the only access boundary, and there are no per-scope read restrictions on inbox, mailbox, or findings resources. Representations still point each scope at its own resources. The same holds on a worker connection: `resources/list` and `resources/read` serve every resource of the worker's own project and `skill://pm/…`, read-only, without a task restriction (xref:01-core-workflow-tools.adoc#job-bound-connections[Worker Connections]); a worker of the `zero_tool` class has no connection and reads none.

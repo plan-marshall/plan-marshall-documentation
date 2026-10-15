@@ -85,7 +85,7 @@ The registries take their members in the constructor: `new FindingRegistry(sourc
 == The Analysis Result and Its Codec
 _Requirements: link:../Requirements.adoc#PM-IMPL-2[PM-IMPL-2]_
 
-`AnalysisResult` is one line of `analysis.jsonl`: its components are exactly the members of the schema of the link:../specification/store-schemas/03-findings-and-review-records.adoc#analysis-result[analysis result record], in schema order, with the quality gate (`Gate`, at most 256 conditions), its conditions (`Condition`) and the closed `CountStatus`, `GateResult` and `Comparator` nested in it. The new issues of an observation are not part of the record; they are findings with the source `analysis` and the same provider.
+`AnalysisResult` is one line of `analysis.jsonl`: its components are exactly the members of the schema of the link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/03-findings-and-review-records.adoc#analysis-result[analysis result record], in schema order, with the quality gate (`Gate`, at most 256 conditions), its conditions (`Condition`) and the closed `CountStatus`, `GateResult` and `Comparator` nested in it. The new issues of an observation are not part of the record; they are findings with the source `analysis` and the same provider.
 
 The compact constructor refuses a violation with an `IllegalArgumentException` naming the rule, and a missing required member with a `NullPointerException` naming the member. Beside the structural rules (`format_version` 1, the provider id pattern, the length bounds of the provider's strings, counts at least 0, `new_code_issue_count` null iff `count_status` is `indeterminate`) it checks the consistency of status, gate and count:
 
@@ -102,7 +102,7 @@ A result that breaks one of them is never built. The record has a builder (`Anal
 == Outcomes and Completeness
 _Requirements: link:../Requirements.adoc#PM-IMPL-1[PM-IMPL-1]_
 
-Both operations answer with one closed `AnalysisOutcome`: `OK` or one of the transport outcomes shared with the other provider contracts (link:../specification/job-runtime/01-pipeline-and-subprocesses.adoc#outcome-derivation[Job Runtime § Outcome Derivation]); the values are those of the enum. There is no outcome for an unknown target, a refusal or a rate limit. `AnalysisCallResult` checks on construction that
+Both operations answer with one closed `AnalysisOutcome`: `OK` or one of the transport outcomes shared with the other provider contracts (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc#outcome-derivation[Job Runtime § Outcome Derivation]); the values are those of the enum. There is no outcome for an unknown target, a refusal or a rate limit. `AnalysisCallResult` checks on construction that
 
 * an `OK` result carries a value, and a transport outcome carries neither a value nor a completeness (it counts as `undecidable` in the wait);
 * a result of `analysis.status` (an `AnalysisResult`) carries no completeness;
