@@ -1,4 +1,4 @@
-= Store Schemas Specification: Owed Items, Findings & Review Records
+= Store Schemas Specification: Phases, Owed Items, Findings & Review Records
 :toc: left
 :toclevels: 3
 :toc-title: Table of Contents
@@ -6,7 +6,38 @@
 :source-highlighter: highlight.js
 :nofooter:
 
-link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store Schemas Specification] » Owed Items, Findings & Review Records
+link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store Schemas Specification] » Phases, Owed Items, Findings & Review Records
+
+[#phase-sub-workflows]
+== Phases as Sub-Workflows and the Phase of a Record
+_See Requirement link:../../Requirements.adoc#PM-WF-16[PM-WF-16: Reusable Compound Sub-Workflows & Config-Driven Git Commit/Push]_
+
+_See Requirement link:../../Requirements.adoc#PM-IMPL-5[PM-IMPL-5: Declarative Workflow DSL & Automated Diagram Generation]_
+
+A plan runs as a workflow of phases. Its plan unit calls each of the six phases, `init`, `refine`, `outline`, `plan`, `execute`, and `finalize`, as a sub-workflow, and a phase's outcome decides the plan unit's next call. Calls, frames, interfaces, and their checks are those of every sub-workflow (link:../workflow-dsl/01-grammar.adoc#interface-rules[Workflow DSL Specification, Interface Rules]; link:../workflow-dsl/06-reusable-sub-workflows.adoc[Workflow DSL Specification, Reusable Sub-Workflows]); this section fixes what is particular to the phases and the phase every store records.
+
+* *The plan unit*: it starts at its starting point and ends in its stop points, with neither entries nor exits, and holds the calls of the phases and the routes between them, never a state of a phase. A loop-back is the plan unit calling an earlier phase again; a re-entry from finalize into execute is the finalize phase ending with that outcome, on which the plan unit calls execute.
+* *A phase's interface*: each phase declares its interface in its frontmatter: an entry for each point at which it is entered (a phase entered again after a loop-back, finalize entered first and after a fix, each through an entry of its own) and an exit for each outcome on which the plan unit continues differently. No transition crosses from one phase into another.
+* *A lane is a choice of phases*: the plan unit's choice of which phases it calls, never a phase of its own. The light and deep lanes call all six; the `land` lane calls no refine, outline, or plan phase, and its `land.*` states form a sub-workflow called within the phase `execute`; the `adopt` lane calls `init` and then `finalize`. A recipe's workflow calls phases the same way, its own where they differ and the plan's shared ones (finalize, the landing) where they do not (link:../domain-extensions/05-recipes-and-extension-points.adoc#recipe-workflow[Domain Extensions Specification, A Recipe Is a Workflow]); a plan behaviour axis is a call site inside a phase, the landing axis inside `finalize` (link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]).
+* *The phase of a plan*: the phase sub-workflow on its call stack, the bottom frame of `call_stack` (xref:02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Workflow State Store]). A sub-workflow called within a phase (a remediation unit, `git.commit_and_push`, the `replan` unit, a decision, a chat) has that phase. No state declares a phase, and no table maps a state to its phase.
+* *Composition*: the plan instance composes the plan unit and the phase sub-workflows; a pruned phase is a pruned call, with its reason (xref:14-plan-instance-waivers-questions.adoc#plan-instance[Plan Instance]). A phase is shown, replaced, and extended on its own, as a unit the composition resolves by level (link:../workflow-dsl/04-ast-node-model.adoc#process-designer[Workflow DSL Specification, Designing a Process]).
+* *Depth*: the phase level adds one frame to every call path of a plan: `call_stack` holds at most five frames (`PM-WF-16`).
+
+*The phase value of a record*: the stores record a phase by its phase value, one per phase sub-workflow:
+
+[cols="1,1"]
+|===
+|Phase sub-workflow |Phase value
+
+|`init` |`phase-1-init`
+|`refine` |`phase-2-refine`
+|`outline` |`phase-3-outline`
+|`plan` |`phase-4-plan`
+|`execute` |`phase-5-execute`
+|`finalize` |`phase-6-finalize`
+|===
+
+Every `phase` field of a plan's record (the `phase` of `mcp/status.json`, a finding, an unplanned change of `references.json`, a metrics row, a gap record, a re-planning trigger, an amendment, a history line) holds the phase value of the phase sub-workflow on the call stack of the transition that writes it, taken by the server and never supplied by a caller; a configuration key that names a phase uses the same value (`workflow.plan.phase-5-execute.per_deliverable_verbs`). A record of an epic, the workspace, or the machine scope has no phase value of a plan.
 
 [#owed-item-record]
 == Owed Item Record (`mcp/status.json` → `owed[]`)
@@ -41,15 +72,15 @@ derived from prose, and it stays in the plan's `mcp/status.json` through archiva
 ----
 
 * *Kinds*: The set is closed; each kind names the states that write it.
-** `cleanup`: removal work the server leaves to the operator. Writers: `finalize.merge-dispatch` and `finalize.merge-queue-wait` (the user's local commits a `land` plan carried that landed squashed stay on the user's branch; the item names the operator command), and `finalize.hand-back` (a worktree or branch removal of a non-merging run it could not perform).
+** `cleanup`: removal work the server leaves to the operator. Writers: `finalize.merge-dispatch` and `finalize.merge-queue-wait` (the operator's local commits a `land` plan carried that landed squashed stay on the operator's branch; the item names what remains to remove), and `finalize.hand-back` (a worktree or branch removal of a non-merging run it could not perform).
 ** `post_merge_cleanup`: the post-merge work of a plan handed back with its pull request still queued (`enqueued_not_landed`): branch removal and the post-merge band steps that did not run. Writer: `finalize.merge-queue-exit` (`closed` or `budget_spent` while the pull request is still queued). Discharged by the operator once the queue landed or dropped the entry.
-** `capture_ref_retained`: the capture ref `refs/pm-mcp/captures/<plan_id>` of a `land` plan, kept as the user's recovery point. Writers: `finalize.merge-dispatch` and `finalize.merge-queue-wait` (a `merged` plan whose captured tree differs from the merged head), `finalize.hand-back`, and the engine-owned abort `plan.aborted` (also as the first transaction of `delete-plan`). Discharged by `pm-operator drop-capture <plan_id>` (link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane, item 5]).
+** `capture_ref_retained`: the capture ref `refs/pm-mcp/captures/<plan_id>` of a `land` plan, kept as the operator's recovery point. Writers: `finalize.merge-dispatch` and `finalize.merge-queue-wait` (a `merged` plan whose captured tree differs from the merged head), `finalize.hand-back`, and the engine-owned abort `plan.aborted` (also as the first transaction of `delete-plan`). Discharged by the operator's drop of the capture (`pm-operator drop-capture <plan_id>` in the terminal client) (link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane, item 5]).
 ** `post_merge_step_failed`: a finalize step that failed after the merge; `incurred_by_step` names it. Writer: `finalize.step-failed` (`after_merge`, the re-fire spent); the plan stays `merged`.
-* *Dischargers*: `operator` (the operator CLI) and `plan_step` (the step that incurred the item, on a later firing).
+* *Dischargers*: `operator` (an act of the operator in either client) and `plan_step` (the step that incurred the item, on a later firing).
 * *Explicit Empty Set*: `emit-landing` and `archive-plan` write `owed` explicitly; `[]` means the plan owes nothing, an absent or null field means the question was never asked and is rendered `unknown`, never as nothing owed.
-* *Survives Archival*: Owed items stay readable from the archived plan (link:../filesystem-layout.adoc[Filesystem Layout Specification]) and are never folded into `completed`.
+* *Survives Archival*: Owed items stay readable from the archived plan (link:../filesystem-layout.adoc[Filesystem Layout Specification]) and are never folded into `completed`; an archived plan with an undischarged item is never due for the cleanup (link:../timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup]).
 * *Listable Without Prose*: For an epic plan the landing envelope carries `owed[]` to the epic inbox. For every plan, the project owed index `pm://project/owed` (link:../mcp-tools.adoc[MCP Tools Specification]) lists the undischarged items of active and archived plans, derived from their `owed[]` (no separate store), with per-root coverage; a root that could not be read is reported, never read as zero.
-* *Discharge*: An item is discharged only by recording `discharge_proof` and `discharged_at` through the discharger's transition: the step that incurred it on a later firing, or the operator CLI `pm-operator discharge-owed --plan <plan_id> --owed <owed_id> --proof <ref>` (and `pm-operator drop-capture <plan_id>` for `capture_ref_retained`), which also serve archived plans; these two verbs are the only writes an archived plan accepts; a discharged item is kept, never deleted.
+* *Discharge*: An item is discharged only by recording `discharge_proof` and `discharged_at` through the discharger's transition: the step that incurred it on a later firing, or the operator's discharge in either client (in the terminal client `pm-operator discharge-owed --plan <plan_id> --owed <owed_id> --proof <ref>`, and `pm-operator drop-capture <plan_id>` for `capture_ref_retained`), which also serve archived plans; these two acts are the only writes to an archived plan's records, beside the transcript of a chat about it and the cleanup's deletion; a discharged item is kept, never deleted.
 
 == Findings Ledger Record (`findings.jsonl`)
 _Implementation watch: link:../../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-16[PM-WATCH-GEN-16], link:../../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-43[PM-WATCH-GEN-43], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-4[PM-WATCH-STORE-4], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-5[PM-WATCH-STORE-5], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-7[PM-WATCH-STORE-7], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-31[PM-WATCH-STORE-31], link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-45[PM-WATCH-STORE-45]_
@@ -102,7 +133,7 @@ Each line in `findings.jsonl` (of a plan, or of the workspace scope for the find
         "required_check": { "type": "boolean", "description": "Whether the check is in the derived required_checks of the base branch; a non-required check is filed with blocking false." }
       }
     },
-    "phase": { "type": ["string", "null"], "enum": ["phase-2-refine", "phase-3-outline", "phase-4-plan", "phase-5-execute", "phase-6-finalize", null], "description": "Phase the finding was filed against; required for qgate findings. A write addressed to a phase the plan has left is refused with phase_closed." },
+    "phase": { "type": ["string", "null"], "enum": ["phase-2-refine", "phase-3-outline", "phase-4-plan", "phase-5-execute", "phase-6-finalize", null], "description": "Phase the finding was filed against: the phase value of the phase sub-workflow on the call stack of the filing transition (Phases as Sub-Workflows); required for qgate findings. A write addressed to a phase the plan has left is refused with phase_closed." },
     "queue_task_id": { "type": ["string", "null"], "pattern": "^qt-[0-9a-f]{16}$", "description": "The queue task whose submit filed the finding (Queue Task Record); null for findings the server files itself. Feeds the spend class findings_only." },
     "batch_id": { "type": ["string", "null"], "pattern": "^BT-[0-9]+$", "description": "The screening batch (batch-v1) of the gather or source firing that ingested the finding's external text; null for a finding without external text (server-filed, self_review, qgate)." },
     "screen": {
@@ -231,7 +262,7 @@ _See Requirement link:../../Requirements.adoc#PM-IMPL-2[PM-IMPL-2: Versioned JSO
 
 Each line of `analysis.jsonl` of a plan is one observation of one code analysis provider for one target: what the provider reported about a commit or a pull request, in the provider-neutral form of the code-analysis contract (link:../module-structure.adoc#findings-analysis-contracts[Module Structure Specification, Findings & Code-Analysis Contracts]). The record is the same for every provider; nothing in it is specific to one. The new issues of an observation are not part of this record: they are findings of the findings ledger with `source: analysis` and the same `provider`.
 
-*Serialization*: one canonical JSON object per line, written through Jackson from a Java record of `de.planmarshall.core.analysis`, with the members in the order of the schema and no member omitted (an absent value is `null`). The log is append-only: a later observation of the same key appends the full record again. The key is (`provider`, `target.kind`, `target.commit_sha`, `target.pr_number`), and the current record of a key is its last readable line. A model never reads the file: the wire shows the aggregated `analysis_status` only, and the record is served on demand by the operator surfaces.
+*Serialization*: one canonical JSON object per line, written through Jackson from a Java record of `de.planmarshall.core.analysis`, with the members in the order of the schema and no member omitted (an absent value is `null`). The log is append-only: a later observation of the same key appends the full record again. The key is (`provider`, `target.kind`, `target.commit_sha`, `target.pr_number`), and the current record of a key is its last readable line. A model never reads the file: the wire shows the aggregated `analysis_status` only, and the record is served on demand to the operator's clients.
 
 [source,json]
 ----

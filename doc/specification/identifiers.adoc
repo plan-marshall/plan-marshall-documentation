@@ -30,6 +30,9 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-SKILL-5[PM-SKILL-5: Skill Extensions]_
 * _See Requirement link:../Requirements.adoc#PM-WF-19[PM-WF-19: Uniform Decision Records & Corpus Export]_
+* _See Requirement link:../Requirements.adoc#PM-WF-21[PM-WF-21: Reports to the Operator]_
+* _See Requirement link:../Requirements.adoc#PM-ARCH-10[PM-ARCH-10: One Cleanup of Work History & Automatic Removal of Residue]_
+* _See Requirement link:../Requirements.adoc#PM-ARCH-11[PM-ARCH-11: The Operator's Two Clients & Their Contract]_
 
 == Status: PLANNED
 
@@ -43,4 +46,4 @@ Implemented in (link:module-structure.adoc[Module Structure Specification]):
 == Parts
 
 * link:identifiers/01-general-rules-and-registry.adoc[General Rules & Registry (Scopes, Workflow, Jobs & Workers)] — general identifier rules and the registry entries for scopes and plans, workflow and links, and jobs, workers, generations, queue tasks, and role names
-* link:identifiers/02-registry-stores-to-web.adoc[Registry (Stores, Surfaces, Configuration, Web)] — registry entries for stores and records (among them waivers, waivable gates, plan instance versions, composition events, and prune reasons), surfaces and URIs, configuration and extensions, and local access and web pairing
+* link:identifiers/02-registry-stores-to-web.adoc[Registry (Stores, Surfaces, Configuration, Web)] — registry entries for stores and records (among them waivers, waivable gates, plan instance versions, composition events, prune reasons, reports, and cleanup jobs), surfaces and URIs (among them event names and message keys), configuration and extensions, and local access and web pairing

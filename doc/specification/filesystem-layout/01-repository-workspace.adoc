@@ -12,7 +12,7 @@ link:../../Specification.adoc[Specification] » link:../filesystem-layout.adoc[F
 == Repository Workspace Layout (`.marshall/`)
 _Implementation watch: link:../../implementation-watch/filesystem-layout.adoc#PM-WATCH-FS-1[PM-WATCH-FS-1]_
 
-Every repository checkout of an enrolled project contains a `.marshall/` directory structured into two distinct regions: git-tracked shared documents and the git-ignored technical directory `.marshall/local/`. It is created by the first run of the project setup workflow in the project's workspace scope (link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]) and is disjoint from the `.plan/` tree of `plan-marshall`, which may exist beside it and is never read or written by `PM-MCP`.
+Every repository checkout of an enrolled project contains a `.marshall/` directory structured into two distinct regions: git-tracked shared documents and the git-ignored technical directory `.marshall/local/`. It is created by the first run of the project setup workflow in the project's workspace scope, which copies no workflow unit into it: `.marshall/config/` holds a unit only once the team placed or changed it (link:../workflow-dsl/04-ast-node-model.adoc#process-designer[Workflow DSL Specification, Designing a Process]) (link:../domain-extensions/04-setup-state-machine.adoc#project-setup-state-machine[Domain Extensions Specification, Project Setup State Machine]) and is disjoint from the `.plan/` tree of `plan-marshall`, which may exist beside it and is never read or written by `PM-MCP`.
 
 [source,text]
 ----
@@ -24,22 +24,25 @@ Every repository checkout of an enrolled project contains a `.marshall/` directo
 │   │   ├── workflow.json                # Plan workflow policy, optional finalize step lanes
 │   │   ├── domains.json                 # Overrides of the derived domain detection
 │   │   ├── build-map.json               # Seeded file-to-build route table
-│   │   └── *.pmwf                       # Project-owned phase and sub-workflow units (Workflow DSL)
+│   │   └── *.pmwf                       # Only the units the team placed or changed; absent units resolve to the machine, then the default
+│   ├── recipes/                         # The project's recipes (git-tracked): each descriptor with its workflow <id>.pmwf
 │   ├── skills/                          # Project skill directory: team extension skills (git-tracked, MCP Tools § Skill Extensions)
 │   │   └── <name>/                      # One skill: SKILL.md and its supporting files, served as skill://pm/ext/<name>/
 │   ├── project-architecture/            # Architecture module enrichment (git-tracked)
 │   │
-│   ├── epic/                    # Epics (git-tracked, edited only in the shared epic worktree)
+│   ├── epics/                           # Epics (git-tracked, edited only in the shared epic worktree)
 │   │   └── <epic_id>/                   # Fully tracked; the epic's FSM state lives in the machine store
-│   │       ├── epic.json                # Epic header: identity, workstreams, lifecycle (no FSM state)
+│   │       ├── epic.json                # Epic header: identity, workstreams, lifecycle, the list of its sources (no FSM state)
+│   │       ├── sources/                 # The epic's source directory: sources.json and the stored sources (03 § The Source Directory)
 │   │       ├── spec.md                  # Epic specification (workstream and plan sections)
 │   │       ├── queue/                   # Staged per-plan spec definitions
 │   │       │   └── <plan_id>.json       # Individual queued plan record and spec reference
 │   │       ├── inbox.jsonl              # Append-only event log: messages from plans and epics
 │   │       ├── landings.jsonl           # Verified plan landings and post-merge analysis
+│   │       ├── register.jsonl           # Findings and watches registers of the epic
 │   │       └── resume_anchor.md         # Human- and model-readable epic checkpoint summary
 │   │
-│   ├── archived-epics/          # Terminal epics (git-tracked, moved in the shared epic worktree)
+│   ├── archived-epics/                  # Archived epics (git-tracked, moved in the shared epic worktree)
 │   │   └── <epic_id>-<YY-MM-DD>/        # Same per-concern layout; epic.json keeps epic_id
 │   │
 │   └── local/                           # Git-ignored technical data only, never state
@@ -55,7 +58,7 @@ Every repository checkout of an enrolled project contains a `.marshall/` directo
 
 Nothing in `.marshall/local/` is state: deleting it loses no plan data. A plan worktree is recreated from the plan's branch by the next step that needs it (<<worktree-lifecycle>>), the shared epic worktree from its branch `pm-mcp/epics`, and `temp/` is never read across calls. All server-owned state of the project lives in the per-project machine store (xref:03-project-store.adoc#machine-store[Per-Project Machine Store]).
 
-The repository `.gitignore` partitions `.marshall/`: `.marshall/*` is ignored as a blanket, `!.marshall/config/`, `!.marshall/skills/`, `!.marshall/project-architecture/`, `!.marshall/epics/`, and `!.marshall/archived-epics/` are un-ignored, and `.marshall/local/` stays fully ignored. The epic trees are fully tracked; no re-ignore rule below them exists. The first run of the project setup workflow writes this partition and every later run verifies it; the entries for the `.plan/` tree of `plan-marshall` are left untouched.
+The repository `.gitignore` partitions `.marshall/`: `.marshall/*` is ignored as a blanket, `!.marshall/config/`, `!.marshall/recipes/`, `!.marshall/skills/`, `!.marshall/project-architecture/`, `!.marshall/epics/`, and `!.marshall/archived-epics/` are un-ignored, and `.marshall/local/` stays fully ignored. The epic trees are fully tracked; no re-ignore rule below them exists. The first run of the project setup workflow writes this partition and every later run verifies it; the entries for the `.plan/` tree of `plan-marshall` are left untouched.
 
 [#worktree-lifecycle]
 === Worktree Lifecycle
@@ -97,7 +100,7 @@ Git-tracked epic state (`.marshall/epics/**`) is edited only in one shared epic 
 * *Location*: `.marshall/local/worktrees/_epics/`, beside the plan worktrees under the same git-ignored root. The key `_epics` lies outside the link:../identifiers/01-general-rules-and-registry.adoc#id-plan-id[plan ID grammar], so no plan can collide with it.
 * *Branch*: One fixed, long-lived branch (`pm-mcp/epics`) created once off `origin/<default branch>`; the ledger changes of every epic are committed there.
 * *Lifecycle*: Created on the first epic-ledger write and reused as-is afterwards (idempotent). No normal operation removes it, including the epic landing; only `pm-operator epic-worktree teardown` does. Plan-worktree enumeration, startup recovery, and any orphan sweep recognise it and never treat it as an orphaned plan worktree.
-* *Concurrency*: The per-concern ledger layout lets concurrent epic sessions write disjoint files in the one working tree. Ledger writes serialize per epic under the epic lock; git operations on the worktree serialize under the project-wide lock `<PM_MCP_BASE>/projects/<project_id>/locks/epics-worktree.lock`.
+* *Concurrency*: The per-concern ledger layout lets concurrent epics write disjoint files in the one working tree. Ledger writes serialize per epic under the epic lock; git operations on the worktree serialize under the project-wide lock `<PM_MCP_BASE>/projects/<project_id>/locks/epics-worktree.lock`.
 * *No Plan Mechanics*: The ledger is git-tracked, so the worktree is a second checkout of it: no per-scope executor and no plan-keyed merge lease apply. The epics' non-tracked FSM state lives in the machine store (`epics/<epic_id>/`, xref:03-project-store.adoc#machine-store[Per-Project Machine Store]) and the epic locks live there too, outside the tree (link:../store-schemas.adoc[Store Schemas Specification], § Lock-Free Snapshot Reads, Transaction Locks & Leases).
-* *Epic Ledger Resolution Seam*: Every read and write of `.marshall/epics/**` (epic header `epic.json`, queue rows, inbox, landings, spec documents, `pm://epic/**` resources, and `pm_epics`) and every plan-side access (the `default:emit-landing` inbox append, a child plan's read of its specification, the `running` observation) resolves through one resolver to the shared epic worktree copy; nothing reads the primary checkout's copy. A specification staged in the worktree but not yet landed is served to the child plan through this seam.
+* *Epic Ledger Resolution Seam*: Every read and write of `.marshall/epics/**` (epic header `epic.json`, queue rows, inbox, landings, the findings and watches registers, spec documents, the epic's sources, `pm://epic/**` resources, and the epic resource of the local API) and every plan-side access (the `default:emit-landing` inbox append, a child plan's read of its specification, the `running` observation) resolves through one resolver to the shared epic worktree copy; nothing reads the primary checkout's copy. A specification staged in the worktree but not yet landed is served to the child plan through this seam.
 * *Stranded-Change Guard*: Before the first ledger write is routed into the shared epic worktree, the runtime checks the primary checkout for uncommitted or unpushed changes under `.marshall/epics/**`. If any exist it refuses with `ledger_changes_stranded`, naming the paths, until the operator lands them or carries them into the worktree with `pm-operator epic-worktree adopt`; two diverging copies are never left behind silently.

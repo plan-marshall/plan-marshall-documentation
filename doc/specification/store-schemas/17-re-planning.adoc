@@ -12,7 +12,9 @@ link:../../Specification.adoc[Specification] » link:../store-schemas.adoc[Store
 == Re-Planning Record (`mcp/status.json` → `replan_pending`, `replans[]`, `follow_ups[]`)
 _See Requirement link:../../Requirements.adoc#PM-WF-17[PM-WF-17: Dynamic Re-Planning of a Running Plan]_
 
-The plan's `mcp/status.json` (xref:02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Workflow State Store]) carries the state of its re-plannings (link:../phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Phase Workflows Specification, Dynamic Re-Planning]): `replan_pending`, the trigger a checkpoint raised and the unit has not yet judged (`null` otherwise); `replans[]`, append-only, one record per judged trigger, whose evidence keys decide whether a checkpoint raises a trigger again and whose task count is charged against `replan_budget`; and `follow_ups[]`, append-only, the follow-up plans the re-plannings recorded. All three are written only by the server, in the transactions of the trigger points and of the `replan` unit.
+_See Requirement link:../../Requirements.adoc#PM-WF-24[PM-WF-24: Chatting with the Planning Role]_
+
+The plan's `mcp/status.json` (xref:02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Workflow State Store]) carries the state of its re-plannings (link:../phase-workflows/08-dynamic-re-planning.adoc#dynamic-re-planning[Phase Workflows Specification, Dynamic Re-Planning]): `replan_pending`, the trigger a checkpoint raised and the unit has not yet judged (`null` otherwise); `replans[]`, append-only, one record per judged trigger, whose evidence keys decide whether a checkpoint raises a trigger again and whose task count is charged against `replan_budget`, and one record per revision the operator accepted in a chat with the planning role (link:../state-catalogue.adoc#chat[State Catalogue, Chatting with the Planning Role]), which has no trigger and is never charged; and `follow_ups[]`, append-only, the follow-up plans the re-plannings recorded. All three are written only by the server, in the transactions of the trigger points, of the `replan` unit, and of `chat.apply`.
 
 [source,json]
 ----
@@ -22,11 +24,15 @@ The plan's `mcp/status.json` (xref:02-workflow-state-store.adoc#_workflow_state_
   "title": "ReplanRecord",
   "type": "object",
   "required": ["replan_id", "trigger", "decided_by", "action", "recorded_at"],
+  "allOf": [
+    { "if": { "properties": { "decided_by": { "const": "operator" } } }, "then": { "required": ["chat"], "properties": { "trigger": { "const": null } } }, "else": { "properties": { "trigger": { "$ref": "#/$defs/trigger" } } } }
+  ],
   "additionalProperties": false,
   "properties": {
     "replan_id": { "type": "string", "pattern": "^RP-[0-9]+$" },
-    "trigger": { "$ref": "#/$defs/trigger" },
-    "decided_by": { "type": "string", "enum": ["task", "fallback"], "description": "task: the replan task's submit; fallback: the trigger's conservative fallback, taken without a task or after the task closed lost or infeasible." },
+    "trigger": { "oneOf": [ { "$ref": "#/$defs/trigger" }, { "type": "null" } ], "description": "The judged trigger; null for a revision the operator accepted in a chat." },
+    "decided_by": { "type": "string", "enum": ["task", "fallback", "operator"], "description": "task: the replan task's submit; fallback: the trigger's conservative fallback, taken without a task or after the task closed lost or infeasible; operator: a revision the operator accepted in a chat, applied through the guards of a first plan at the next task boundary." },
+    "chat": { "type": ["object", "null"], "required": ["queue_task_id", "channel", "device_id"], "additionalProperties": false, "description": "decided_by operator only: the chat task whose proposed revision the operator accepted, and the operator's channel.", "properties": { "queue_task_id": { "type": "string", "pattern": "^qt-[0-9a-f]{16}$" }, "channel": { "type": "string", "enum": ["cli", "web"] }, "device_id": { "type": ["string", "null"], "pattern": "^dev-[0-9a-f]{12}$" } } },
     "queue_task_id": { "type": ["string", "null"], "pattern": "^qt-[0-9a-f]{16}$", "description": "The replan task; null for a fallback taken without a task (budget spent, no outline)." },
     "fallback_reason": { "type": ["string", "null"], "enum": ["budget_spent", "no_outline", "role_unqualified", "role_undefined", "class_mismatch", "role_unavailable", "attempts_spent", "infeasible", null] },
     "action": { "type": "string", "enum": ["reintegrate_in_plan", "split_change", "defer_to_follow_up_plan", "wait_for_prerequisite", "rebase_and_reverify_only", "hand_back", "continue"], "description": "continue: a fallback that continued the plan where it stood." },
@@ -48,13 +54,13 @@ The plan's `mcp/status.json` (xref:02-workflow-state-store.adoc#_workflow_state_
       "additionalProperties": false,
       "description": "Also the shape of replan_pending.",
       "properties": {
-        "kind": { "type": "string", "enum": ["infeasible", "base_advanced", "merge_conflict", "downstream_limit", "ceiling", "spend_exceeded"] },
-        "evidence_key": { "type": "string", "minLength": 1, "description": "kind-specific: the infeasible task ids, the base commit, the base commit and HEAD, HEAD and the bot, the policy and its renewal, or the plan id; a checkpoint raises no trigger whose kind and key a record already carries." },
+        "kind": { "type": "string", "enum": ["infeasible", "base_advanced", "merge_conflict", "downstream_limit", "ceiling"] },
+        "evidence_key": { "type": "string", "minLength": 1, "description": "kind-specific: the infeasible task ids, the base commit, the base commit and HEAD, HEAD and the bot, or the policy and its renewal; a checkpoint raises no trigger whose kind and key a record already carries." },
         "checkpoint": { "type": "string", "description": "The state that raised it (execute.replan-check, execute.evaluate-envelope-return, execute.exit-barrier, finalize.sync-baseline, finalize.merge-sync, finalize.review-cap-check, or the remediation call state)." },
-        "phase": { "type": "string" },
+        "phase": { "type": "string", "description": "The phase value of the phase sub-workflow on the call stack of the checkpoint (store-schemas/03, Phases as Sub-Workflows)." },
         "base_sha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
         "head_sha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
-        "measurement": { "type": ["object", "null"], "description": "The figures the condition compared: overlapping paths, conflicted files, the cap and the measured value, the spent budget, the spend ratio." },
+        "measurement": { "type": ["object", "null"], "description": "The figures the condition compared: overlapping paths, conflicted files, the cap and the measured value, the spent budget." },
         "evidence_uri": { "type": ["string", "null"], "description": "pm://plan/{plan_id}/evidence/{evidence_id} of the facts the task received." },
         "raised_at": { "type": "string", "format": "date-time" }
       }
@@ -88,5 +94,5 @@ The plan's `mcp/status.json` (xref:02-workflow-state-store.adoc#_workflow_state_
 }
 ----
 
-* *Budget*: `replan_budget` is charged per record with `decided_by: task` or with a `queue_task_id` (a task that closed `lost` counts); a fallback taken without a task is not charged.
-* *Rendering*: The pull-request body and the landing record list every record with its action and rationale, the moved deliverables, and the follow-ups with their scope and preserved ref; the epic's queue row of a follow-up carries its origin (xref:04-epic-and-change-ledger.adoc#epic-queue-row[Queue Row], `follow_up`).
+* *Budget*: `replan_budget` is charged per record with `decided_by: task` or with a `queue_task_id` (a task that closed `lost` counts); a fallback taken without a task and a revision the operator accepted in a chat are not charged.
+* *Rendering*: The pull-request body, the landing record, and the plan's completion report (link:../runtime-model/01-processes-and-transport.adoc#reports[Runtime & Interaction Model Specification, Reports to the Operator]) list every record with its action and rationale, a revision of the operator's chat naming the operator as who decided, the moved deliverables, and the follow-ups with their scope and preserved ref; the epic's queue row of a follow-up carries its origin (xref:04-epic-and-change-ledger.adoc#epic-queue-row[Queue Row], `follow_up`).

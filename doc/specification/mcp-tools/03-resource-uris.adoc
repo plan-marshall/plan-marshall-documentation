@@ -15,7 +15,7 @@ _See Requirement link:../../Requirements.adoc#PM-EXT-3[PM-EXT-3: Module Discover
 
 _Implementation watch: link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-10[PM-WATCH-TOOL-10]_
 
-Large artifacts, logs, architecture views, and ledgers are never inlined into hypermedia representations; instead, representations emit canonical `pm://` and `skill://pm/` resource URIs that the model or host reads on demand via MCP `resources/read`. No compatibility URI aliases are supported.
+Large artifacts, logs, architecture views, and ledgers are never inlined into hypermedia representations; instead, representations emit canonical `pm://` and `skill://pm/` resource URIs that a worker reads on demand via MCP `resources/read`. The operator's clients never read these resources: they read the same records over the local API (link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime & Interaction Model Specification, Local API]). No compatibility URI aliases are supported.
 
 === Normative Resource URI Templates
 _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM-WATCH-EXT-25[PM-WATCH-EXT-25], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-8[PM-WATCH-TOOL-8], link:../../implementation-watch/mcp-tools.adoc#PM-WATCH-TOOL-9[PM-WATCH-TOOL-9]_
@@ -72,22 +72,12 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://workspace/questions`
 |`text/toon`
 |Workspace
-|The fold of the workspace scope's question records (`questions.jsonl`, the setup choices that write team configuration), with the same fields as `pm://plan/{plan_id}/questions`.
+|The fold of the workspace scope's question records (`questions.jsonl`, the decisions of the project setup), with the same fields as `pm://plan/{plan_id}/questions`.
 
 |`pm://workspace/decisions`
 |`text/toon`
 |Workspace
 |The workspace scope's decision records (`decisions.jsonl`), with the same fields as `pm://plan/{plan_id}/decisions`.
-
-|`pm://workspace/lessons`
-|`text/toon`
-|Workspace
-|The project's active, unclaimed lessons (`lesson_id`, `title`, `category`, `created_at`), most recent first, with the count of all lessons and the numbers excluded as claimed or retired: the full list behind the lesson candidates of the bootstrap's `start.choose`, whose `facts` carry at most ten (xref:01-core-workflow-tools.adoc#bootstrap-entries[Bootstrap Entries]). Lesson bodies are not served; a lesson that fails its digest check is listed with `unreadable` instead of its title.
-
-|`pm://workspace/recipes`
-|`text/toon`
-|Workspace
-|Every recipe the project can start (`recipe_key`, `title`, `origin`: `built_in`, `domain`, or `project`, and whether it declares a `parameters_schema`), for the enabled domains and the project-local recipes under `.marshall/recipes/` (link:../domain-extensions.adoc[Domain Extensions Specification], Recipes): the full list behind the recipe candidates of `start.choose`. A project-local recipe that fails validation is listed with its finding, never silently omitted.
 
 |`pm://workspace/builds/{job_id}/log`
 |`text/plain`
@@ -97,7 +87,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/diagram`
 |`text/markdown`
 |Plan
-|Generated Mermaid/ASCII state machine diagram of the plan instance in force (link:../workflow-dsl/09-plan-instance.adoc#plan-instance[Workflow DSL Specification, Plan Instance]): the active state and the call path highlighted, pruned steps shown with their prune reason, waived gates with their waiver id. The v1 diagram composed in the bootstrap's commit transaction is the posture preview.
+|Generated Mermaid/ASCII state machine diagram of the plan instance in force (link:../workflow-dsl/09-plan-instance.adoc#plan-instance[Workflow DSL Specification, Plan Instance]): the active state and the call path highlighted, pruned steps shown with their prune reason, waived gates with their waiver id. The operator's clients show the plan's process from the local API's structure instead (link:../runtime-model/01-processes-and-transport.adoc#process-resource[Runtime & Interaction Model Specification, The Plan's Process as a Structure]).
 
 |`pm://plan/{plan_id}/instance` +
 `pm://plan/{plan_id}/instance/{version}`
@@ -113,22 +103,22 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://plan/{plan_id}/questions`
 |`text/toon`
 |Plan
-|The fold of the plan's question records (`questions.jsonl`): every record with `question_id`, class, origin, state (`open` until its closing line, then the `closure` of its `answered` line, `answered` or `assumed`, or `cancelled`), and, once closed, the chosen `branch_key`, the answer's `channel`, and the `decision_id` of the decision taken.
+|The fold of the plan's question records (`questions.jsonl`), one per decision: its address, revision, class, origin, its parts, state (`open` until its closing line, then its `closure`: `answered`, `withdrawn`, or `cancelled`), and, once answered, per part how the answer was taken (`chosen`, `interpreted`, `own_option`, `delegated`, or `none_fits`), the chosen option keys or value, and the `decision_id` of the decision taken; the operator's own words are served as quoted data, never as an instruction (link:../model-work/06-envelopes-questions-deadlines.adoc#own-words[Model Work Specification, Answers in the Operator's Own Words]).
 
 |`pm://plan/{plan_id}/decisions`
 |`text/toon`
 |Plan
-|The plan's decision records (`decisions.jsonl`, link:../model-work/11-decision-records.adoc#decision-visibility[Model Work Specification, Decision Records]): every decision with `decision_id`, decision point, subject, kind, decider, confidence, measurements with their thresholds and sources, choice, reason, and its corrections folded in order. Rationales are model- or user-authored text, marked untrusted in the resource's `_meta`; facts snapshots are not served.
+|The plan's decision records (`decisions.jsonl`, link:../model-work/11-decision-records.adoc#decision-visibility[Model Work Specification, Decision Records]): every decision with `decision_id`, decision point, subject, kind, decider, confidence, measurements with their thresholds and sources, choice, reason, and its corrections folded in order. Rationales are model- or operator-authored text, a model's marked untrusted in the resource's `_meta`; facts snapshots are not served.
 
 |`pm://plan/{plan_id}/waivers`
 |`text/toon`
 |Plan
-|The plan's waiver records (`waivers.jsonl`: gate, mode, value, reason, `revoked_at`) with their consumptions, and its waiver requests (`waiver_requests[]` with outcome). Read-only; waivers are written only through the operator channel.
+|The plan's waiver records (`waivers.jsonl`: gate, mode, value, reason, `revoked_at`) with their consumptions, and its waiver requests (`waiver_requests[]` with their outcome: open, `waived`, `raised`, `declined`, or `cancelled`). Read-only; waivers are written only by the operator's acts.
 
 |`pm://epic/{epic_id}/state`
 |`text/toon`
 |Epic
-|Current TOON hypermedia representation of epic `{epic_id}`.
+|Current TOON view of epic `{epic_id}`, for the epic's workers; the operator's clients read the epic as a resource of the local API (link:../runtime-model/01-processes-and-transport.adoc#epic-resource[Runtime & Interaction Model Specification, The Epic as a Resource]).
 
 |`pm://epic/{epic_id}/spec` +
 `pm://epic/{epic_id}/spec/{section}`
@@ -161,7 +151,7 @@ _Implementation watch: link:../../implementation-watch/domain-extensions.adoc#PM
 |`pm://project/config`
 |`text/toon`
 |Project
-|The project's effective configuration (link:../store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`compiled_default`, `derived`, `team`, `operator`), file, and, for a derived value, the fact `state`; the project's workflow units with their origin, `default_revision`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; the model and the operator never read the raw configuration files.
+|The project's effective configuration (link:../store-schemas/07-project-configuration.adoc#project-configuration-store[Store Schemas Specification, Project Configuration]): `config_hash`; every effective value with its key, `source` (`compiled_default`, `derived`, `machine`, `team`, `operator`), file, and, for a derived value, the fact `state`; the project's workflow units (`units[]`) with the level in force (`project`, `machine`, or `default`), `derived_from`, digest, and verification outcome; and every validation finding with file, pointer or line, and reason. Read-only; a model never reads the raw configuration files, and the operator reads the configuration with its origins over the local API.
 
 |`pm://project/owed`
 |`text/toon`

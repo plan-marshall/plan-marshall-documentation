@@ -17,7 +17,8 @@ Every job, and every in-process `git` or `ci` operation of the native variant (<
 * build jobs: the canonical command `<build_system>:<verb>[@<module_id>]` (canonical verb from the link:../job-runtime/02-confinement-and-environment.adoc#canonical-build-verbs[Canonical Build Verb Set], module omitted for a whole-tree run; a build profile is named literally in the verb's template and is no key component), for example `maven:quality-gate` or `maven:module-tests@plan-marshall-mcp`;
 * `git` and `ci` operations: `<kind>:<operation>`, where `<operation>` is the closed contract operation name of the composing primitive, for example `git:worktree-remove` or `ci:checks`. The key is the same for the native and the CLI variant: a project uses one variant per integration, so the key needs no variant component;
 * `project_script` jobs: `project_script:<project_script_id>`;
-* workers (kind `llm`): `llm:<role>`, one key per role whatever the harness, for example `llm:implement` or `llm:screener` (role names of the link:../model-work/01-roles-and-configuration.adoc[effective role set]).
+* workers (kind `llm`): `llm:<role>`, one key per role whatever the harness, for example `llm:implement` or `llm:screener` (role names of the link:../model-work/01-roles-and-configuration.adoc[effective role set]);
+* probe jobs (kind `probe`): `probe:<probe>`, one key per kind of probe: `probe:version`, `probe:login`, `probe:models`, and `probe:script` (<<probe-budget>>). A probe job runs before its program is enrolled and has no project store, so its key has no learned value.
 
 The budget of every job starts at its spawn: a job recorded `queued` while it waits for a build or model slot (<<build-slot-wait>>, <<model-slot-wait>>; link:../store-schemas/13-leases-integrity-testing.adoc#machine-lease-stores[Store Schemas, Machine Lease Stores]) has no budget running, and its queued time is outside the budget and outside the worker's measured duration.
 
@@ -53,7 +54,7 @@ Learned values live in the project's `<PM_MCP_BASE>/projects/<project_id>/build-
 
 |[[operator-budget]]Operator budget $O$
 |Seconds per budget key, set by the operator.
-|`command_budgets` of the project's enrolment file `enrolments/<project_id>.json` (link:../store-schemas/11-enrolment-store.adoc#enrolment-store[Store Schemas, Project Enrolment Store]), written only through the operator CLI
+|`command_budgets` of the project's enrolment file `enrolments/<project_id>.json` (link:../store-schemas/11-enrolment-store.adoc#enrolment-store[Store Schemas, Project Enrolment Store]), written only by the operator's acts
 |Clamped up to $F$; may exceed the escalation cap $C$.
 |build jobs, `git` and `ci` operations
 |As allocated budget.
@@ -117,10 +118,10 @@ Learned values live in the project's `<PM_MCP_BASE>/projects/<project_id>/build-
 
 |[[project-script-budget]]`project_script` budget
 |The enrolled maximum timeout of the script, used as $t$ for every run; no learning and no escalation.
-|`max_timeout_seconds` of the entry in `enrolments/<project_id>.json -> project_scripts` (operator CLI, link:../store-schemas/11-enrolment-store.adoc#enrolment-store[Store Schemas, Project Enrolment Store])
+|`max_timeout_seconds` of the entry in `enrolments/<project_id>.json -> project_scripts` (the operator's acts, link:../store-schemas/11-enrolment-store.adoc#enrolment-store[Store Schemas, Project Enrolment Store])
 |minimum `10`; no cap beyond the operator's value
 |`project_script` jobs
-|`timed_out`; the retry is offered at the same budget, bounded by the retry budget of the calling policy or the condition budget (<<remediation-budgets>>); `facts.operator_command` names the re-enrolment verb as relay text (the operator raises the maximum by re-enrolment).
+|`timed_out`; the retry is offered at the same budget, bounded by the retry budget of the calling policy or the condition budget (<<remediation-budgets>>); the operator's clients show the job with the act that raises the maximum by re-enrolment, never a model.
 |link:../domain-extensions.adoc[Domain Extensions] (Project Script Jobs); link:../job-runtime.adoc[Job Runtime]
 
 |[[model-job-budget]]Worker budget (`llm`)
@@ -130,6 +131,14 @@ Learned values live in the project's `<PM_MCP_BASE>/projects/<project_id>/build-
 |workers of every role
 |The supervisor ends the worker (<<grace-period>>, then the fence: job token revoked, generation fenced, lease released at once) and records `timed_out` (<<no-verdict-rule>>); the held task's attempt ends `budget` and the task is offered again within the <<task-reoffer-budget>>.
 |link:../model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]; link:../job-runtime.adoc[Job Runtime]
+
+|[[probe-budget]]Probe budget (`probe`)
+|Fixed per key, used as $t$ for every run; no learning and no escalation: `probe:version` `15` (the version probe of a harness or a host tool found), `probe:models` `30` (the models probe of a harness), `probe:login` `120` (the login probe of a harness, a minimal headless call where its profile has no login command), `probe:script` `600` (a script of a checkout in a project's onboarding).
+|fixed (compiled constant)
+|—
+|`probe` jobs
+|`timed_out`; never retried by itself: the step that asked for the probe shows the failure with the harness's or tool's own output and its acts (link:../job-runtime/02-confinement-and-environment.adoc#probe-jobs[Job Runtime Specification, Probe Jobs]).
+|link:../client-profiles/01-profile-schema.adoc#harness-scan[Client Profiles, Harness Scan]; link:../cli-and-security/02-credentials-and-operator.adoc#project-onboarding[CLI, Coordination & Security, Onboarding a Project as One Process]
 
 |[[grace-period]]Termination grace period
 |`5` between `SIGTERM` and `SIGKILL` to the job's process group. The measured exits of the worker harnesses on `SIGTERM` under a held wait lie within it (`claude` at most 2.9 s, `opencode` below 0.1 s).
@@ -170,7 +179,7 @@ A native `git` or `ci` operation runs inside the runtime, not as a process (link
 === Timed-Out Outcomes Are No-Verdict
 
 * *Every `timed_out` is `no_verdict`*: A job settled `timed_out` counts as `no_verdict` in every roll-up (landing facts, metrics, gate facts, CI taxonomy, finding counts), never as `failed` and never as `succeeded`, whatever its `budget_derivation`. It never fails a gate, and it emits zero located code errors or findings (`PM-EXEC-4`).
-* *The derivation selects only the retry offer*: A `timed_out` job auto-offers `retry` with the escalation budget $E$ when $E > t$ (derivations `floor_default`, `learned`, `operator`, and `escalated` below the cap). When $E = t$ (the budget already reached $\max(t, C)$) or for a `project_script`, `retry` is offered at $t$, bounded by the retry budget of the calling policy or the condition budget (<<remediation-budgets>>); no `escalate` link exists, and `facts.operator_command` names the enrolment verb with which the operator may set an operator budget above the cap.
+* *The derivation selects only the retry offer*: A `timed_out` job auto-offers `retry` with the escalation budget $E$ when $E > t$ (derivations `floor_default`, `learned`, `operator`, and `escalated` below the cap). When $E = t$ (the budget already reached $\max(t, C)$) or for a `project_script`, `retry` is offered at $t$, bounded by the retry budget of the calling policy or the condition budget (<<remediation-budgets>>); no `escalate` link exists, and the operator's clients show the job with the act that sets an operator budget above the cap.
 * *Budget statistic*: A budget always names the statistic it came from (the blend $L$ with its observation count, never a median or percentile); a p50 or p95 duration quoted in a record or report is labelled as such and is never used as a budget.
 
 [#worktree-remove-recheck]
@@ -196,7 +205,7 @@ _Implementation watch: link:../../implementation-watch/job-runtime.adoc#PM-WATCH
 |Compiled default `240` per client profile.
 |`connection.bounded_wait_seconds` of the client profile; operator override in `machine-config.json` (`client_profiles.<client_id>.connection`, link:../store-schemas/12-machine-stores.adoc#machine-config[Store Schemas, Machine Configuration Store])
 |`15`..`3600`; for a host whose `connection.progress_resets_timeout` is false, profile validation also rejects a value above `connection.idle_timeout_seconds − 30`
-|`pm_wait` of a worker or an entry session (consultation answers included; where the host's `progress_resets_timeout` is set, progress frames hold it through the window); a `pm_build` call and its `job_id` continuation when the connection does not qualify for a progress wait
+|`pm_wait` of a worker (consultation answers included; where the host's `progress_resets_timeout` is set, progress frames hold it through the window); a `pm_build` call and its `job_id` continuation when the connection does not qualify for a progress wait
 |`pm_wait` answers `wait_again` (or `end`, link:../mcp-tools/01-core-workflow-tools.adoc[MCP Tools, `pm_wait`]); `pm_build` returns the running result with its `job_id` continuation; never an MCP transport timeout.
 |link:../job-runtime/01-pipeline-and-subprocesses.adoc#_bounded_long_poll_progress_reset_waiting_primitives_pm_wf_8_pm_impl_4[Job Runtime, Bounded Long-Poll]; link:../model-work/02-task-protocol.adoc[Model Work, Task Protocol]; link:../mcp-tools/02-service-and-skill-tools.adoc#_pm_build_enrolled_build_execution[MCP Tools, `pm_build`]
 
@@ -215,14 +224,6 @@ _Implementation watch: link:../../implementation-watch/job-runtime.adoc#PM-WATCH
 |progress waits
 |—
 |link:../job-runtime/01-pipeline-and-subprocesses.adoc#_bounded_long_poll_progress_reset_waiting_primitives_pm_wf_8_pm_impl_4[Job Runtime, Bounded Long-Poll]
-
-|[[elicitation-wait]]Elicitation request
-|None: the call ends with its `input_required` result, and the runtime holds nothing until the host retries the call with `inputResponses` (link:../runtime-model/03-relay.adoc#_messages_from_runtime_to_host[Runtime & Interaction Model, Messages from Runtime to Host]).
-|fixed
-|—
-|the choices of the project setup and of the plan and epic bootstraps that the entry session drives, among them a team-configuration question of the workspace setup and the operator-channel choice of an operator-configuration setup state (link:../domain-extensions/04-setup-state-machine.adoc#setup-integration-variants[Domain Extensions, Integration Variants])
-|Nothing expires: the choice stays offered by its state. A question record stays open with its own deadline (<<question-wait>>) and stays delivered through the web app; an operator-configuration choice renders `facts.operator_command` (`pm-operator config --project <project_id>`) and offers its bounded `retry`. A retry whose choice the state no longer offers is refused like a stale link. A declined or cancelled elicitation is an answer, not an expiry.
-|link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas, Question Record]; link:../cli-and-security/02-credentials-and-operator.adoc#operator-channel-isolation[CLI & Security, Operator Channel Isolation]
 
 |[[build-slot-wait]]Build slot wait
 |No deadline of its own: a `build` job waiting for a slot is recorded `queued` in the FIFO `waiting` of `build-slots.json` and admitted in that order when a slot frees. The wait is bounded by the budgets of the running build jobs, which end every held slot.
@@ -274,8 +275,16 @@ a|* *Rate window*: `reset_at` is the bot-stated reset ETA when one is published 
 |`timed_out` (`no_verdict`, <<no-verdict-rule>>) enters `finalize.merge-queue-exit`, which resumes the wait while the pull request is still queued (within the <<watch-restart-budget>>) or re-enters `finalize.merge-gate`; it ends in `finalize.hand-back` when the budget is spent or the pull request is closed. A `timed_out` landing records no merge verdict.
 |link:../phase-workflows/06-finalize-re-entry-and-merge.adoc#_cross_plan_merge_mutex_fifo_admission_queue[Phase Workflows, Cross-Plan Merge Mutex]; link:../model-work.adoc[Model Work] (Epic Landing); _Implementation watch: link:../../implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-78[PM-WATCH-PHASE-78]_
 
+|[[release-landing-wait]]Release landing wait (`release.landing_wait_seconds`)
+|`600` from the release's confirmation, while a short landing of the project (`git.land-removal`, `git.land-unit`) runs.
+|fixed (compiled constant)
+|—
+|the release of a project (link:../cli-and-security/02-credentials-and-operator.adoc#project-release[CLI & Security, Releasing Ends Work as the Operator Ends It])
+|The release is refused (`release_landing_pending`) and ends nothing; the landing runs on.
+|link:../cli-and-security/02-credentials-and-operator.adoc#project-release[CLI & Security, Releasing Ends Work as the Operator Ends It]
+
 |[[host-cancellation]]Host cancellation of a wait
-|Immediate: a host `notifications/cancelled` ends the pending call only; the relay ignores a cancel of an already answered request (link:../runtime-model.adoc[Runtime Model], relay).
+|Immediate: a harness's `notifications/cancelled` ends the pending call only; the relay ignores a cancel of an already answered request (link:../runtime-model.adoc[Runtime Model], relay).
 |fixed
 |—
 |every wait
@@ -297,15 +306,15 @@ The supervisor ends, recycles, and replaces workers by these values (link:../mod
 |`worker.ack_deadline_seconds` of the harness's client profile, counted from the offer; for a fresh worker from its first call; where the profile marks it informational (`worker.ack_informational`), silence alone decides.
 |client profile (compiled)
 |`1`..`600`
-|every offer to a worker or an entry session (a `zero_tool` worker receives no offer)
-|A worker is ended (`end_reason: ack_missed`) and the task is offered to its successor; a session-first offer moves to a worker of the role (attempt end `session_withdrawn`) and the session stays.
+|every offer to a worker (a `zero_tool` worker receives no offer)
+|The worker is ended (`end_reason: ack_missed`) and the task is offered to its successor.
 |link:../model-work/02-task-protocol.adoc[Model Work, Task Protocol]
 
 |[[silence-limit]]Silence limit
 |The bounded wait (<<bounded-wait>>) plus `worker.silence_grace_seconds` of the client profile, measured from the worker's last call while it holds no open wait call.
 |client profile (compiled)
 |grace `5`..`600`
-|every running worker except a `zero_tool` worker, which has no connection and whose exit and budget alone decide, and an entry session holding a task lease (silence limit from its declared client's profile)
+|every running worker except a `zero_tool` worker, which has no connection and whose exit and budget alone decide
 |The worker is ended (`end_reason: silence`, then the fence), its lease released at once, and a successor started while work remains.
 |link:../model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]
 
@@ -338,11 +347,11 @@ The supervisor ends, recycles, and replaces workers by these values (link:../mod
 |fixed
 |—
 |worker starts per role and harness, `zero_tool` roles excepted (they make no first call)
-|The guard holds: no further worker of the role is started on that harness; the harness's own error text is reported in `pm-operator status`, the web app, and the audit log, and the role's queued and new tasks close `lost` with `role_unavailable` and take their conservative fallback. A change of the role's artifact or a new enrolment of the harness clears it; after the probe backoff, the next task starts one probe worker, whose first call clears the guard and whose failure restarts the backoff.
+|The guard holds: no further worker of the role is started on that harness; the harness's own error text is reported to both clients of the operator and in the audit log, and the role's queued and new tasks close `lost` with `role_unavailable` and take their conservative fallback. A change of the role's artifact or a new enrolment of the harness clears it; after the probe backoff, the next task starts one probe worker, whose first call clears the guard and whose failure restarts the backoff.
 |link:../model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]
 
 |[[task-reoffer-budget]]Task re-offer budget
-|`3` re-offers per task after an attempt that ended without a result, spent as the <<condition-budget>> of the state's `job_incomplete` condition; an attempt ended by a restart, a drain, a start failure, or the withdrawal of a session offer spends none.
+|`3` re-offers per task after an attempt that ended without a result, spent as the <<condition-budget>> of the state's `job_incomplete` condition; an attempt ended by a restart, a drain, a start failure, or a pause with the point _now_ spends none.
 |fixed
 |—
 |every queue task (`counts` of its attempts)
@@ -388,6 +397,14 @@ The supervisor ends, recycles, and replaces workers by these values (link:../mod
 |worker starts of one harness on the machine
 |The next start proceeds; a collision that still makes a worker exit before its first call is a start failure (<<start-failure-guard>>).
 |link:../model-work/03-supervision-and-recycling.adoc#start-collisions[Model Work, Starts of One Harness]
+
+|[[off-track-thresholds]]Off-track signal thresholds
+|Compiled per signal, computed by the runtime from the task's activity and records: `repeating`: `5` identical tool calls (same tool, same target) in a row; `no_progress`: `40` turns without a link of the task followed; `over_size`: the tokens spent on the current plan task above `3 ×` its `predicted_cost_tokens`; `outside_footprint`: `3` unplanned changed files recorded for the task.
+|role artifact, which may lower each threshold and never raise it
+|the compiled values are the caps; `repeating` and `outside_footprint` at least `1`, `no_progress` at least `5` turns, `over_size` at least `1.5 ×`
+|every worker whose harness reports activity events (link:../client-profiles/01-profile-schema.adoc#worker-activity[Client Profiles, What a Worker Does])
+|Not an expiry and no limit: the signal is raised and the role's action for it taken (`show`, `nudge`, `yield`, `restart`); it never ends a plan.
+|link:../model-work/03-supervision-and-recycling.adoc#worker-off-track[Model Work, A Worker Off Track]
 |===
 
 The termination grace between `SIGTERM` and `SIGKILL` of a worker is the job's <<grace-period>>; a worker ended by the supervisor has its usage recorded `unmeasured` (`terminated`).
@@ -397,50 +414,58 @@ The termination grace between `SIGTERM` and `SIGKILL` of a worker is the job's <
 _See Requirements link:../../Requirements.adoc#PM-WF-7[PM-WF-7: Remediation Policies, Loop-Back & Iteration Bounds], link:../../Requirements.adoc#PM-WF-12[PM-WF-12: Question Records vs Operator Overrides], link:../../Requirements.adoc#PM-WF-13[PM-WF-13: Finalize Step Ordering Bands, Verdict Currency & Pre-Merge Barrier]_
 _Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-39[PM-WATCH-STORE-39]_
 
-Every blocking condition of a plan has a bounded server retry and then a defined fallback (`returned` or `handed_back`, link:../phase-workflows/06-finalize-re-entry-and-merge.adoc[Phase Workflows Specification, Plan Outcomes]); no wait of a plan is unbounded except the integrity pause and a question in `questions.mode: operator`, which the operator chose. Remediation budgets are call arguments of the project-owned phase units, bound with their source in the plan instance (link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas, Plan Instance]); they are counted per plan and policy class and never reset (link:../store-schemas/14-plan-instance-waivers-questions.adoc#policy-counter[Store Schemas, Remediation Budget Accounting]). A step-out consumes no budget.
+Every blocking condition of a plan has a bounded server retry and then a defined fallback (`returned` or `handed_back`, link:../phase-workflows/06-finalize-re-entry-and-merge.adoc[Phase Workflows Specification, Plan Outcomes]). An operator wait, a decision and a waiver request among them, has no time limit and ends only by an act of the operator (link:../workflow-dsl/02-units-jobs-decisions.adoc#operator-wait[Workflow DSL Specification, Waiting for the Operator]); it halts its own scope and nothing else, and no budget below runs while it waits. Remediation budgets are call arguments of the project-owned phase units, bound with their source in the plan instance (link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas, Plan Instance]); they are counted per plan and policy class and never reset (link:../store-schemas/14-plan-instance-waivers-questions.adoc#policy-counter[Store Schemas, Remediation Budget Accounting]). A step-out consumes no budget.
 
 [cols="2,3,2,2,2,3,2"]
 |===
 |Name |Value / derivation |Configurable? |Floor / cap |Applies to |Behaviour on expiry |Defined for
 
 |[[retry-budget]]Retry budget (`retry_budget`)
-|Shipped call arguments per policy: `qgate-findings` `0`, `build-failure` `1` (land `1`), `ci-failure` `2`, `review-findings` `1`, `analysis` `1`, `merge-conflict` `0`, `spend` `0`.
+|Shipped call arguments per policy: `qgate-findings` `0`, `build-failure` `1` (land `1`), `ci-failure` `2`, `review-findings` `1`, `analysis` `1`, `merge-conflict` `0`.
 |call argument of the calling project-owned phase unit (`.marshall/config/*.pmwf`); per plan by a `raise` waiver `retry_budget:<policy>` (a revoked raise lowers the ceiling again from the next budget check)
 |hard cap `5` (compiled; bounds template values and operator raises)
 |`retry` of a remediation unit's `decide` (reason `flaky`, `infra`, or `timeout`)
-|The `retry` link is withheld; when no other remedy remains the unit ends `exhausted` (after the waiver wait, when one is bound) and the caller takes its fallback.
+|The `retry` link is withheld; when no other remedy remains the unit ends `exhausted` (after the operator declined a waiver request, where one was filed) and the caller takes its fallback.
 |link:../workflow-dsl/08-remediation-units.adoc#remediation-units[Workflow DSL, Remediation Policy Units]
 
 |[[fix-budget]]Fix budget (`fix_budget`)
-|Shipped call arguments per policy: `qgate-findings` `3`, `build-failure` `3` (land `0`: the land lane binds `actions: [retry]`), `ci-failure` `3`, `review-findings` `3`, `analysis` `3`, `merge-conflict` `2`, `spend` `0`.
+|Shipped call arguments per policy: `qgate-findings` `3`, `build-failure` `3` (land `0`: the land lane binds `actions: [retry]`), `ci-failure` `3`, `review-findings` `3`, `analysis` `3`, `merge-conflict` `2`.
 |as retry budget (`fix_budget:<policy>`)
 |hard cap `5`
 |`fix` of a remediation unit's `decide`, including the `loop_back` form; charged when the fix's commit or artifact exists
 |As retry budget.
 |link:../workflow-dsl/08-remediation-units.adoc#remediation-units[Workflow DSL, Remediation Policy Units]
 
-|[[waiver-wait]]Waiver wait (`waiver_wait_seconds`)
-|Shipped `0` for every policy: a `request_waiver` is then not offered, and an exhausted budget goes straight to the fallback, whose hand-back report names what could be waived. A positive value makes `request_waiver` available for a waivable gate and bounds the wait for the operator.
-|call argument of the calling phase unit
-|floor `0`, hard cap `86400`
-|the waiver wait of a remediation unit, a server-side `composite_job` (no model turns; it survives a gone host session)
-|The request is recorded `expired` and the unit ends `exhausted`. A `waive` answering it resumes `decide` (`raised`) or ends the unit `waived`.
-|link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-request-record[Store Schemas, Waiver Request Record]; link:../job-runtime/01-pipeline-and-subprocesses.adoc#engine-deadlines[Job Runtime, Engine Deadlines]; _Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-40[PM-WATCH-STORE-40]_
+|[[waiver-wait]]Waiver request
+|No time limit: a `request_waiver` makes the remediation unit rest in an operator wait until the operator answers `waive` or `decline` in either client; `request_waiver` is offered for every gate on the closed waivable list.
+|—
+|—
+|the waiver request of a remediation unit (no model turns; it holds no worker and no slot)
+|Nothing expires. A `waive` resumes `decide` (`raised`) or ends the unit `waived`; a `decline` records the outcome `declined` and the unit takes its next transition.
+|link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-request-record[Store Schemas, Waiver Request Record]; link:../workflow-dsl/02-units-jobs-decisions.adoc#operator-wait[Workflow DSL, Waiting for the Operator]; _Implementation watch: link:../../implementation-watch/store-schemas.adoc#PM-WATCH-STORE-40[PM-WATCH-STORE-40]_
 
-|[[question-wait]]Question wait (`questions.wait_seconds`)
-|`1800` from the question's delivery, in `questions.mode` `auto` and for a set the adjudication escalated in mode `quorum`. No deadline in mode `operator`; no wait in mode `none`. [[vote-wait]]*Vote wait*: in mode `quorum` the adjudication before the delivery is bounded by the vote wait from the set's creation: the declaration `vote_wait_seconds` of the project's adjudication unit (shipped `900`, compiled bounds `60` to `1800`, link:../workflow-dsl/02-units-jobs-decisions.adoc#unit-declarations[Workflow DSL, Unit Declarations]), recorded with the unit's digest; it is the vote tasks' own deadline: at its expiry every open vote task closes `lost` and counts as without an answer (link:../model-work/10-decision-quorum.adoc#adjudication[Model Work, Ask or Quorum]).
-|`questions.wait_seconds` in `<PM_MCP_BASE>/projects/<project_id>/local-config.json`, machine-wide default in `machine-config.json` `project_defaults.questions.wait_seconds`
-|floor `0` (every question resolves at once through its class fallback)
-|open question records of plan, epic, and workspace scopes; the deadline is server-owned, and no model and no session waits for it
-|The engine takes the compiled class fallback without a model call: init: the classifier's `recommended` option, else `returned`; clarification: `default_assumption` as an assumption amendment; review (outline review): `returned`; task and ask: the stated default of the question, validated against its options; setup: the fallback option the question state declares (for example `skip`, `keep_build_map`, or no change). Every expiry that applies a default is recorded `channel: assumption`; a later answer through a user channel is refused `question_expired`.
-|link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas, Question Record]; link:../job-runtime/01-pipeline-and-subprocesses.adoc#engine-deadlines[Job Runtime, Engine Deadlines]; _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-29[PM-WATCH-DISP-29]_
+|[[question-wait]]Decision
+|No time limit: an open decision of a plan, an epic, a workspace, the machine scope, or an entry is an operator wait until the operator answers it in either client, or a quorum decides it as its declaration says; nothing is decided by the passing of time, and there is no default applied on expiry.
+|—
+|—
+|open decisions of every scope; a worker holds its task for the answer only within its role's question hold (<<question-hold>>)
+|Nothing expires.
+|link:../model-work/06-envelopes-questions-deadlines.adoc#decision-structure[Model Work, The Decision Structure]; link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas, Question Record]; _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-29[PM-WATCH-DISP-29]_
+
+|[[vote-wait]]Vote wait
+|The declaration `vote_wait_seconds` of the project's adjudication unit (shipped `900`), from the decision's creation, where its declaration names a quorum; it is the vote tasks' own deadline, never a deadline of the operator.
+|declaration of the project-owned `adjudicate-decisions.pmwf` (link:../workflow-dsl/02-units-jobs-decisions.adoc#unit-declarations[Workflow DSL, Unit Declarations]), recorded with the unit's digest
+|`60` to `1800` (compiled)
+|the vote tasks of a quorum
+|Every open vote task closes `lost` and counts as without an answer; a decision the quorum does not decide is delivered to the operator as an operator wait (link:../model-work/10-decision-quorum.adoc#adjudication[Model Work, Ask or Quorum]).
+|link:../model-work/10-decision-quorum.adoc#adjudication[Model Work, Ask or Quorum]
 
 |[[condition-budget]]Condition budget
 |`3` server retries per condition instance (`pending_condition.remedy_attempts`).
 |fixed
 |—
 |every non-integrity condition overlay (`footprint_violation`, `guard_indeterminate`, `job_incomplete`, whose retries are the server's re-offers of the state's tasks (<<task-reoffer-budget>>), `config_drift`, `precondition_unmet`), the `retry` of a bootstrap's failed source step, and the server retries of `finalize.adopt-blocked` (re-adoption), `finalize.merge-lease-interrupted` (lease re-entry), and `finalize.archive-plan` (pull-request observation)
-|The phase's fallback with the condition as the gap; `handed_back` degrades to a local branch when the fallback lacks what is missing (for example a push credential). The epic and workspace scopes have no fallback: an unreadable epic ledger keeps its `retry` and ends by the operator's `abort`, a workspace condition keeps its `retry`. A bootstrap has no fallback either: after the last source `retry` only the implicit `step_out` back to `start.choose` remains.
+|The phase's fallback with the condition as the gap; `handed_back` degrades to a local branch when the fallback lacks what is missing (for example a push credential). The epic and workspace scopes have no fallback: an unreadable epic ledger keeps its `retry` as a hold and ends by the operator's cancel, a workspace condition keeps its `retry`. A start's entry has no fallback either: after the last source `retry` the source unit's operator wait offers only its `step_out` back to the entry's list of sources.
 |link:../state-catalogue/01-conventions-generic-conditions.adoc[State Catalogue, Conditions]
 
 |[[watch-restart-budget]]Watch restart budget
@@ -516,4 +541,4 @@ Every blocking condition of a plan has a bounded server retry and then a defined
 |link:../domain-extensions/04-setup-state-machine.adoc#setup-verify-credentials[Domain Extensions, Credential Verification]; link:../state-catalogue/06-setup-epic-other.adoc#state-setup.verify-credentials[State Catalogue, `setup.verify-credentials`]; link:../workflow-dsl/04-ast-node-model.adoc#static-verification-rules[Workflow DSL Specification] (Rule 11a)
 |===
 
-*Deadline processing*: The waiver wait, the question deadline, and the prerequisite wait of a re-planning are engine-owned instants persisted with their record (`expires_at`; the prerequisite's `deadline_at`), processed by the runtime's deadline timer (link:../job-runtime/01-pipeline-and-subprocesses.adoc#engine-deadlines[Job Runtime Specification, Engine Deadlines]); none of the three overlaps another in one plan, the integrity pause holds every fallback until it ends, and `abort` / `delete-plan` close pending questions `cancelled` and waiver requests `expired`.
+*Deadline processing*: The prerequisite wait of a re-planning is an engine-owned instant persisted with its record (`deadline_at`), processed by the runtime's deadline timer (link:../job-runtime/01-pipeline-and-subprocesses.adoc#engine-deadlines[Job Runtime Specification, Engine Deadlines]); an operator wait has none. The integrity pause and the operator's pause hold every fallback and deadline until they end, and an operator act that ends the plan (cancel, abandon, the integrity abort, the release, `delete-plan`) closes its open decisions and waiver requests `cancelled`.

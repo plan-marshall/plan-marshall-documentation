@@ -37,28 +37,28 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-record[Store Schemas, Waiver Record]; `pm-operator waive`, `unwaive`, `waivers` link:../cli-and-security/02-credentials-and-operator.adoc#operator-waive[CLI & Security]; plan instance `waived_gates`, step `waiver_ref`
 
 |[[id-waivable-gate]]Waivable gate identifier (`gate`)
-|Closed grammar: `review_evidence(:<bot_kind>)?`, `ci_check:<check_name>`, `analysis_gate:<provider>`, `findings:<class>`, `qgate_findings:(refine\|outline\|plan)`, `spend` (the spend check at `merge.gate-entry`, passed only by a `met` waiver), and the budgets of a `raise`: `fix_budget:<policy>`, `retry_budget:<policy>`, and `fix_budget:outline-loop-back` (link:../timeouts/01-job-budgets-and-waits.adoc#loop-back-outline-budget[Timeouts & Budgets, Outline loop-back budget]). `<bot_kind>` as <<id-bot-kind>>; `<provider>` an analysis provider id `^[a-z][a-z0-9-]{0,31}$` (for example `sonar`, `codeql`); `<class>` a findings ledger `source` value or an analysis provider id; `<policy>` one of `ci-failure`, `review-findings`, `build-failure`, `merge-conflict`, `qgate-findings`, `analysis`; `<check_name>` the provider's check name verbatim, `^[\x20-\x7E]{1,128}$` (the only identifier that admits a space, because it is a provider value compared byte-exactly). At most 160.
+|Closed grammar: `review_evidence(:<bot_kind>)?`, `ci_check:<check_name>`, `analysis_gate:<provider>`, `findings:<class>`, `qgate_findings:(refine\|outline\|plan)`, and the budgets of a `raise`: `fix_budget:<policy>`, `retry_budget:<policy>`, and `fix_budget:outline-loop-back` (link:../timeouts/01-job-budgets-and-waits.adoc#loop-back-outline-budget[Timeouts & Budgets, Outline loop-back budget]). `<bot_kind>` as <<id-bot-kind>>; `<provider>` an analysis provider id `^[a-z][a-z0-9-]{0,31}$` (for example `sonar`, `codeql`); `<class>` a findings ledger `source` value or an analysis provider id; `<policy>` one of `ci-failure`, `review-findings`, `build-failure`, `merge-conflict`, `qgate-findings`, `analysis`; `<check_name>` the provider's check name verbatim, `^[\x20-\x7E]{1,128}$` (the only identifier that admits a space, because it is a provider value compared byte-exactly). At most 160.
 |operator (verb argument), validated by the server; the compiled `waiver.lookup` call sites name only listed gates
 |Plan
 |Closed; extended only with a schema version. Refused as `not_waivable`: every gate outside the grammar and `findings:security_audit`
 |link:../store-schemas/14-plan-instance-waivers-questions.adoc#waiver-record[Store Schemas, Waiver Record]; link:../workflow-dsl/04-ast-node-model.adoc#project-owned-units[Workflow DSL, Compiled Invariants] (`INV-GEN-2`)
 
 |[[id-instance-version]]Plan instance version (`instance_version`)
-|Integer `N` ≥ 1; the file name `instance/plan.v<N>.pmwf` (the plan instance is always referred to by this file, never as `plan.pmwf`, which names the Phase 4 unit), the header `version` of that instance, and the resource segment `{version}` of `pm://plan/{plan_id}/instance/{version}`.
+|Integer `N` ≥ 1; the file names of one version, `instance/plan.v<N>.pmwf` (the plan unit with the instance header) and `instance/<unit>.v<N>.pmwf` per composed unit (a phase sub-workflow or an axis variant, for example `instance/phase-6-finalize.v3.pmwf`; link:../workflow-dsl/09-plan-instance.adoc[Workflow DSL, Plan Instance]), the header `version` of that instance, and the resource segment `{version}` of `pm://plan/{plan_id}/instance/{version}`.
 |server (composition)
 |Plan
 |Monotonic from `1`; never reused or rewritten
 |`instance_version` of `mcp/status.json`, link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas, Plan Instance]
 
 |[[id-composition-event]]`composition_event`
-|Closed enum: `start`, `outline`, `plan`, `config_adopted`, `waiver`, `fallback`, `empty_harvest`, `replan`.
+|Closed enum: `start`, `outline`, `plan`, `config_adopted`, `waiver`, `override` (a plan's own value set while it runs, link:../workflow-dsl/09-plan-instance.adoc#plan-overrides[Workflow DSL, Plan Overrides]), `fallback`, `empty_harvest`, `replan`.
 |build
 |—
 |Closed; extended only with a schema version
 |Instance header and `composition.jsonl` link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas, Plan Instance]
 
 |[[id-prune-reason]]Prune reason
-|Closed enum: `posture`, `provider_unconfigured`, `footprint_disjoint`, `change_type_exempt`, `recipe_override`, `local_only`, `land_lane`, `adopt`, `auto_merge_off`, `empty_harvest`, `returned`, `handed_back`.
+|Closed enum: `posture`, `provider_unconfigured`, `footprint_disjoint`, `change_type_exempt`, `local_only`, `land_lane`, `adopt`, `merge_by_operator`, `empty_harvest`, `returned`, `handed_back`, `plan_default` (a step the plan behaviour axes leave out, link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL, Plan Behaviour Axes]).
 |build (composition rules)
 |—
 |Closed; extended only with a schema version
@@ -69,7 +69,7 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |server (allocated under the lesson store lock)
 |Project lesson store
 |Never reused (the lesson file is never deleted by a lifecycle transition; a retirement is recorded in its front matter)
-|link:../store-schemas/10-job-and-lesson-records.adoc#lesson-record[Store Schemas, Lesson Record]; the lesson source of the plan bootstrap (`source-lesson`), `pm://workspace/lessons` link:../mcp-tools.adoc[MCP Tools]
+|link:../store-schemas/10-job-and-lesson-records.adoc#lesson-record[Store Schemas, Lesson Record]; the lesson source of a plan's start (`source-lesson`)
 
 |[[id-message-id]]`message_id`
 |`^msg-[0-9]{4,}$`, at most 64.
@@ -77,6 +77,27 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |One inbox or mailbox store file
 |Monotonic; never reused
 |link:../store-schemas/04-epic-and-change-ledger.adoc#epic-inbox-record[Store Schemas, Epic Inbox & Plan Mailbox Records]; inbox and mailbox resources link:../mcp-tools.adoc[MCP Tools]
+
+|[[id-epic-item-id]]Epic register item identifier (`item_id`)
+|`^EI-[0-9]+$`, at most 32.
+|server (store-assigned, the next number above the highest ever written)
+|One epic's `register.jsonl` (findings and watches together)
+|Monotonic; never reused
+|link:../store-schemas/04-epic-and-change-ledger.adoc#epic-registers[Store Schemas, Findings and Watches Registers]; link:../model-work/08-epic-coordination.adoc[Model Work, Epic Coordination]
+
+|[[id-report-id]]`report_id`
+|`^rep-[0-9]{4,}$`, at most 64.
+|server (store-assigned on the `report` event of `state/reports.jsonl`)
+|Machine
+|Monotonic; never reused, also after the cleanup deleted the report
+|link:../runtime-model/01-processes-and-transport.adoc#reports[Runtime Model, Reports to the Operator]
+
+|[[id-cleanup-job-id]]Cleanup job identifier (`job_id` of the cleanup journal)
+|`^cln-[0-9]{4,}$`, at most 64. Disjoint by shape from the xref:01-general-rules-and-registry.adoc#id-job-id[`job_id` of the job runtime]: a cleanup job is no job of the job runtime and has no job record.
+|server (store-assigned on the `job` event of `state/cleanup.jsonl`)
+|Machine
+|Monotonic; never reused
+|link:../timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets, One Cleanup]; the audit record `cleanup_deleted` and a tombstone's `job_id`
 
 |[[id-audit-id]]`audit_id` / `event_id`
 |UUIDv7 in lowercase canonical form: `^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`, 36. An `audit_id` is the `event_id` of the audit record that holds the diagnostics.
@@ -133,21 +154,28 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |build
 |Tool surface (the closed core tool set)
 |Stable (`PM-TOOL-5`)
-|link:../mcp-tools.adoc[MCP Tools], Constraint 2; `preload_tools` link:../client-profiles.adoc[Client Profiles]
-
-|[[id-upstream-tool-name]]Upstream pass-through tool name
-|`up_<server_id>_<tool>`: `^up_[a-z][a-z0-9]{0,15}_[a-z0-9_]{1,44}$`, at most 64. The first `_` after `up_` ends the `server_id`; an upstream tool whose name does not match `[a-z0-9_]{1,44}` cannot be allowlisted.
-|server (from the operator allowlist)
-|Project tool surface
-|Changes only with the operator allowlist
-|link:../mcp-tools/02-service-and-skill-tools.adoc#_selective_upstream_mcp_proxy_meta_provenance_pm_svc_3[MCP Tools, Selective Upstream MCP Proxy]
+|link:../mcp-tools.adoc[MCP Tools], Constraint 2
 
 |[[id-server-id]]`server_id`
 |`^[a-z][a-z0-9]{0,15}$`, 1–16.
-|operator (`upstream_mcp.servers` of the project's `local-config.json`, through `pm-operator upstream allow`)
+|operator (`upstream_mcp.servers` of the project's `local-config.json`, through the operator's act `pm-operator upstream allow` or its form in the web app)
 |Project allowlist
 |Immutable while allowlisted
-|Upstream tool names, provenance `upstream_mcp:<server_id>`, credential key `mcp-<server_id>` link:../mcp-tools.adoc[MCP Tools]
+|Provenance `upstream_mcp:<server_id>`, credential key `mcp-<server_id>` link:../mcp-tools.adoc[MCP Tools]
+
+|[[id-event-name]]Event name
+|`^[a-z][a-z_]*(\.[a-z][a-z_]*)*$`, at most 64 (for example `state.entered`, `runtime.upgrade_failed`, `reset`): one name of the closed event catalogue.
+|build (the event catalogue of `pm-api`)
+|Global
+|Closed; extended only with a release of `pm-api`
+|link:../runtime-model/06-event-catalogue.adoc[Runtime Model, Event Catalogue]; the SSE `event` field of every event stream
+
+|[[id-message-key]]Message key
+|`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`, at most 128 (for example `check.login.missing`): its first segment is the catalogue area. Never translated; the text it names is.
+|build (the message catalogue of `pm-api`)
+|Global (one catalogue, one pack per language and area)
+|A key keeps its meaning; a changed meaning is a new key. A key missing in a pack or present only in a pack fails the build
+|link:../module-structure.adoc#i18n[Module Structure, Languages and Internationalisation]; link:../hypermedia-format/01-representation-and-link-forms.adoc#runtime-texts[Hypermedia Format, Texts of the Runtime]
 
 |[[id-skill-uri]]Skill URI
 |Document: `^skill://pm/[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*/SKILL\.md$`. Supporting file: `^skill://pm/[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*/[A-Za-z0-9_][A-Za-z0-9_.-]*\.(md\|adoc\|json\|toon)$`. Skill reference (a skill, not a document) in descriptors: domain `^skill://pm/domain/[a-z][a-z0-9-]{1,31}/[a-z0-9][a-z0-9-]*$`, triage `^skill://pm/triage/[a-z0-9][a-z0-9-]*$`, recipe `^skill://pm/recipe/[a-z][a-z0-9]*(-[a-z0-9]+)*$`. Each at most 256. The DSL clause `skill pm/<path>` maps to `skill://pm/<path>/SKILL.md`. The first path segment `ext` is reserved for extension skills: `skill://pm/ext/<name>/SKILL.md` and `skill://pm/ext/<name>/<file>` with <<id-extension-skill-name>>; no compiled skill lies under it.
@@ -193,10 +221,10 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 
 |[[id-branch-name]]Branch name (`base_branch`)
 |`^[A-Za-z0-9_./-]+$`, 1–128; further validated with `git check-ref-format`.
-|model (the `base_branch` commit option of the plan bootstrap) or server
+|operator (the option asked where the plan first needs it, link:../state-catalogue/09-bootstrap-and-lessons.adoc#options-when-needed[State Catalogue, Asked When Needed]) or server (the project's default branch)
 |Repository
 |Not an identity
-|Pending entry record `bootstrap.options.base_branch` link:../store-schemas/01-format-and-session-log.adoc#pending-entry-record[Store Schemas]
+|The plan's state link:../store-schemas/02-workflow-state-store.adoc[Store Schemas, Workflow State Store]
 
 |[[id-bundle-path]]Bundle path
 |`^(?!/)(?!.*\.\.)[A-Za-z0-9_./-]+$` (stored schema only), at most 512.
@@ -214,14 +242,14 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |Identifier |Grammar (regex) and max length |Generated by |Uniqueness scope |Stability & reuse |Defined for / used in
 
 |[[id-client-id]]`client_id`
-|Closed enum: `claude`, `opencode`, `antigravity`, `codex`, `neutral` (bundle manifests exclude `neutral`; a worker's harness is a client whose profile marks it worker-eligible, `claude` and `opencode`; `neutral` is never a worker host). The harness fields of the stores (`harness` of the enrolment store, the job record's `worker.harness`, the qualification record, and the metrics rows of workers) admit `claude`, `opencode`, and `codex`, the clients with a headless template; the profile's `worker.eligible`, not the schema, decides whether a worker of that harness is launched (link:../client-profiles/01-profile-schema.adoc[Client Profiles, Worker Block]).
-|build
-|—
-|Closed
-|link:../client-profiles.adoc[Client Profiles]; session rows (`client`, `client_detected`) link:../store-schemas/01-format-and-session-log.adoc#scope-session-log[Store Schemas]; the `harness` of a role artifact link:../model-work/01-roles-and-configuration.adoc[Model Work]; the harness enrolment store and the job record's `worker.harness` link:../store-schemas.adoc[Store Schemas]
+|`^[a-z][a-z0-9-]{1,31}$`, 2–32: the id of a client profile, which names a harness. Shipped profiles: `claude`, `opencode`, `antigravity`, `codex`; a harness the operator adds in the onboarding brings a profile of its own id (link:../client-profiles/01-profile-schema.adoc#unknown-harness[Client Profiles, Unknown Harness]). No closed list of client ids refuses a harness the operator added: the harness fields of the stores (`harness` of the enrolment store, the job record's `worker.harness`, the qualification record, the metrics rows of workers) take every id of an enrolled profile, and the profile's `worker.eligible`, not the schema, decides whether a worker of that harness is launched (link:../client-profiles/01-profile-schema.adoc[Client Profiles, Worker Block]).
+|build (shipped profiles) or operator (an added harness's profile)
+|Machine
+|Immutable while its profile exists
+|link:../client-profiles.adoc[Client Profiles]; the `harness` of a role artifact link:../model-work/01-roles-and-configuration.adoc[Model Work]; the harness enrolment store and the job record's `worker.harness` link:../store-schemas.adoc[Store Schemas]
 
 |[[id-credential-key]]`credential_key`
-|`^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$`, 3–64: `github`, `gitlab`, or `git-https` for the agent credentials of the native git and provider integrations (link:../cli-and-security/02-credentials-and-operator.adoc#agent-credentials[CLI & Security, Agent Credentials]); `mcp-<server_id>` for an upstream MCP server; otherwise the key the project configuration names for the integration in its `credential_key` (for example `sonar`, link:../store-schemas/07-project-configuration.adoc[Store Schemas, Project Configuration]). There is no key for a harness: `PM-MCP` stores no harness authentication.
+|`^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$`, 3–64: `github`, `gitlab`, `forgejo` (with the forge's host recorded on the entry, link:../module-structure.adoc#forgejo[Module Structure, Codeberg and Forgejo]), or `git-https` for the agent credentials of the native git and provider integrations (link:../cli-and-security/02-credentials-and-operator.adoc#agent-credentials[CLI & Security, Agent Credentials]); `mcp-<server_id>` for an upstream MCP server; otherwise the key the project configuration names for the integration in its `credential_key` (for example `sonar`, link:../store-schemas/07-project-configuration.adoc[Store Schemas, Project Configuration]). There is no key for a harness: `PM-MCP` stores no harness authentication.
 |operator
 |Machine (global entry) or project (override `<project_id>/<credential_key>`)
 |Immutable
@@ -274,7 +302,7 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |build (built-in) or operator (project-local recipes)
 |Recipe registry of the project
 |Immutable
-|link:../domain-extensions.adoc[Domain Extensions], Declarative Recipe Descriptor Schema; the recipe source of the plan bootstrap (`source-recipe`), `pm://workspace/recipes` link:../mcp-tools.adoc[MCP Tools]
+|link:../domain-extensions.adoc[Domain Extensions], Declarative Recipe Descriptor Schema; the recipe chosen at a plan's start (link:../domain-extensions/05-recipes-and-extension-points.adoc#recipe-workflow[Domain Extensions, A Recipe Is a Workflow])
 
 |[[id-project-script-id]]`project_script_id`
 |`^[a-z][a-z0-9-]{0,63}$`, 1–64.
@@ -302,13 +330,13 @@ link:../../Specification.adoc[Specification] » link:../identifiers.adoc[Identif
 |build
 |—
 |Immutable per release
-|`bundle_version` (install records, bundle manifest), `pm_mcp_version` (session log), `min_daemon_version` (client profile) link:../client-profiles.adoc[Client Profiles]
+|`bundle_version` (install records, bundle manifest), `min_daemon_version` (client profile) link:../client-profiles.adoc[Client Profiles]; the runtime's version, the newest version known, and an upgrade's versions in the runtime status link:../runtime-model/02-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Model, The Runtime's Lifecycle]
 |===
 
 [#registry-local-access]
 == Local Access & Web Pairing
 
-None of these identifiers is model-facing; they appear only on the Local API, in `pm-mcp` and `pm-operator`, the web app, the stores of link:../store-schemas/12-machine-stores.adoc#web-access-records[Store Schemas, Web Access Records], and the audit log.
+None of these identifiers is model-facing; they appear only on the Local API, in `pm-operator`, the web app, the stores of link:../store-schemas/12-machine-stores.adoc#web-access-records[Store Schemas, Web Access Records], and the audit log.
 
 [cols="2,3,1,2,2,3"]
 |===
@@ -340,11 +368,11 @@ None of these identifiers is model-facing; they appear only on the Local API, in
 |server (runtime, at pairing)
 |One device
 |Returned once at pairing; stored only as SHA-256; invalid after revocation or idle expiry; never reissued
-|`Authorization: Bearer` from the browser on the runtime's web listener, and on no other listener link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model, Local API]; link:../cli-and-security/03-web-server.adoc#web-auth-seam[CLI & Security, Authentication Seam]
+|`Authorization: Bearer` from the browser on the runtime's web listeners, and on no other listener link:../runtime-model/01-processes-and-transport.adoc#local-api[Runtime Model, Local API]; link:../cli-and-security/03-web-server.adoc#web-auth-seam[CLI & Security, Authentication Seam]
 
 |[[id-pairing-code]]Pairing code
 |`^[BCDFGHJKLMNPQRSTVWXZ]{8}$`, 8 (the RFC 8628 base-20 alphabet, about 34.5 bits). Displayed as `XXXX-XXXX`; input is normalized to upper case with `-` and whitespace removed before validation. Carried in a URL only in the fragment (`/pair#code=<code>`).
-|server (runtime, `pm-operator web pair`)
+|server (runtime, on the CLI-only pairing request of the terminal client; while the terminal client is open a redeemed code is replaced at once, link:../cli-and-security/03-web-server.adoc#fresh-code[CLI & Security, A Fresh Code after a Redemption])
 |Machine (at most one open pairing)
 |Single use; valid for the link:../timeouts/02-runtime-leases-operator-web.adoc#pairing-code-ttl[pairing code lifetime] and for at most the link:../timeouts/02-runtime-leases-operator-web.adoc#pairing-attempt-limit[pairing failed-attempt limit] of failed redemptions; held in memory as SHA-256; lost on runtime restart
 |link:../cli-and-security/03-web-server.adoc#web-pairing[CLI & Security, Pairing Protocol]

@@ -27,7 +27,7 @@ Hazard:: A record bound to the full artifact digest is invalidated by an edit th
 measured (the worker count, the recycling bounds), so the role falls to its conservative fallback for no reason;
 a record bound to too few members stays valid after the model or a skill changed; a role with no passing candidate
 either blocks the release or ships as if it were qualified.
-Guard:: Table test over artifact edits: a change of `count`, `session_first`, `recycling`, `budget_floor_seconds`,
+Guard:: Table test over artifact edits: a change of `count`, `recycling`, `budget_floor_seconds`,
 `context_budget_tokens`, or `form` changes the configuration digest and keeps the record valid; a change of
 `description` changes neither digest; a change of `harness`, the harness major.minor, `model`, `effort`, `tools`, `class`, or a skill digest changes the
 qualification digest and invalidates it, and the role reports unqualified until graded again. A shipped role whose
@@ -108,8 +108,8 @@ the same relay), and the server handed a task leased to the caller to its second
 decided it, and the second submit was refused.
 Guard:: Scenario test: two concurrent `pm_wait` calls of one generation: the earlier is answered `wait_again` at once
 and never with a task, the later receives the offer, and the task is leased exactly once; a generation that holds a
-lease is offered no second task; a new session generation fences the earlier one, whose calls are refused
-`generation_fenced` and whose lease is released; matched control: two generations of one role each receive their
+lease is offered no second task; a fenced generation's calls are refused `generation_fenced` and its lease is
+released; matched control: two generations of one role each receive their
 own task.
 Source:: harness-as-worker evaluation (doc/specification/evaluation.adoc).
 
@@ -132,18 +132,14 @@ Source:: harness-as-worker evaluation (doc/specification/evaluation.adoc).
 === PM-WATCH-DISP-47: A task is offered by the role's current configuration digest
 
 Anchor:: link:../specification/model-work/02-task-protocol.adoc#offer[Model Work § Offer],
-link:../specification/model-work/02-task-protocol.adoc#session-worker[§ The Session as Optional Worker],
 link:../Requirements.adoc#PM-WORK-2[PM-WORK-2]
 Hazard:: An offer matched by the digest stored at task creation strands every task queued before an artifact edit:
 no generation started after the edit matches it, and the generation that does match is recycled; an offer matched by
-role alone hands new work to a generation running the outdated configuration; a session in another checkout receives
-a task whose working directory it does not hold.
+role alone hands new work to a generation running the outdated configuration.
 Guard:: Scenario test: a task queued before an edit of its role's artifact is offered to the first generation started
 with the new configuration digest, and that digest is recorded on the attempt; a running generation with the outdated
 digest gets no new offer and is recycled; matched control: an edit that leaves the digest unchanged keeps offering to
-the running generation. A session generation is offered only tasks of a `session_first` role, on a host with
-`worker.session_tasks`, in the scope it entered, and with its own working directory; a task of another working
-directory is never offered to it.
+the running generation. Only a worker launched by the runtime as a job of its role is ever offered a task.
 Source:: design review.
 
 [#PM-WATCH-DISP-43]
@@ -161,19 +157,19 @@ a worker whose latest turn exceeds the budget is answered `end` at its next `pm_
 Source:: harness-as-worker evaluation (doc/specification/evaluation.adoc).
 
 [#PM-WATCH-DISP-44]
-=== PM-WATCH-DISP-44: A reported clear or compaction re-delivers the skills
+=== PM-WATCH-DISP-44: A new generation or a changed skill re-delivers the skills; a compaction is left to the shim
 
 Anchor:: link:../specification/model-work/04-worker-launch.adoc#skill-delivery[Model Work § Skill Delivery Record & Re-Delivery],
-link:../specification/model-work/02-task-protocol.adoc#session-worker[§ The Session as Optional Worker],
 link:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]
-Hazard:: A clear of the host session was invisible to the server: the cleared Claude Code session got its next offer
+Hazard:: A clear or compaction of a worker's context is invisible to the server: a warm worker got its next offer
 with the task-protocol skill named by URI only, because the server had delivered it to that generation already, and
-only the shim made the session read it again.
-Guard:: Scenario test with a host marker passed by the relay: after a clear or compaction marker the generation's
-delivery record is empty, an unacknowledged offer is withdrawn, and the next offer carries every required skill
-in-band; a skill whose digest changed is delivered again; a new generation starts with an empty record; matched
-control: without a marker the next offer carries only the skills the record lacks, and every launch prompt of a
-`writer` or `read_only` worker starts with the shim paragraph.
+only the shim made the worker read it again; a server that tries to detect the compaction from host markers relies on
+a signal no harness guarantees.
+Guard:: Scenario test: a new generation starts with an empty delivery record and its first offer carries every
+required skill in-band; a skill whose digest changed is delivered again to every running generation; matched
+control: without a new generation or a changed digest the next offer carries only the skills the record lacks, and
+every launch prompt of a `writer` or `read_only` worker starts with the shim paragraph, which makes the worker read
+a skill named by URI after a compaction; no server path reads a host marker for a clear or a compaction.
 Source:: harness-as-worker evaluation (doc/specification/evaluation.adoc).
 
 [#PM-WATCH-DISP-55]
@@ -407,35 +403,37 @@ outcome).
 Source:: design review.
 
 [#PM-WATCH-DISP-28]
-=== PM-WATCH-DISP-28: A task question ends the envelope task and the work continues in a new envelope task
+=== PM-WATCH-DISP-28: A task question that cannot continue ends the envelope task, and the work continues in a new envelope task
 
 Anchor:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc#task-questions[Model Work § Task Questions],
 link:../Requirements.adoc#PM-WF-12[PM-WF-12]
-Hazard:: A sub-agent waits in-leaf for an answer (blocking the envelope and holding the worktree), or its question
-is lost when the entity ends, or an unanswered task question blocks the plan without bound.
-Guard:: Scenario: the worker of an envelope task follows `ask:TASK-NNN`; the record is persisted, the task ends
-`asked` with `yield_reason: question` recorded by the server, its worker and model slot are free, and the plan
-enters `execute.task-question`; no further envelope task is queued while the record is open; the record is
-delivered on the web app and as `answer:<question_id>` to an entry session viewing the plan; after the answer the
-remaining plan tasks, the asking one included, form the next envelope task with the answer in its facts; with
-`questions.mode: auto` an expired record takes the question's stated default, validated against its options and
-recorded with `channel: assumption`; no condition and no operator verb exist for it.
+Hazard:: A sub-agent waits in-leaf for an answer (blocking the envelope and holding the worktree beyond any bound),
+or its question is lost when the entity ends, or an unanswered task question is decided by the passing of time.
+Guard:: Scenario: the worker of an envelope task follows `ask:TASK-NNN`; the record is persisted naming the envelope
+and the plan task; where the envelope task continues it rests in `envelope.task.awaiting_answer`, its worker holds
+only within its role's question hold, and the same plan task continues with the answer; where it does not continue,
+the task ends `asked` with `yield_reason: question` recorded by the server, its worker and model slot are free, and
+the plan enters `execute.task-question`; no further envelope task is queued while the record is open; the decision is
+delivered to both clients of the operator as an operator wait and never to a worker; after the answer the remaining
+plan tasks, the asking one included, form the next envelope task with the answer in its facts; the decision has no
+deadline and no default.
 Source:: design review.
 
 [#PM-WATCH-DISP-29]
-=== PM-WATCH-DISP-29: Question expiry follows the class in mode `auto`, never in mode `operator`
+=== PM-WATCH-DISP-29: A decision is never decided by time, and the first valid answer wins
 
-Anchor:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Model Work § Delivery, Mode & Server-Owned Deadlines],
-link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Timeouts & Budgets § Question Wait],
+Anchor:: link:../specification/model-work/06-envelopes-questions-deadlines.adoc#question-delivery[Model Work § Delivery to the Operator],
+link:../specification/timeouts/01-job-budgets-and-waits.adoc#question-wait[Timeouts & Budgets § Decision],
 link:../Requirements.adoc#PM-WF-12[PM-WF-12]
-Hazard:: One fallback for every class turns an unanswered outline review into execution, or a question in mode
-`operator` expires and takes a fallback the operator chose to prevent.
-Guard:: Table test per class in mode `auto` with `questions.wait_seconds` elapsed: `init` takes the recommended
-option or `returned`, `clarification` the default assumption, `review` `returned`, `task` and `ask` the question's
-stated default, `setup` the state's declared fallback, each recorded as an assumption; with `wait_seconds: 0` the
-fallback applies at creation; a record in mode `operator` has no deadline and never expires; in mode `quorum` a set
-the adjudication delivers takes the `auto` handling with its deadline counted from the delivery; the server-side
-timer runs without a session and needs no model call.
+Hazard:: A timer that ends an unanswered decision with a default takes a choice the operator never made; two clients
+that both accept an answer record two answers for one decision; a delivery to a host session or a model lets a
+model answer for the operator.
+Guard:: Table test per class (`init`, `clarification`, `review`, `task`, `ask`, `setup`): a decision the adjudication
+escalates stays open as an operator wait however long it waits, with no deadline, no expiry, and no default, and no
+server timer touches it; a set the declarations decide by quorum is answered `channel: quorum`; a decision is
+announced on the event stream of its scope and answered through the one answer endpoint of the local API: an answer
+over the runtime's socket is recorded `cli`, one of a paired device `web` with its `device_id`, the first valid
+answer wins and a later one is refused `already_answered`; no MCP representation offers an answer link.
 Source:: design review.
 
 [#PM-WATCH-DISP-45]
@@ -446,14 +444,14 @@ link:../specification/model-work/10-decision-quorum.adoc#blind-input[§ Blind In
 link:../specification/model-work/10-decision-quorum.adoc#decision-rule[§ Decision Rule],
 link:../Requirements.adoc#PM-WF-18[PM-WF-18]
 Hazard:: A vote task whose facts are composed from the asking task's representation carries the asker's
-`recommended` flag, its confidence, its rationale, or its default assumption, so a listed role anchors on the
+`recommendation` (its option, its confidence, its rationale), so a listed role anchors on the
 recommendation and "agrees" without judging; or an agreement check that iterates over the votes received instead of
 the declaration's listed roles treats a lost, unavailable, cancelled, or refused vote task as absent rather than as a
 failed quorum, so a set is decided automatically on fewer judgments than declared, or on the asker's alone.
 Guard:: Scenario test with the adjudication unit declaring `decide approach -> quorum(quorum-a, quorum-b, 90)` and
 `decide scope -> ask`, calibrated, and a set of kind `approach` asked by a role the declaration does not list: the
-facts and the offer of each vote task contain none of `recommended`, `recommendation_confidence`, `rationale`,
-`default_assumption`, or another role's answer (asserted on the serialized representation, not on the facts
+facts and the offer of each vote task contain none of the `recommendation`, its confidence, its `rationale`, or
+another role's answer (asserted on the serialized representation, not on the facts
 builder); with `quorum-b` lost through its re-offers and `quorum-a` submitting the option at `95` the set ends
 `escalated` with reason `role_unavailable`, the vote entries `task_outcome: lost` and `branch_key: null`; with
 `quorum-a` unqualified it ends `escalated` with reason `role_unqualified` and creates no task; with the vote tasks'
@@ -486,13 +484,13 @@ link:../Requirements.adoc#PM-WF-19[PM-WF-19]
 Hazard:: A store that keeps one current object per decision updates its `choice` when a later decision departs from
 it, so the original decision, its decider, and its confidence are lost and the threshold it was taken against can no
 longer be calibrated; or the export reads the question record's `recommended` option, or the decision's first
-`choice`, as the reference, so an item teaches the model the recommendation the user overruled or the decision a
+`choice`, as the reference, so an item teaches the model the recommendation the operator overruled or the decision a
 re-planning reverted, and an operator waiver read as a correction turns a policy override into a reference.
-Guard:: Scenario test: a plan whose outline question the user answers against the asker's recommendation, whose
+Guard:: Scenario test: a plan whose outline question the operator answers against the asker's recommendation, whose
 finding group is triaged `ACCEPT` and later `FIX`, whose re-planning names the change-type decision in `corrects`,
 and whose blocking Q-Gate verdict is waived: `decisions.jsonl` holds every `decided` line byte-identical after the
 run, with one `corrected` line per departure (causes `reverted`, `replanned`, `overridden`), and the export writes
-the question item with the user's `branch_key`, the triage item with `FIX`, no change-type item (skipped
+the question item with the operator's `branch_key`, the triage item with `FIX`, no change-type item (skipped
 `corrected_without_choice`), and the Q-Gate item with the task's own verdict and the waiver only in `review.notes`;
 no item's input contains `recommended`, `recommendation_confidence`, the asker's rationale, or the choice. Matched
 control: a decision without a correction is exported with its own choice and an unchanged line.
@@ -521,7 +519,7 @@ Anchor:: link:../specification/model-work/04-worker-launch.adoc#job-token[Model 
 link:../Requirements.adoc#PM-WF-5[PM-WF-5]
 Hazard:: A sub-agent that connects with the runtime token, or with a token that outlives its job, can drive any scope
 of the machine or keep acting after its fate was recorded; a relay that falls back to the runtime token silently
-widens a worker to the rights of an interactive session.
+widens a worker to the rights of the operator's clients.
 Guard:: Scenario tests over a running worker fixture: a call naming a scope or entity that is not a task entity leased
 to the worker's generation is refused `job_scope_mismatch`; `tools/list` returns only the role's tool set; a `pm_do`
 of a link that starts a model is refused, and a consultation passes only through a `consult:<role>` link of the
@@ -578,14 +576,14 @@ Source:: design review.
 
 Anchor:: link:../specification/model-work/04-worker-launch.adoc#job-token[Model Work § Job Token, Generation & Connection Binding],
 link:../Requirements.adoc#PM-WF-5[PM-WF-5]
-Hazard:: A headless harness run loads the host's own PM-MCP integration: a second MCP server connects with the
-runtime token, or an entry command records an entry, issues a session generation, or starts a bootstrap from inside
-a worker.
+Hazard:: A headless harness run loads the host's own configuration: a second MCP server (an entry of the operator's
+own configuration, possibly named `plan-marshall`) connects beside the job relay, or a worker inherits the runtime
+token or the host's session markers and acts beyond its job.
 Guard:: Per harness with a `headless` block, a launch-vector test asserts the exclusive per-call MCP configuration
-(only the job relay); an entry-command test with `PM_MCP_JOB_ID` set asserts that each of the three entry commands
-exits at once with no entry row, no pending entry record, no session generation, and no API call; an integration test
-runs one worker in a project with the client bundle installed and finds no entry row, no session generation, and no
-second connection in the audit log.
+(only the job relay) where the profile declares `mcp_config.exclusive`; an environment test asserts that a worker
+holds its job token only, never the runtime token, and none of the host markers; an integration test runs one worker
+in a project with the client bundle installed and a global MCP entry in the operator's configuration and finds no
+second connection in the audit log and no tool of it in the worker's `tools/list`.
 Source:: design review.
 
 [#PM-WATCH-DISP-24]
@@ -671,7 +669,7 @@ it: its synthetic row id equalled its own target.
 Guard:: Round-trip tests for the server start of a launchable row → `source-epic-row` → row set `running` in the
 bootstrap's `start.create-scope` transaction → `outbox:send` → inbox append → `submit mailbox_send` → plan mailbox →
 landing reconcile, using real row shapes in which the ordinal differs from the plan id; assert delivery, and assert
-that a mismatched id is refused (`epic_pointer_mismatch` for a session bootstrap that derives a row's `plan_id`, a
+that a mismatched id is refused (`epic_pointer_mismatch` for a start from other sources that derives a row's `plan_id`, a
 held row with `row_unknown` for a start whose row is missing), never re-routed silently.
 Fixture:: `+{"id": "PLAN-01", "slug": "tracked-orchestrator-store-resolver", "workstream": "WS-01", "status": "shipped", "plan_marshall_plan_id": "tracked-orchestrator-store-resolver", "pr": "#1557, #1558, #1561", "landing": "landings/PLAN-01.md", "seq": 1}+`
 Source:: plan-marshall orchestrator-refactor PLAN-05 D6.
@@ -867,8 +865,10 @@ Anchor:: link:../specification/model-work/08-epic-coordination.adoc#git-distribu
 link:../Requirements.adoc#PM-WF-15[PM-WF-15]
 Hazard:: Mapping a plan's `handed_back` outcome onto a shipped status reports unmerged work as shipped and lets a
 dependent row start on a base that lacks it.
-Guard:: Reconciliation test per plan outcome: `merged` -> `merged`, `no_change` -> `completed`, `aborted` ->
-`abandoned`, `returned` -> `returned`, `handed_back` -> `handed_back` (live); a `handed_back` row becomes `merged`
+Guard:: Reconciliation test per plan state and outcome: `merged` -> `merged`, `no_change` -> `completed`, `aborted` ->
+`abandoned`, `cancelled` -> `cancelled`, `abandoned` -> `abandoned`, `returned` -> `returned`, `handed_back` ->
+`handed_back` (live), a pausing or paused plan -> `pausing`, `paused` (live, back to `running` on start), and
+`released` changes no row; a `handed_back` row becomes `merged`
 only when the landing reconciliation observes its pull request merged, and a row that depends on it is not started
 before; it becomes `abandoned` when the reconciliation observes the pull request closed without a merge, and a row
 that depends on it is then never started. Matched control: while the pull request is open the row stays
@@ -885,13 +885,13 @@ Hazard:: An epic whose git-tracked ledger arrived by clone has no machine scope;
 re-creates `epic.json` and the vision over the durable ledger, or an adoption that "repairs" the header (`lifecycle`,
 rows) rewrites team-shared state as a side effect of entering it; an entry state taken from the header instead of
 the rows sends an epic with staged rows back to decomposition.
-Guard:: Scenario test over a cloned ledger without `epics/<epic_id>/`: `pm-mcp enter epic <epic_id>` routes to
-`start-epic.adopt`, and without an id `start-epic.define` offers `adopt_epic:<epic_id>`; after `adopted` the bytes of
+Guard:: Scenario test over a cloned ledger without `epics/<epic_id>/`: an epic start entry offers `adopt:<epic_id>` in
+`start-epic.sources`, which routes to `start-epic.adopt`; after `adopted` the bytes of
 every file under `.marshall/epics/<epic_id>/` are unchanged (digest before and after, and no commit on
 `pm-mcp/epics`), the machine scope holds `status.json`, and the entry state is `epic.decompose`
 only for a ledger without any queue row and `epic.next-work` for every other ledger, whatever the header's `lifecycle` says.
 Matched controls: a truncated `epic.json` ends in `start-epic.adopt-failed` with `ledger_unreadable` naming the file
-and creates no machine scope; a `define` with that `epic_id` reaches `start-epic.ready`, whose `create` is refused
+and creates no machine scope; a start of a new epic with that `epic_id` reaches `start-epic.ready`, whose `create` is refused
 with the reason `plan_id_taken` and stays in that state.
 Source:: design review.
 
@@ -919,13 +919,13 @@ link:../Requirements.adoc#PM-WF-15[PM-WF-15]
 Hazard:: An epic that enters `epic.archived` or `epic.aborted` when it moves its ledger leaves the move uncommitted
 or unlanded in the shared epic worktree, so the default branch keeps a live ledger of an ended epic and the next
 clone adopts it again.
-Guard:: Scenario test for `complete` and for `pm-operator abort epic <epic_id> --reason`: the abort first withdraws the
-epic's open tasks and ends their workers; `epic.archive` moves the ledger and sets the archive flag; the move is
+Guard:: Scenario test for `complete` and for the operator's cancel of the epic (either client; `pm-operator epic
+cancel <epic_id>`): the cancel first withdraws the epic's open tasks and ends their workers; `epic.archive` moves the ledger and sets the archive flag; the move is
 committed by `epic.commit-ledger` staging `epic/**` and `archived-epics/**` and landed by
-`epic.landing`; only then does `epic.next-work` take `archive_landed` (`epic.archived`) or `abort_landed`
+`epic.landing`; only then does `epic.next-work` take `archive_landed` (`epic.archived`) or `cancel_landed`
 (`epic.aborted`). Fixtures: a landing that fails or a commit that steps out keeps the epic non-terminal and resumes on
 the next ledger commit or default-branch advance; no plan starts and no task is served while the archive flag is set.
-Matched control: the `abort` resolution of an `integrity_breach` on the epic enters `epic.aborted` directly and
+Matched control: the cancel that resolves an integrity pause on the epic enters `epic.aborted` directly and
 commits nothing from the tampered ledger.
 Source:: design review.
 

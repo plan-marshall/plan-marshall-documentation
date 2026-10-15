@@ -20,14 +20,22 @@ link:../../Specification.adoc[Specification] » link:../state-catalogue.adoc[Sta
 |`auto`
 |`outline.gate` (`pass`), `outline.route-review` (`approve`); the Phase 4 re-entry after a `loop_back_outline` (additive derivation; completed tasks are kept).
 |Profile-to-task mapping, DAG construction and cycle rejection, two-tier skill resolution, atomic non-idempotent creation, lane re-evaluation logged as `lane_reevaluation`. The same derivation already ran as a dry-run when the outline was submitted.
-|`derived` -> `plan.describe-tasks`; `derivation_failed` (inputs changed since the dry-run, for example the skill registry; no task is created) -> `outline.remediate-qgate` (phase set back to `phase-3-outline`, the failure filed as a blocking `3-outline` Q-Gate finding).
+|`derived` -> `plan.order-tasks`; `derivation_failed` (inputs changed since the dry-run, for example the skill registry; no task is created) -> `outline.remediate-qgate` (phase set back to `phase-3-outline`, the failure filed as a blocking `3-outline` Q-Gate finding).
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#_deterministic_task_derivation_dag_cycle_detection[Phase Workflows Specification, Deterministic Task Derivation]
+
+|[[state-plan.order-tasks]]`plan.order-tasks`
+|`phase-4-plan`
+|`call`
+|`plan.derive-tasks` (`derived`).
+|The call site of the method axis: `call method.<variant>`, the variant the plan instance binds (`method.test-first` or `method.tests-after`, the other pruned with reason `plan_default`; xref:18-plan-unit-axes-short-landings.adoc#state-catalogue-axes[Axis Variants]), which records the order of each deliverable's implementing and testing tasks that the task descriptions and the envelope packing follow.
+|`done` -> `plan.describe-tasks`.
+|link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]
 
 |[[state-plan.describe-tasks]]`plan.describe-tasks`
 |`phase-4-plan`
 |`job`
-|`plan.derive-tasks`.
-|`job llm task-descriptions role plan`: the entity submits the enriched task descriptions (`description`, `steps`, `target_files`, `depends_on`) under declared-path discipline; on submission the server sizes costs, packs envelopes, composes the plan instance version of event `plan` (tasks and steps; provider and footprint prunes beside the posture prunes of version 1; budgets bound; in force from the transition into `plan.qgate`), and projects the budget (`split_advice`, advisory).
+|`plan.order-tasks` (`done`).
+|`job llm task-descriptions role plan`: the entity submits the enriched task descriptions (`description`, `steps`, `target_files`, `depends_on`) under declared-path discipline and in the order the method variant recorded; on submission the server sizes and packs the envelopes and composes the plan instance version of event `plan` (tasks and steps; provider and footprint prunes beside the posture prunes; budgets bound; in force from the transition into `plan.qgate`).
 |`described` -> `plan.qgate` (every path; the Q-Gate is not configurable); `infeasible`, `lost` -> `plan.return`.
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#_deterministic_task_derivation_dag_cycle_detection[Phase Workflows Specification, Deterministic Task Derivation items 4–7]; link:../store-schemas/14-plan-instance-waivers-questions.adoc#plan-instance[Store Schemas Specification, Plan Instance]
 
@@ -83,11 +91,11 @@ Envelopes run serially as tasks of the writer role `implement`: a plan runs at m
 
 |[[state-execute.task-question]]`execute.task-question`
 |`phase-5-execute`
-|`awaiting_user`
+|`call`
 |`execute.envelope-ready` (`question_pending`: the envelope task's `ask:TASK-NNN` created a question record of class `task` and ended the entity).
-|The task question, answered per `questions.mode` through the web app or the entry session's answer links. On expiry the server records the question's stated default, validated against its options (`assumed`). The server validates `branch_key` against the stored options, records an `amendments[]` entry, and lists it in the pull request body and the landing record.
-|`answered`, `assumed` -> `execute.envelope-ready`, whose next envelope task (`envelope-(M+1)`) takes over the remaining plan tasks, the asking one included, with the answer in `facts`.
-|link:../model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Envelopes, Questions & Deadlines]; link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas Specification, Question Record]
+|`call decision` over the task question. The server validates the answer against the stored options, records an `amendments[]` entry, and lists it in the pull request body and the landing record.
+|`answered`, `withdrawn` -> `execute.envelope-ready`, whose next envelope task (`envelope-(M+1)`) takes over the remaining plan tasks, the asking one included, with the answer, or the operator's note, in `facts`.
+|link:../model-work/06-envelopes-questions-deadlines.adoc[Model Work Specification, Envelopes & Questions]; link:../store-schemas/14-plan-instance-waivers-questions.adoc#question-record[Store Schemas Specification, Question Record]
 
 |[[state-execute.chain-tail-commit]]`execute.chain-tail-commit`
 |`phase-5-execute`
@@ -132,7 +140,7 @@ Envelopes run serially as tasks of the writer role `implement`: a plan runs at m
 |[[state-execute.remediation-commit]]`execute.remediation-commit`
 |`phase-5-execute`
 |`call`
-|`execute.envelope-ready` (`remediation_chain_tail`); `execute.exit-barrier` and `land.exit-barrier` (`dirty`).
+|`execute.envelope-ready` (`remediation_chain_tail`); `execute.exit-barrier` (`dirty`).
 |`call git.commit_and_push (message_mode=interactive, push_mode=never)`: the message is composed by a task of the role `commit-message` and validated as a Conventional Commit; stamps `change-ledger.jsonl`. For a dirty tree at an exit barrier its artifact review separates build leftovers from real changes, which are committed and recorded as unplanned changes.
 |`done` -> `execute.route-commit-cause`; `stepped_out` -> `finalize.hand-back`.
 |link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]
@@ -142,7 +150,7 @@ Envelopes run serially as tasks of the writer role `implement`: a plan runs at m
 |`auto`
 |`execute.remediation-commit` (`done`).
 |Router: `auto execute.route-commit-cause` reads the persisted `remediation_cause` of the commit (link:../store-schemas/02-workflow-state-store.adoc#_workflow_state_store_mcpstatus_json[Store Schemas Specification, Workflow State Store]) and clears it in the routing transaction.
-|`deliverable` (cause `deliverable`) -> `execute.deliverable-build`; `sweep` (cause `sweep`, `finalize` for a finalize loop-back, or `exit_barrier` for a dirty `execute.exit-barrier`) -> `execute.verify-sweep`; `land` (cause `land_exit`, a dirty `land.exit-barrier`) -> `land.verify-sweep`.
+|`deliverable` (cause `deliverable`) -> `execute.deliverable-build`; `sweep` (cause `sweep`, `finalize` for a finalize loop-back, or `exit_barrier` for a dirty `execute.exit-barrier`) -> `execute.verify-sweep`.
 |link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]; link:../workflow-dsl/03-reference-excerpt.adoc#_reference_workflow_dsl_excerpt_finalize_pmwf[Workflow DSL Specification, Routing by Fact]
 
 |[[state-execute.verify-sweep]]`execute.verify-sweep`
@@ -167,16 +175,24 @@ The re-planning checkpoint `execute.replan-check` and the call state `execute.re
 [#state-catalogue-land]
 == Land Lane: `land`
 
-Plans started from `local_changes` only. The `land.*` states run in phase `phase-5-execute`. The capture of `land.worktree-init` is one-shot and never repeated. No worker authors the landed change: the plan instance's composition rules prune task allocation with reason `land_lane` and bind every policy call with `actions: [retry]`, so no `loop_back` and no in-branch fix is offered; a failure the retries cannot clear hands the plan back, and the user fixes the branch after the run.
+Plans started from `local_changes` only. The land lane calls no refine, outline, or plan phase: the plan unit calls `init` and then the phase `execute` at its entry `land`, whose call state `execute.land` calls the sub-workflow `land` (`land.pmwf`, exit contract `passed`, `hand_back`, and the control outcome `stepped_out`); its states have the phase `execute`. The capture of `land.worktree-init` is one-shot and never repeated. No worker authors the landed change: the plan instance's composition rules prune task allocation with reason `land_lane` and bind every policy call with `actions: [retry]`, so no `loop_back` and no in-branch fix is offered; a failure the retries cannot clear hands the plan back, and the operator fixes the branch after the run. The plan lands by the project's landing like every plan; `landing.files` is refused for a plan from local changes at its start (link:../workflow-dsl/09-plan-instance.adoc#plan-axes[Workflow DSL Specification, Plan Behaviour Axes]).
 
 [cols="2,1,1,2,3,2,2"]
 |===
 |State id |Phase value |Kind |Entered from |Offered links / outcomes |Exits to |Defined in
 
+|[[state-execute.land]]`execute.land`
+|`phase-5-execute`
+|`call`
+|`init.ready` (`land`: the plan unit calls the phase `execute` at its entry `land`).
+|`call land`.
+|`passed` -> `finalize.settle-commit` (phase `phase-6-finalize`, `settle_trigger` order `0`); `hand_back`, `stepped_out` -> `finalize.hand-back` (the pull request carries the operator's change with the failure documented).
+|link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane]
+
 |[[state-land.worktree-init]]`land.worktree-init`
 |`phase-5-execute`
 |`auto`
-|`init.ready` (`land`).
+|`execute.land` (start state of the unit).
 |Creates the plan's branch at the capture's snapshot commit (`refs/pm-mcp/captures/<plan_id>`) and its worktree `.marshall/local/worktrees/<plan_id>/`, records `worktree_path`; then restores the main checkout's captured paths (untracked ones included) to `HEAD` only where their content digest still equals the capture, lists the paths edited after the capture (left untouched) in `facts`, and re-records `entry_baseline` from the main checkout it leaves. Main's index and refs are never touched.
 |`land.verify-sweep`.
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane item 3]
@@ -184,7 +200,7 @@ Plans started from `local_changes` only. The `land.*` states run in phase `phase
 |[[state-land.verify-sweep]]`land.verify-sweep`
 |`phase-5-execute`
 |`composite_job`
-|`land.worktree-init`; `land.remediate-build` (`resolved`); `land.exit-barrier` (`stale`); `execute.route-commit-cause` (`land`).
+|`land.worktree-init`; `land.remediate-build` (`resolved`); `land.exit-barrier` (`stale`); `land.remediation-commit` (`done`).
 |Execute's exit verification over the captured footprint: the plan instance's Phase 5 verification steps with footprint-driven scope and relocation override, the baseline-red server rule as in `execute.verify-sweep`, and the check that the realized footprint equals the captured `declared_files`.
 |`all_green` -> `land.exit-barrier`; `red` (plan-caused, or no verdict), `cancelled` (cancelled by the server or the operator) -> `land.remediate-build`.
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane item 3]
@@ -194,7 +210,7 @@ Plans started from `local_changes` only. The `land.*` states run in phase `phase
 |`call`
 |`land.verify-sweep` (`red`, `cancelled`).
 |As xref:01-conventions-generic-conditions.adoc#state-phase.remediate-build[`<phase>.remediate-build`] with the land budgets (`retry_budget=1`, `fix_budget=0`, `actions: [retry]`): with these bindings the unit's `decide` offers only `retry`, and the server takes it without a task while the retry budget is left (xref:08-remediation-units.adoc#state-remediation-build.decide[`remediation-build.decide`]).
-|`resolved` -> `land.verify-sweep`; `exhausted`, `stepped_out` -> `finalize.hand-back` (the pull request carries the user's change with the failure documented).
+|`resolved` -> `land.verify-sweep`; `exhausted`, `stepped_out` -> `land.handed-back`.
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane item 4]
 
 |[[state-land.exit-barrier]]`land.exit-barrier`
@@ -202,6 +218,22 @@ Plans started from `local_changes` only. The `land.*` states run in phase `phase
 |`auto`
 |`land.verify-sweep` (`all_green`).
 |The Phase 5 exit barrier with zero tasks (the pending-tasks gate is vacuous); clean-tree and freshness gates unchanged.
-|`pass` -> `finalize.settle-commit` (phase `phase-6-finalize`, `settle_trigger` order `0`); `dirty` -> `execute.remediation-commit` (writes `remediation_cause: land_exit`); `stale` (freshness `stale`, or `undecidable` for a reason a build clears) -> `land.verify-sweep`; the `undecidable` reasons no sweep clears raise xref:01-conventions-generic-conditions.adoc#condition-guard_indeterminate[`guard_indeterminate`] as in `execute.exit-barrier`.
+|`pass` -> `land.passed`; `dirty` -> `land.remediation-commit`; `stale` (freshness `stale`, or `undecidable` for a reason a build clears) -> `land.verify-sweep`; the `undecidable` reasons no sweep clears raise xref:01-conventions-generic-conditions.adoc#condition-guard_indeterminate[`guard_indeterminate`] as in `execute.exit-barrier`.
 |link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane item 3]
+
+|[[state-land.remediation-commit]]`land.remediation-commit`
+|`phase-5-execute`
+|`call`
+|`land.exit-barrier` (`dirty`).
+|`call git.commit_and_push (message_mode=interactive, push_mode=never)`: its artifact review separates build leftovers from real changes, which are committed and recorded as unplanned changes.
+|`done` -> `land.verify-sweep`; `stepped_out` -> `land.handed-back`.
+|link:../workflow-dsl/06-reusable-sub-workflows.adoc#_call_site_reuse_matrix_across_workflows[Workflow DSL Specification, Call-Site Reuse Matrix]
+
+|[[state-land.passed]][[state-land.handed-back]]`land.passed`, `land.handed-back`
+|`phase-5-execute`
+|`terminal`
+|`land.exit-barrier` (`pass`); `land.remediate-build` (`exhausted`, `stepped_out`), `land.remediation-commit` (`stepped_out`).
+|Declared `terminal passed success` and `terminal hand_back failure`; the hand-back records the gap of the spent budget or the step-out.
+|The caller's `passed` and `hand_back` transitions (`execute.land`).
+|link:../phase-workflows/02-planning-lanes-phases-3-4.adoc#land-lane[Phase Workflows Specification, Land Lane]
 |===
