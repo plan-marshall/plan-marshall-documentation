@@ -108,8 +108,8 @@ Flow::
        ▼ yes
   [S] auto.run                 each sub-workflow with its proposal accepted:
        │                       the system language for both languages,
-       │                       every supported harness found, the first one
-       │                       the default, and their models, the default
+       │                       every supported harness found, the first by
+       │                       client id the default, and their models, the default
        │                       role assignment, the OS credential store where
        │                       available, the providers whose tools are
        │                       found, the default plan behaviour; every check
@@ -199,8 +199,8 @@ Flow::
   [O] harness.choose           every found harness, each with version,
        │                       supported or not, worker-eligible or not,
        │                       what it reports of its token usage;
-       │                       every supported one preselected, the first of
-       │                       them as the default
+       │                       listed by client id; every supported one
+       │                       preselected, the first of them the default
        ├── add another ──► harness.add
        ▼ the chosen ones, one of them the default
   [O] harness.probe-consent    may the server run the login probe of each
