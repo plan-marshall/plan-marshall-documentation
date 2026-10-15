@@ -315,6 +315,17 @@ _See Requirement link:../../Requirements.adoc#PM-WORK-6[PM-WORK-6: Role Qualific
 
 A role runs only on a configuration whose judgment was shown to meet the operator's level against the model verification corpus `test/model/verification/` (link:../evaluation.adoc#corpus[Evaluation Reference, Verification Corpus]), which the release ships with its revision.
 
+[#corpus-sources]
+=== Corpus Sources
+
+The corpus is its own part plus the items generated from public datasets. A dataset is a source of the corpus, named by its manifest `sources/<name>/manifest.json` (the repository, the commit it is pinned to, the licence, and every file read from it with its SHA-256) and its overlay `sources/<name>/overlay.json` (the rows of one file that become items, and what each item adds to its row); `ATTRIBUTION.md` holds one section per source. No text of a dataset is stored below the corpus: the items are generated from the files fetched at the pinned commits into a cache outside the repository, and the corpus revision covers the pins, so a changed pin is a changed revision.
+
+* *Fetch*: The git part reads each file as it is stored at the pinned commit; a file kept in Git LFS is read as its pointer, and its object is downloaded over HTTP from the repository's LFS endpoint. The refusal of LFS by the native git variant for a project repository does not concern the corpus cache: no filter driver runs for it.
+* *Missed source*: A source is missed by name, and none of its items is generated, when its repository or LFS endpoint does not answer, its pinned commit, file, or object is absent, a file, a pointer, or a downloaded object does not have the SHA-256 its manifest pins, or its manifest, overlay, or source file does not yield the items its overlay selects. The other sources are generated all the same.
+* *Partial import*: An import whose missed sources were all missed because a repository or endpoint did not answer or something is absent at the pin is *partial*.
+* *Failed import*: A source missed for a SHA-256 that is not the pinned one, or for a manifest, overlay, or source file that does not yield the selected items, fails the import, whatever else was missed. The items of the other sources are still generated, but no role is qualified on a failed import.
+* *Partial qualification*: A qualification graded on a partial corpus is recorded as such, with the missed sources named (link:../store-schemas/16-task-queue.adoc#qualification-record[Store Schemas Specification, Role Qualification Record]).
+
 [#qualification-records]
 === Qualification Records
 _Implementation watch: link:../../implementation-watch/model-work.adoc#PM-WATCH-DISP-48[PM-WATCH-DISP-48]_

@@ -210,7 +210,7 @@ What a worker does while it serves a task, one entry per activity, in an append-
 [#qualification-record]
 == Role Qualification Record (`<set>/qualification/<role>.json`)
 
-The record of one grading of a role's configuration by the operator's grading in either client (`pm-operator roles qualify` in the terminal client) or the setup run's `setup.qualify-roles`, behind its consent to the model cost (`PM-WORK-6`; grading, validity, and invalidation: link:../model-work/01-roles-and-configuration.adoc#qualification[Model Work Specification, Role Qualification]). Every record the operator makes lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/<role>.json`), whichever set holds the role's effective artifact; the shipped set carries the release's records, and the machine set holds none (lookup: project set first, then the set of the artifact; paths: link:../filesystem-layout/03-project-store.adoc#role-sets[Filesystem Layout Specification, Role Sets & Task Queue]). Written only by the runtime, by atomic write-and-rename; a new grading replaces the record. The record holds the measurements only and no pass flag: whether it qualifies a form is evaluated at every check against the project's current levels (`qualification.agreement_level`, `qualification.allowed_gap`, operator configuration, xref:08-project-configuration-local.adoc#local-config[Operator Local Configuration]). A record with an ungraded item (its judge task closed `lost`) qualifies no form; the next grading re-grades only those items while `qualification_digest` and `corpus_revision` are unchanged.
+The record of one grading of a role's configuration by the operator's grading in either client (`pm-operator roles qualify` in the terminal client) or the setup run's `setup.qualify-roles`, behind its consent to the model cost (`PM-WORK-6`; grading, validity, and invalidation: link:../model-work/01-roles-and-configuration.adoc#qualification[Model Work Specification, Role Qualification]). Every record the operator makes lies in the project role set (`<PM_MCP_BASE>/projects/<project_id>/roles/qualification/<role>.json`), whichever set holds the role's effective artifact; the shipped set carries the release's records, and the machine set holds none (lookup: project set first, then the set of the artifact; paths: link:../filesystem-layout/03-project-store.adoc#role-sets[Filesystem Layout Specification, Role Sets & Task Queue]). Written only by the runtime, by atomic write-and-rename; a new grading replaces the record. The record holds the measurements only and no pass flag: whether it qualifies a form is evaluated at every check against the project's current levels (`qualification.agreement_level`, `qualification.allowed_gap`, operator configuration, xref:08-project-configuration-local.adoc#local-config[Operator Local Configuration]). A record with an ungraded item (its judge task closed `lost`) qualifies no form; the next grading re-grades only those items while `qualification_digest` and `corpus_revision` are unchanged. A record graded on a partial corpus, one whose import of the corpus sources missed a source that did not answer or is absent at its pin, names the missed sources in `missed_sources` beside `corpus_revision`; the list is empty for a complete corpus (link:../model-work/01-roles-and-configuration.adoc#corpus-sources[Model Work Specification, Corpus Sources]). No record is graded on a failed import.
 
 [source,json]
 ----
@@ -219,7 +219,7 @@ The record of one grading of a role's configuration by the operator's grading in
   "$id": "https://cuioss.de/plan-marshall-mcp/schemas/qualification-record.json",
   "title": "QualificationRecord",
   "type": "object",
-  "required": ["format_version", "role", "qualification_digest", "configuration", "corpus_revision", "forms", "warm_fresh_gap", "ungraded", "graded_at", "items"],
+  "required": ["format_version", "role", "qualification_digest", "configuration", "corpus_revision", "missed_sources", "forms", "warm_fresh_gap", "ungraded", "graded_at", "items"],
   "additionalProperties": false,
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
@@ -241,6 +241,7 @@ The record of one grading of a role's configuration by the operator's grading in
       }
     },
     "corpus_revision": { "type": "string", "minLength": 1, "description": "Revision of the model verification corpus the release ships." },
+    "missed_sources": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }, "description": "The corpus sources the import missed, by name; empty when the grading ran on the complete corpus (model-work/01, Corpus Sources)." },
     "forms": {
       "type": "object",
       "required": ["fresh"],
