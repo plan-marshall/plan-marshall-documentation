@@ -115,6 +115,15 @@ Options:: (1) Implement the small subset of the ICU message syntax the catalogue
 Recommendation:: 1; the catalogue's texts use only that subset, and a test over every key proves it.
 Blocks:: the message catalogue (link:../specification/module-structure.adoc[Module Structure Specification]).
 
+[#uncovered-operator-acts]
+=== Operator Acts Without a Use Case
+
+Question:: Two requirements give the operator something to do or to see that no use case shows: allowing and denying an upstream MCP server of a project, with its credential (link:../requirements/05-services.adoc#PM-SVC-3[PM-SVC-3], `pm-operator upstream allow|deny` or the same act in the web app), and an extension skill refused on its check, whose reason is reported to the operator (link:../requirements/03-skills.adoc#PM-SKILL-5[PM-SKILL-5]). Do they get use cases?
+Why it is open:: a use case is agreed by the operator, and the clients design only what a use case shows; without one, neither client offers the upstream act nor shows the refusal.
+Options:: (1) A new use case for the upstream servers of a project (in link:../use-cases/04-projects.adoc[Projects]) and the refused extension skill as a report of link:../use-cases/03-plans.adoc#UC-PLN-6[UC-PLN-6]; both start as `DRAFT`. (2) The upstream act stays a terminal verb only and the refusal a line of the runtime's status; no use case.
+Recommendation:: 1; the requirement already names the act in the web app.
+Blocks:: the design of both acts in the clients.
+
 [#recorded-elsewhere]
 == Recorded Elsewhere
 
