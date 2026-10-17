@@ -1,0 +1,145 @@
+= Graphify
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:graphify-impact.adoc[Graphify Impact] » Graphify
+
+[horizontal]
+Source:: https://github.com/Graphify-Labs/graphify (README, default branch `v8`); docs at https://docs.graphify.com
+Read:: 2026-10-17
+Cited by:: xref:graphify-impact.adoc[Graphify Impact]
+Focus:: what our LSP approach should take from it
+
+This is not a summary of the tool. It keeps what is useful for PM-MCP and says where it touches our documents. It is
+based on the README, not on running the tool. The README makes no measured claim about token savings: its "80 %" is
+marketing for the cloud version, and its benchmarks measure retrieval quality.
+
+== What Graphify Does
+
+* *Builds a graph of the codebase once, offline.* tree-sitter parses code in about 40 languages without a model. The
+  edges are `calls`, `imports`, `inherits` and `mixes_in`, plus `uses`, `references` and `method`. `# NOTE:` and
+  `# WHY:` comments and ADR or RFC citations become nodes linked to the code. Documents, PDFs and media need a model
+  pass.
+* *Labels where an edge comes from.* An edge is `EXTRACTED` (written in the source) or `INFERRED` (resolved by
+  Graphify).
+* *Gives an overview.* Communities (Leiden clustering), "god nodes" (the most connected), surprising connections and
+  suggested questions, in `GRAPH_REPORT.md`, with the full graph in `graph.json`.
+* *Answers three queries*: `query`, `path` (how two nodes connect) and `explain` (a node's location, community and
+  degree). Each answer has an explicit outcome: answer, ambiguous (several nodes match, the candidates are listed), or no
+  match.
+* *Steers the agent towards itself.* It writes instruction files, and on hook-capable hosts a hook fires before search
+  calls and before reading source files, pointing the agent to the graph first.
+* *Updates incrementally*: only changed files are extracted again, the graph is rebuilt on commit and branch checkout,
+  and an AST cache is kept.
+* *Logs its queries locally* (JSON Lines) as its only instrument. There is no telemetry.
+
+Its own reviewers note the limit: the graph is good for reading a codebase and of no help for writing to it, which
+needs the files themselves.
+
+== Where It Touches Our Documents
+
+Our approach is a warm pool of real language servers, one per worktree and language, shared by all workers and
+reached through `pm_lsp` (xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2], xref:../Requirements.adoc#PM-TOOL-2[PM-TOOL-2],
+xref:../specification/mcp-tools/02-service-and-skill-tools.adoc[MCP Tools, `pm_lsp`]). The architecture inventory
+gives the module-level structure (xref:../Requirements.adoc#PM-EXT-3[PM-EXT-3]).
+
+=== The choice holds: live and exact beats precomputed for writers
+
+A language server answers on the worktree as it is now, edits included, with the compiler's resolution of overloads,
+generics and imports. A graph is a snapshot from the last build, with name-based resolution where tree-sitter cannot
+resolve (`INFERRED`). Our writers change code and then need to know its consumers. For that, a snapshot is the wrong
+source, and Graphify says so itself. Nothing in Graphify argues for replacing `pm_lsp`.
+
+=== "Empty" is not "none": an index still being built
+
+Graphify keeps three outcomes apart: answer, ambiguous, no match. `pm_lsp` has a gap here. A language server that is
+still indexing (jdtls on a large Maven project takes minutes after `initialize`) answers `references` or
+`workspace_symbol` with an empty or partial list, and nothing in our specifications tells that apart from "there is
+none". A timeout is reported, never answered empty
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/02-runtime-leases-operator-web.adoc#runtime-lifecycle[Timeouts & Budgets, Runtime Lifecycle]),
+but an index in progress is neither a timeout nor a failure. Only the corpus language server states that an empty
+answer means none, and only for its own index.
+
+This matters because the core conduct skill makes `pm_lsp references` the basis of a fix's co-reference population
+(rule 2 of the
+xref:../specification/mcp-tools/02-service-and-skill-tools.adoc#_pure_vocabulary_skills_dynamic_context_injection_pm_skill_1_pm_skill_2_pm_skill_4[core conduct vocabulary]).
+An empty answer from an index that is not ready makes the worker conclude "no other site". That is the incomplete fix
+the rule exists to prevent. The case is worse for us than for one session, because every plan worktree gets its own
+language server instance, so every plan starts with a cold index.
+
+Language servers report their indexing through work-done progress (`$/progress`), so the pool can know when an index
+is ready. A result could then carry whether it was answered from a complete index, or wait for a bounded time until it
+is.
+
+=== Missing operations: call hierarchy and implementations
+
+Graphify's most used edges are `calls` and `inherits`, and its `path` query follows them. `pm_lsp` offers
+`workspace_symbol`, `document_symbol`, `definition`, `references`, `hover`, `diagnostics` and `rename`. LSP has the
+exact versions of what the graph approximates:
+
+* `implementation` (`textDocument/implementation`): the implementations of an interface or abstract method. `references`
+  does not return them as such;
+* call hierarchy (`prepareCallHierarchy`, `incomingCalls`, `outgoingCalls`): who calls a method and what it calls,
+  across files;
+* type hierarchy (`prepareTypeHierarchy`, `supertypes`, `subtypes`).
+
+The consumer sweeps of our pipeline would use them: the Q-Gate rule that every consumer is covered or argued out of
+scope, a public symbol deletion that ratchets the plan to the deep lane, and the co-reference population of a fix
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/03-q-gate-and-execute.adoc[Phase Workflows, Q-Gate and Execute]).
+Today a worker has to rebuild them from `references` one level at a time.
+
+=== Orientation is the part a graph does better
+
+What Graphify gives and we do not is the overview at symbol level: which classes are central, which clusters belong
+together, how two distant parts connect. Our architecture inventory stops at modules. The
+xref:clean-code-to-clean-spec-cleanliness-study.adoc[cleanliness study] found that the cost of an agent lies in
+navigating across modules. An overview could save some of it.
+
+That is not a reason for a second index. If wanted, it can come from the same language servers: `document_symbol`
+over the modules and the call hierarchy give the edges, labelled the way Graphify labels them, as exact. The
+architecture refresh would be the place for it. Without measurement this is speculative, and the revisit measure of
+the study is how we would find out.
+
+=== Steering towards the tool, and seeing whether it works
+
+Graphify needs a hook to make the agent use the graph before searching. Our core conduct skill names `pm_lsp` for the
+co-reference population. Whether workers actually use it is visible in data we keep: every `tool_call` of a worker's
+activity has its tool and target
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]).
+The share of `pm_lsp` calls against searches with the harness's own tools, per role, would show whether the skill
+works, with no hook.
+
+=== Provenance labels
+
+Graphify's `EXTRACTED`/`INFERRED` matches what we already require for derived edges: the resolver that derived an edge
+is kept with it (xref:../Requirements.adoc#PM-EXT-2[PM-EXT-2]). Nothing to change.
+
+== Candidates for a Change
+
+What became of them is in the status below. None corrects a requirement; each is new scope:
+
+. *Index readiness in `pm_lsp`*: the pool tracks the indexing of each language server through work-done progress. A
+  result says whether its index was complete, or the call waits within a bound until it is. An empty answer from an
+  incomplete index is never returned as complete. This is the one with a real defect behind it; Serena's users
+  report the same defect (xref:token-reduction-addons-serena.adoc[Serena], issue #1858).
+  It touches xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2] and the `pm_lsp` specification, and is a candidate for an
+  implementation watch item even before it is decided.
+. *Operations `implementation`, call hierarchy and type hierarchy* in `pm_lsp`
+  (xref:../Requirements.adoc#PM-TOOL-2[PM-TOOL-2]), read-only and so open to `read_only` roles.
+. *Use of `pm_lsp` per role* as a measure from the activity records, beside the revisit measure.
+. *A symbol-level overview derived from the language servers* at architecture refresh. Only if measurement shows that
+  navigation across modules is where the tokens go.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, index readiness in `pm_lsp` (xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2], xref:../specification/mcp-tools/02-service-and-skill-tools.adoc#lsp-index-readiness[Index Readiness]).
+* 3, the use of `pm_lsp` per role and the fallback-to-read rate (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+
+Open, because they add function:
+
+* 2 (implementation, call and type hierarchy operations), 4 (a symbol-level overview).

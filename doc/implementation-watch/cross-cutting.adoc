@@ -813,3 +813,22 @@ regenerated only from corrected semantics.
 Fixture:: plan-marshall PLAN-07: the `corpus verdicts` `stale` fix (#1585) had to land before the epic script
 split; a split taken earlier would have frozen the stale behaviour as the equivalence baseline.
 Source:: plan-marshall defect orchestrator-refactor epic queue annotations (PLAN-07), PLAN-07 Dependencies.
+
+[#PM-WATCH-GEN-59]
+=== PM-WATCH-GEN-59: A pinned commit is checked after it arrives, never looked up by name
+
+Anchor:: link:../Requirements.adoc#PM-EXEC-5[PM-EXEC-5] (git identities) and link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime § Verify-Not-Resolve Execution Pipeline]
+Hazard:: A 40-character commit id passed to `git` as a plain argument is also a valid branch name. A remote that
+allows hash-shaped branch names (self-hosted servers, Bitbucket) can serve a branch of that name, and `git` resolves
+the string to the branch; nothing compares what was checked out with the pin, so other code is read, built, and
+landed as the pinned commit.
+Guard:: The CLI variant passes a commit as `<id>^{commit}` (or `--end-of-options` followed by the object id where a
+ref is not accepted) and a ref by its full `refs/…` name, never a bare string; after every fetch, checkout, reset, and
+worktree creation that targets a recorded commit, `rev-parse HEAD` (CLI) or the `ObjectId` of `HEAD` (JGit) equals the
+recorded id, else the operation refuses. A test creates a branch named like the pinned commit in a fixture remote and
+asserts the refusal in both variants.
+Fixture:: Plugin4Shell (2026): Claude Code, Codex, Copilot, and Gemini CLI fetched marketplace plugins by their pinned
+SHA, and a branch named like that SHA on the plugin's repository was checked out and run instead; the fix compares
+the checked-out code with the pinned commit.
+Source:: heise developer, 2026-09-21 (updated 2026-09-30), reporting AIR Security's disclosure; analysed in
+link:../articles/plugin4shell.adoc[Plugin4Shell].

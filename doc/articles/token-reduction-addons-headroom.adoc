@@ -1,0 +1,108 @@
+= headroom
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:token-reduction-addons.adoc[Token-Reduction Add-ons] » headroom
+
+[horizontal]
+Source:: https://github.com/headroomlabs-ai/headroom (Apache-2.0, Python)
+Read:: 2026-09-23 (for plan-marshall), read again against PM-MCP on 2026-10-17
+Cited by:: xref:token-reduction-addons.adoc[Token-Reduction Add-ons]
+
+This is not a summary of the tool. It keeps what is useful for PM-MCP and says where it touches our documents. Its
+published figures were not reproduced.
+
+== What headroom Does
+
+* *Compresses context at the API boundary.* The recommended mode `headroom wrap claude` starts a local proxy and
+  launches Claude Code with `ANTHROPIC_BASE_URL` pointing at it. It is also a library, middleware, or an MCP server.
+* *Compresses by content type*: JSON arrays keep error items, outliers and first and last rows; code is reduced
+  AST-aware; prose goes through a small trained model; logs and search results have their own compressors.
+* *Keeps the originals.* They stay in a local cache under a hash, and the compressed text carries a marker such as
+  `[1000 items compressed to 20. Retrieve more: hash=abc123]`. The proxy injects a `headroom_retrieve(hash)` tool and
+  answers its calls itself.
+* *Leaves the cached prefix alone.* Only the _live zone_ (the newest tool results and the latest turn) is compressed;
+  older turns, the system prompt and the tool definitions stay byte-identical.
+* *Shapes output*: a fixed "be terse" block, and _effort routing_, which lowers the requested effort on a turn that
+  only resumes after a clean tool result.
+* *Reports savings as estimated*, unless a holdout share of turns ran without the feature; then they count as
+  measured.
+
+Its benchmarks use synthetic payloads (21–57 % saved) and small generic accuracy tests, not agentic coding tasks. The
+issue tracker shows the compression losing data in ways that look complete:
+
+* array rows dropped with no marker, so the JSON contradicts its own count field (#3650), and a retrieval hash that
+  never reaches the store (#389);
+* search matches merged onto one line, creating false line-to-content links (#3545);
+* `ls -la` and `git status` treated as prose and losing fields (#3652).
+
+Side effects: `wrap` registers Serena at user scope, a non-Anthropic base URL disables Claude Code's Remote Control,
+and an anonymous telemetry beacon is on by default.
+
+== Where It Touches Our Documents
+
+=== It could not run in a worker, and should not
+
+A worker's environment is built from scratch, with each variable of a stated provenance
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/02-confinement-and-environment.adoc[Job Runtime, Confinement and Environment]),
+and it loads no harness plugin, hook or settings MCP server
+(xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]). That keeps out every route headroom uses but one: a base URL set
+in the harness's own settings file. Claude Code reads an `env` block from its settings, so a proxy configured there by
+the operator for their own sessions would also route every worker. Then:
+
+* every usage figure we record would measure the proxy's rewriting, not the work
+  (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]);
+* the lossy compression would feed workers results that look complete and are not, which is the confident-but-wrong
+  signal our facts rules exist to prevent
+  (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/hypermedia-format/01-representation-and-link-forms.adoc#model-facing-minimality[Hypermedia Format, rules for facts]);
+* the effort routing lowers effort per turn, the "examine less" lever that plan-marshall measured and rejected.
+
+The extension isolation of the client profile covers plugins, hooks and MCP servers from settings. It does not yet
+cover the endpoint and environment a settings file sets.
+
+=== Every elision names its retrieval route
+
+headroom's design is right where it works: compress, keep the original, say what was dropped and how to get it. Its
+defects show what happens where the marker became optional. PM-MCP has the first half as a rule: a server-side clamp
+of text reports `truncated: true` with the original and the kept length, cut at a sentence or line boundary
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/hypermedia-format/01-representation-and-link-forms.adoc[Hypermedia Format, rule 4 "Truncation Is Reported"]).
+It has the second half in places: a build's full output is a resource (xref:../Requirements.adoc#PM-TOOL-2[PM-TOOL-2]),
+and an offer above the per-tool-result limit continues as resource reads
+(xref:../Requirements.adoc#PM-WORK-2[PM-WORK-2]). The general rule does not require that a truncated model-facing text
+names where the full text can be read.
+
+=== Shrink only what is not yet cached
+
+The live-zone rule matches our cost model: a byte's cost is set by when it enters and how many turns it stays. It is
+the same reason our launch prompt should keep a stable prefix
+(xref:graphify-impact.adoc#_prompt_caching_depends_on_a_stable_prefix[Graphify Impact]).
+
+=== Measured only with a holdout
+
+Calling a saving measured only when a random share of runs went without the lever is the right standard for our own
+levers too: a change of a skill, a role's model, or the envelope budget. It fits the minimal-pair method from the
+xref:clean-code-to-clean-spec-cleanliness-study.adoc#_a_method_for_measuring_skill_changes[cleanliness study] and
+gives it a name for the report: _measured_ or _estimated_.
+
+== Candidates for a Change
+
+What became of them is in the status below:
+
+. *Extension isolation also covers the endpoint and environment of settings files*: a worker's model endpoint and
+  environment come only from the launch, never from an `env` block or base URL of the harness's settings. The
+  profile verification's `isolation` stage would add a decoy endpoint. This extends
+  xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2].
+. *Truncation names its retrieval route*: rule 4 of the facts rules requires, beside `truncated: true`, the resource
+  where the full text is read, wherever the full text is kept.
+. *Savings reported as measured only with a holdout*, in any evaluation of a lever.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, settings endpoints and environment excluded from workers (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]).
+* 2, truncation names where the full text is read (the facts rules of the hypermedia format, rule 4).
+* 3, measured only with randomised runs, else estimated (xref:../Requirements.adoc#PM-TEST-6[PM-TEST-6]).

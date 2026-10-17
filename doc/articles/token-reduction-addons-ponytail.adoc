@@ -1,0 +1,100 @@
+= ponytail
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:token-reduction-addons.adoc[Token-Reduction Add-ons] » ponytail
+
+[horizontal]
+Source:: https://github.com/DietrichGebert/ponytail (MIT, Node.js hooks and skills)
+Read:: 2026-09-23 (for plan-marshall), read again against PM-MCP on 2026-10-17
+Cited by:: xref:token-reduction-addons.adoc[Token-Reduction Add-ons]
+
+This is not a summary of the tool. It keeps what is useful for PM-MCP and says where it touches our documents.
+
+== What ponytail Does
+
+A Claude Code plugin that pushes the model toward the simplest implementation that works. A session-start hook (also
+on resume, clear and compact) injects its ruleset of about 1.4k tokens; a subagent-start hook injects it into every
+subagent; slash commands switch between `lite`, `full` and `ultra`.
+
+The ruleset is an ordered ladder, climbed before writing anything:
+
+. Does it need to exist at all?
+. Is it already in the codebase?
+. Does the standard library cover it?
+. Is there a native platform feature?
+. Does an already-installed dependency cover it?
+. Can it be one line?
+. Only then, write the minimum.
+
+Around it: no unrequested abstractions, deletion over addition, fewest files; fixes at the root cause with every
+caller checked; deliberate corner-cuts marked with a `ponytail:` comment; non-trivial logic leaves one runnable check
+behind. A *never-simplify list* exempts input validation at trust boundaries, error handling that prevents data loss,
+security, accessibility, and anything the user asked to keep. `/ponytail-review` reviews a diff for over-engineering
+only.
+
+The evidence is thin. "16 % fewer tokens" comes from five toy tasks, one run each. A later agentic benchmark (Haiku,
+twelve tasks, four runs) reports about −54 % lines added and −22 % tokens, but *the feature code was never run*, so
+correctness was not measured.
+
+== Where It Touches Our Documents
+
+=== It is a wording candidate, not a token lever
+
+It acts on generated output, about 1 % of billing weight
+(xref:token-reduction-addons.adoc#_why_the_usual_cost_model_does_not_transfer[Token-Reduction Add-ons]). Injected at
+session start, its ruleset is resident on every turn. In PM-MCP it could not run as a plugin anyway
+(xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]); its rules would be content of our skills.
+
+=== Our restraint layers
+
+PM-MCP has the same goal in three places: the plan's `simplicity` axis (`lean`, `pragmatic`, `defensive`), resolved
+from the configuration and persisted in the plan
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/01-planning-phases-1-2.adoc[Phase Workflows, Planning Phases 1–2]);
+the domain skills a writer receives (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]); and the finalize step
+`simplify`, a read-only review whose proposals a writer applies
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows, Normative Step Catalogue]).
+
+=== The ladder answers the duplication failure
+
+Rung 2, "is it already in the codebase?", is the direct counter to the failure in the
+xref:clean-code-to-clean-spec.adoc[Clean Code analysis], where an agent implemented the same retry logic in four
+modules. That analysis proposed "reuse before writing" for the writer's skill. The ladder gives it an order that a
+skill can state and a review can check against: the existing code, then the standard library, then the platform, then
+an installed dependency, and only then new code.
+
+=== A never-simplify list makes simplify fail closed
+
+plan-marshall's simplify pass once deleted a regression test added in the same plan, and made further wrong deletions
+that had to be reverted. PM-MCP guards the test case already
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-61[PM-WATCH-PHASE-61],
+xref:../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-30[PM-WATCH-GEN-30]). The vocabulary of `simplify` already
+holds such a list (behaviour-pinning tests, trust-boundary validation, security checks, data-loss error handling,
+operator-kept code); ponytail's list confirms it.
+
+=== Mark deliberate corner-cuts
+
+An in-code marker for an intentional shortcut separates it from an accidental one for later reviewers and simplify
+passes. For us it would be a convention of the domain skills, and a pattern the self-review surfacers can list.
+
+== Candidates for a Change
+
+What became of them is in the status below. Their effect on behaviour is a claim to measure, not a token saving:
+
+. *The ordered ladder* in the writer's domain skills and in the vocabulary of `simplify`. It replaces the "reuse before
+  writing" candidate of the Clean Code analysis with a sharper form.
+. *A never-simplify list* in the vocabulary of `simplify`.
+. *A marker for deliberate corner-cuts*, as a convention of the domain skills.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, the ordered ladder in the domain standards (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]) and in the vocabulary of `simplify`; 3, the marker for deliberate shortcuts.
+
+Already in place:
+
+* 2: the vocabulary of `simplify` already holds a never-simplify list (behaviour-pinning tests, trust-boundary validation, security checks, data-loss error handling, operator-kept code); the analysis above missed it.

@@ -1,0 +1,101 @@
+= Serena
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:token-reduction-addons.adoc[Token-Reduction Add-ons] » Serena
+
+[horizontal]
+Source:: https://github.com/oraios/serena (GPL-3.0-or-later; its language-server layer `src/solidlsp` is MIT)
+Read:: 2026-09-23 (for plan-marshall), read again against PM-MCP on 2026-10-17
+Cited by:: xref:token-reduction-addons.adoc[Token-Reduction Add-ons]; also named in
+xref:../discussions/execution-patterns.adoc[Execution Patterns] as a host-native server
+Focus:: what our LSP approach should take from it
+
+This is not a summary of the tool. It keeps what is useful for PM-MCP and says where it touches our documents.
+
+== What Serena Does
+
+An MCP server that gives an agent symbol-level access to a codebase through language servers (or a JetBrains
+backend), in more than thirty languages:
+
+* *Retrieval*: `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `find_declaration`,
+  `find_implementations`, `type_hierarchy`, `diagnostics`.
+* *Refactoring*: `rename`, `move`, `inline`, `safe_delete` (move and inline mostly through JetBrains).
+* *Editing*: `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `replace_content`.
+* *Memory*: project memories written by an onboarding pass on first start.
+
+`serena project index` builds a symbol cache once and updates it on file change. Reported problems: a start slow
+enough that a 60 s MCP timeout is recommended, a 35 s start on a large tree (#1991), and *incomplete results while a
+language server is still indexing* (#1858).
+
+Serena's documentation says Claude Code's built-in tools are strongly preferred by the model, and prescribes a system
+prompt that declares `Read` and `Edit` forbidden for code. The measurements:
+
+* the maintainers' own evaluation: built-in `Edit` uses about 4.5× less payload for one-line edits; Serena about 2×
+  less for whole-method rewrites and about 8× less for a four-file rename;
+* independent usage data (#1491, about 21,000 tool calls in 192 sessions): Serena was used at all in 35.4 % of
+  sessions, and *18.4 % of its symbol queries were followed by a plain read of the same file*.
+
+== Where It Touches Our Documents
+
+Serena is the closest thing to our `pm_lsp`: language servers behind a tool surface
+(xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2], xref:../Requirements.adoc#PM-TOOL-2[PM-TOOL-2]). The differences are
+deliberate: our servers are a warm pool owned by the runtime, one per worktree and language, confined like jobs, and
+a rename is applied by the server and lands in the plan's footprint.
+
+=== It confirms two gaps
+
+* *Indexing incomplete* (#1858) is the readiness gap found in the
+  xref:graphify-impact-graphify.adoc#_empty_is_not_none_an_index_still_being_built[Graphify analysis]: an index still
+  being built answers with an empty or partial list, and `pm_lsp` cannot tell that from "none". Serena's users hit it
+  in practice.
+* *`find_implementations` and `type_hierarchy`* are operations `pm_lsp` does not offer, the same gap found there.
+
+=== Uptake is measured as a fallback-to-read rate
+
+The most useful number here is not a saving: in 18.4 % of cases a symbol lookup was followed by a full read of the
+same file, so the lookup preceded the read instead of replacing it. Only whole-file reads count; a read of the located
+lines is the expected next step, because a lookup returns positions, not content. Our activity records hold every
+`tool_call` with its tool and target
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]),
+so this rate can be derived per role without new collection. It sharpens the "use of `pm_lsp` per role" candidate of
+the Graphify analysis.
+
+=== We do not fight the host
+
+Serena needs a system prompt that forbids the host's own tools. PM-MCP does not need to: a role's tool set is exact
+and enforced where the harness allows it (xref:../Requirements.adoc#PM-WORK-1[PM-WORK-1]). Whether to leave a writer
+its harness `Read` beside `pm_lsp` is a per-role choice, and the fallback-to-read rate is how to judge it.
+
+=== Overview before body
+
+A symbol overview of a file before any symbol body is the layering our `document_symbol` operation already allows,
+and the same layering as our skills' section index (xref:../Requirements.adoc#PM-SKILL-3[PM-SKILL-3]).
+
+=== Symbol editing is not needed
+
+Serena's symbol editing saves payload only on larger rewrites and costs more on one-line edits. Our writers edit with
+their harness tools, and the server applies only renames. Nothing to take.
+
+== Candidates for a Change
+
+What became of them is in the status below. These sharpen candidates of the
+xref:graphify-impact-graphify.adoc#_candidates_for_a_change[Graphify analysis]:
+
+. *Index readiness in `pm_lsp`*, now with a second, independent report of the defect.
+. *`implementation` and type hierarchy in `pm_lsp`.*
+. *The fallback-to-read rate per role* as the measure of `pm_lsp` uptake: a symbol lookup followed by a whole-file read
+  of the same file within the same plan task.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, index readiness (xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2]); 3, the fallback-to-read rate (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+
+Open, because it adds function:
+
+* 2, further `pm_lsp` operations.

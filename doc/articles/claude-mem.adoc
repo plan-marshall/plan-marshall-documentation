@@ -1,0 +1,119 @@
+= Claude-Mem
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » Claude-Mem
+
+[horizontal]
+Source:: https://github.com/thedotmack/claude-mem (README, Apache-2.0, relicensed from AGPL-3.0; a commercial hosted
+tier is separate from the open-source core)
+Read:: 2026-09-23 (issue tracker, for plan-marshall) and 2026-10-17 (README)
+Cited by:: xref:graphify-impact.adoc[Graphify Impact], xref:token-reduction-addons.adoc[Token-Reduction Add-ons]
+Focus:: what our handling of knowledge across tasks and plans can learn from it
+
+This is not a summary of the tool. It keeps what is useful for PM-MCP and says where it touches our documents. It is
+based on the README and the issue tracker, not on running the tool. The README does not describe its compression step
+or its token budgets. Its only figure ("~10× token savings") has no method behind it.
+
+== What Claude-Mem Does
+
+* *Captures everything through hooks*: session start (starts the worker service and injects context), prompt submit,
+  before `Read` (attaches file context), after *every* tool call (sent to the observer, asynchronously), stop
+  (summarises the session) and session end. Only a few tools are skipped by default (TodoWrite, Skill, SlashCommand,
+  AskUserQuestion, ListMcpResources).
+* *Compresses with a model, the observer*: each tool event becomes an _observation_. The default observer is Claude
+  Haiku billed to the user's own subscription; Gemini or OpenRouter are alternatives, and the interactive installer
+  defaults to a paid hosted observer.
+* *Stores* sessions, observations and summaries in SQLite with full-text search, plus a Chroma vector index, combined
+  into a hybrid search. A local Bun worker serves an HTTP API and a viewer. Cloud sync is optional; a server mode uses
+  Postgres and Redis.
+* *Injects context at session start*: by default the last 50 observations, 10 sessions and the latest summary, with no
+  documented token size.
+* *Retrieves by progressive disclosure*: a search returns a compact index (about 50–100 tokens per hit), a timeline
+  gives the context around a hit, and full observations (about 500–1,000 tokens each) are fetched only by id.
+* *Excludes* content wrapped in `<private>` tags. A leak of these tags has been fixed (#2149); a file-path leak through
+  a messaging wrap-up is open (#4144).
+* *Keeps nothing correct*: no detection of outdated memories, no resolution of contradictions, no expiry.
+
+The issue tracker shows what this costs:
+
+* +64 % on top of the coding model's spend, measured by a user (#3848);
+* about 10× token amplification from unbounded observer history (#3497), single observer calls near one million
+  tokens (#3443), uncapped base64 screenshots sent to the observer (#3839), billed warm-up pings (#4159);
+* about 3.5 s of hook preamble per tool call on Windows (#4121);
+* the observer records disproven hypotheses as findings (#3897).
+
+== Where It Touches Our Documents
+
+=== We remember differently, on purpose
+
+Claude-Mem assumes one long-lived assistant whose sessions should continue each other. PM-MCP does the opposite. A
+successor worker starts with an empty context and "nothing is handed over, because every task carries what its state
+needs" (xref:../Requirements.adoc#PM-WORK-2[PM-WORK-2]). What lasts beyond a task is written by the server as records:
+
+* *Within a plan*: the clarified request, the outline, the decision records with their corrections
+  (xref:../Requirements.adoc#PM-WF-19[PM-WF-19]), and the facts of each state.
+* *Across plans*: lessons (with category, rule and sources), the architecture inventory
+  (xref:../Requirements.adoc#PM-EXT-3[PM-EXT-3]), and the project's extension skills
+  (xref:../Requirements.adoc#PM-SKILL-5[PM-SKILL-5]).
+
+That is not something to give up. Issue #3897 is the failure Claude-Mem has no answer to: a captured memory that
+nobody checks is injected into every later session and trusted. Our lessons have that answer. A lesson's premise is
+checked before a plan is made from it, and an invalid or resolved premise retires the lesson
+(xref:../Requirements.adoc#PM-WF-10[PM-WF-10]). Capture is not curation.
+
+=== The injection sits in the most expensive place
+
+A byte costs the cache-creation price once and the cache-read price on every later turn. A block injected at session
+start is therefore paid on every turn of the session. plan-marshall measured roughly 99 % of its billing weight on
+context and 1 % on output, so _when_ a byte enters context matters more than how large it is
+(xref:token-reduction-addons.adoc#_why_the_usual_cost_model_does_not_transfer[Token-Reduction Add-ons]). Our launch
+prompt puts only what every worker of a role needs at its start, and the per-task part after it
+(xref:graphify-impact.adoc#_prompt_caching_depends_on_a_stable_prefix[Graphify Impact, stable prefix]).
+
+=== Spend nobody attributes
+
+An extra model call per tool call, billed to the operator's quota, is spend no usage record of ours would attribute,
+because it happens outside our workers. Our usage is attributed per task, role and phase
+(xref:../Requirements.adoc#PM-WF-14[PM-WF-14]). A plugin like this inside a worker is now excluded anyway: workers
+load no harness plugins or hooks (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2],
+xref:plugin4shell.adoc[Plugin4Shell]).
+
+=== What it does better: cheap retrieval by index
+
+Claude-Mem's progressive disclosure is the same pattern our skills use: catalogue entries, then the skill, then its
+supporting files, and a section index with `section` reads (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1],
+xref:../Requirements.adoc#PM-SKILL-3[PM-SKILL-3]). For lessons and the decisions of earlier plans, a worker gets what
+its state's facts carry and can read `pm://` resources, but it has no cheap search over them. An index of short
+entries (title, category, component), searched by the worker and fetched by id, would let a worker find "we decided
+this before" without the server guessing which past records matter.
+
+=== Captured automatically versus written deliberately
+
+Our activity records already capture every tool call of every worker (xref:../Requirements.adoc#PM-WORK-7[PM-WORK-7]);
+they serve supervision, not memory. Turning them into memory would bring Claude-Mem's correctness problem with it.
+Learning from them belongs in the retrospective that writes lessons, where a lesson still gets its premise and its
+sources.
+
+=== Local by design
+
+The default observer is hosted, and cloud sync sends memories off the machine. PM-MCP keeps everything local
+(xref:../Requirements.adoc#PM-ARCH-2[PM-ARCH-2]).
+
+== Candidates for a Change
+
+What became of them is in the status below:
+
+. *A searchable index of lessons and decision records* for workers: short entries, a search, and full records by id,
+  read-only and confined to the project.
+. *Learning from the activity records only through lessons*: if the retrospective ever mines worker activity, its
+  result is a lesson with premise and sources, never memory injected unchecked.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Open:
+
+* 1, a searchable index of lessons and decisions (adds function); 2 is a rule for a feature that does not exist yet and stays a note.

@@ -1,0 +1,132 @@
+= A Philosophy of Software Design vs. Clean Code
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec] » APOSD vs. Clean Code
+
+[horizontal]
+Source:: https://github.com/johnousterhout/aposd-vs-clean-code
+Authors:: John Ousterhout (_A Philosophy of Software Design_) and Robert C. Martin (_Clean Code_)
+Written:: 2024-09 to 2025-02
+Read:: 2026-10-17
+Cited by:: xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec], as the source of the shallow-module argument
+
+This is not a summary of the debate. It keeps what is useful for PM-MCP and says where it touches our documents. The
+debate is written for human developers; agents are not mentioned. Reading it for agents is our own interpretation.
+
+== What Is Interesting for Us
+
+=== Over-decomposition
+
+Ousterhout: very small methods get shallow interfaces and become entangled, so a reader has to jump between them to
+understand any one of them. The "one thing" rule gives no limit. Martin: short, well-named functions are valuable; when
+in doubt he would rather decompose too much, because methods can be inlined again. Both agree that decomposition can
+go too far and that _Clean Code_ does not say how to recognise it.
+
+For an agent, jumping between methods means reading more files and coming back to them. The
+xref:clean-code-to-clean-spec-cleanliness-study.adoc[cleanliness study] measured exactly that: on focused tasks,
+extraction made the agent open more files and spend slightly more tokens. Martin's "inline it later" assumes someone
+notices the over-decomposition; an agent does not.
+
+=== Comments
+
+Ousterhout: an interface needs a comment, because a signature cannot say what an abstraction means. Missing comments
+cost more than wrong ones. Martin: comments are a necessary evil and a claim to be checked against the code. He prefers
+long, descriptive names.
+
+Both points hold for agents, together:
+
+* An interface comment lets an agent use a method without reading its body. That is the same saving as a good name,
+  for what a name cannot say: preconditions, side effects, units, invariants.
+* A comment is a claim. In the PrimeGenerator example, Martin found an error in Ousterhout's comments (the multiples
+  are not all odd). Agents write plausible comments easily, and a wrong comment misleads the next agent, which trusts
+  it instead of reading the body.
+
+=== The PrimeGenerator exercise
+
+Martin's eight-method version had entangled methods with hidden side effects. Ousterhout's single-method version had
+a wrong comment. Martin's four-method rewrite was 3–4× slower, because splitting the loops added iterations, and the
+loops were merged again. Every version had a defect that its own author did not see and the other author found.
+
+For us, the lesson is about review: each side's mistakes were found by the other. That is the case for review by a
+different role, ideally on a different model.
+
+=== TDD and "bundling"
+
+Martin defends TDD (three laws, red-green-refactor). Ousterhout prefers _bundling_: write a few hundred lines with the
+design thought through, then write the unit tests right after. They agree on one thing: the main value of unit tests is
+that they make refactoring safe. Ousterhout's objection is that TDD's unit is one test, which pushes towards tactical
+work and away from design. His advice to TDD users: plan ahead, refactor often, and ask whether you would choose the
+current structure if you knew then what you know now.
+
+== Where It Touches Our Documents
+
+=== Our pipeline is design first and bundling
+
+The order of our pipeline is Ousterhout's, not Martin's. Refine and outline do the design before any code. Phase 4
+derives the tasks of a deliverable in the fixed order `implementation`, `module_testing`, `verification`
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/02-planning-lanes-phases-3-4.adoc[Phase Workflows, Planning Lanes, Phases 3–4]).
+The implementation and test tasks of a module share an envelope
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work, Envelopes]),
+so the same worker writes the code and then its tests. That is bundling.
+
+The risk of bundling with an agent is the one the
+xref:clean-code-to-clean-spec.adoc[article] raises for reward hacking. A worker that writes the tests after its own
+code can fit the tests to what the code does instead of to what was asked. What we already have against it:
+
+* tests that pin a defect are never deleted
+  (xref:../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-30[PM-WATCH-GEN-30]);
+* the verification command of a deliverable is fixed in the outline before any code exists;
+* `review-requirement` judges the change against the clarified request and the outline, not against the tests.
+
+The gap is the one already named in the article's analysis: the outline holds no structured acceptance criteria or
+edge cases. Criteria fixed in the outline before implementation would be the spec-level form of "test first", without
+changing the bundling order of the tasks. Ousterhout's design-first argument and the article's verification-criteria
+argument point to the same change.
+
+=== Interface comments as a deliberate rule, checked as claims
+
+For the domain skills
+(xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]), both sides combine into one rule: write interface comments for what
+a name cannot carry, and treat every comment as a claim the review checks. The second half already exists. The
+self-review surfacers look for description-versus-body mismatches
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/domain-extensions/05-recipes-and-extension-points.adoc#self-review-surfacer[Self-Review Surfacer]),
+which is exactly the check that caught the error in Ousterhout's comment.
+
+=== Depth as the criterion for decomposition
+
+Neither _Clean Code_ nor the debate gives a usable limit for decomposition. For the skills and for the `simplify` step
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/04-finalize-step-bands.adoc#_normative_step_catalogue_across_ordering_bands[Phase Workflows, Normative Step Catalogue]),
+Ousterhout's criterion is the one an agent can apply: does the extracted method hide more than its interface costs?
+Shallow pass-through methods are a simplify candidate (inline them), just like duplicated logic.
+
+=== Review by another role
+
+The PrimeGenerator exercise supports what we already do: `review-code` and `review-requirement` are their own roles in
+their own states, separate from the writer, and the decision quorum brings in roles on different models
+(xref:../Requirements.adoc#PM-WF-18[PM-WF-18]). Nothing to change; the debate is anecdotal evidence for it.
+
+== Candidates for a Change
+
+What became of them is in the status below. These add to the candidates of the
+xref:clean-code-to-clean-spec.adoc#_candidates_for_a_change[article's analysis]:
+
+. *Acceptance criteria in the outline as the test-first replacement* in a bundling pipeline: the same change as
+  candidate 1 there, now with a second reason.
+. *Depth as the decomposition criterion* in the domain skills and in the vocabulary of `simplify`: inline shallow
+  pass-through methods.
+. *Interface comments required where a name cannot carry the contract*, in the domain skills, with the existing
+  description-versus-body check as the counterweight.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 2, depth as the decomposition criterion, and 3, interface comments checked as claims: the domain standards (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]) and the vocabulary of `simplify`.
+
+Open:
+
+* 1, acceptance criteria in the outline (adds function).

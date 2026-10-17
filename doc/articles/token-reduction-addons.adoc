@@ -1,0 +1,106 @@
+= Token-Reduction Add-ons for Coding Agents
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » Token-Reduction Add-ons
+
+[horizontal]
+Source:: plan-marshall's evaluation `doc/other_approaches`, written 2026-09-23 and moved here:
+https://github.com/cuioss/plan-marshall/tree/c3abf8c385e9a3d46e774ccd522224360ec2a41f/doc/other_approaches. It was
+prompted by an article that models agent spend as "what you send + what the model thinks + what it writes back + what
+you re-explain tomorrow"; the article is not named there.
+Read:: 2026-09-23 (for plan-marshall), read again against PM-MCP on 2026-10-17
+Focus:: whether the add-ons, or ideas from them, fit PM-MCP
+
+This is not a summary of the tools. It keeps what is useful for PM-MCP and says where it touches our documents. The
+evaluation was written for plan-marshall; its findings about the tools stand, and every assessment here is redone
+against PM-MCP.
+
+The tools get their own analyses:
+
+* xref:token-reduction-addons-headroom.adoc[headroom]: a local proxy that compresses tool results and shapes output.
+* xref:token-reduction-addons-serena.adoc[Serena]: symbol retrieval and editing through language servers, over MCP.
+* xref:token-reduction-addons-ponytail.adoc[ponytail]: a "write the least code" ruleset injected at session start.
+* xref:claude-mem.adoc[Claude-Mem]: memory across sessions, captured by a model observer.
+* xref:token-reduction-addons-usage-meters.adoc[Usage meters]: quota meters such as UsageScope and ccusage.
+
+== The Verdict
+
+None of the add-ons belongs in PM-MCP, and none could run in it unchanged: a worker loads no harness plugins, hooks or
+settings MCP servers (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]), and its environment is built from scratch.
+What is worth taking are their ideas, listed below with the document each comes from.
+
+[[_why_the_usual_cost_model_does_not_transfer]]
+== Why the Usual Cost Model Does Not Transfer
+
+The usual framing is "your prompt is cheap; the model's output and the files it opens are expensive". plan-marshall's
+own measurement says otherwise, and the mechanics carry over to PM-MCP because our workers run on the same harnesses:
+
+* *Output is about 1 % of billing weight; context is about 99 %* (input, cache read, cache creation). A lever whose
+  mechanism is "the model writes less" acts on the 1 %. It may still be worth having for code quality.
+* *Cost is resident bytes × turns resident.* A byte costs the cache-creation price once and the cache-read price on
+  every later turn. When a byte enters context matters more than its size: shrinking late, short-lived bytes buys
+  little, and anything injected at session start is paid on every turn.
+* *The largest consumer measured was the system reading its own documents*, not the codebase. In plan-marshall that
+  was its skills, standards and workflow documents, on one instrumented plan, so it shows a direction, not a size.
+  PM-MCP removed the whole-phase workflow documents (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]), but it still
+  delivers skills in-band (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]), so the same question applies to our
+  skills.
+* *"Examine less" is not a lever.* In plan-marshall, higher effort measurably cut the rate of phases that found
+  nothing. A saving that comes from looking less is rejected whatever its size. In PM-MCP the effort of a role is set
+  by its assignment and graded by qualification (xref:../Requirements.adoc#PM-WORK-1[PM-WORK-1],
+  xref:../Requirements.adoc#PM-WORK-6[PM-WORK-6]); nothing lowers it per turn.
+
+== Ideas Worth Taking
+
+[cols="1,4,2",options="header"]
+|===
+|# |Idea |From
+
+|1
+|*Progressive loading of our own content*: index first, then the section, then the whole document. Our skills already
+have a section index and `section` reads, and a fresh worker gets a section index above the in-band bound
+(xref:../Requirements.adoc#PM-SKILL-3[PM-SKILL-3], xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]). What is open is
+measuring which skill sections a task actually needs, because in-band delivery up to the bound makes every byte
+resident.
+|Claude-Mem, Serena
+
+|2
+|*Every elision names its retrieval route*: a cut or summarised result says what was dropped and where to read it in
+full. PM-MCP reports truncation (`truncated: true`, original and kept length) and serves a build's full output as a
+resource, but the general rule does not require the route.
+|headroom
+
+|3
+|*Shrink only what is not yet cached*, and keep the prefix byte-identical.
+|headroom
+
+|4
+|*Measured only with a holdout*: a saving counts as measured when a random share of runs went without the lever;
+otherwise it is an estimate.
+|headroom
+
+|5
+|*An ordered restraint ladder* and a never-simplify list for writers and the `simplify` step.
+|ponytail
+
+|6
+|*Fallback-to-read rate* as the measure of whether symbol lookups replace file reads.
+|Serena
+
+|7
+|*A cross-check of our usage figures* against the harness's own session logs.
+|Usage meters
+|===
+
+Taken together, the set points where our own findings already point. The lever that matters is control over what
+enters a worker's context and when, not compression or restraint applied to what the model writes.
+
+== Candidates for a Change
+
+The candidates are listed in the analysis of each tool. Two of them confirm earlier findings:
+
+* Serena reports incomplete results while a language server is still indexing (its issue #1858). That is the
+  readiness gap of `pm_lsp` found in the xref:graphify-impact-graphify.adoc#_empty_is_not_none_an_index_still_being_built[Graphify analysis].
+* Serena offers `find_implementations` and `type_hierarchy`, the operations `pm_lsp` lacks.

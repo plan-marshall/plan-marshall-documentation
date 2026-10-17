@@ -1,0 +1,102 @@
+= Measuring the Impact of Graphify on Claude Code
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » Graphify Impact
+
+[horizontal]
+Source:: https://medium.com/@FrankPizzuta/measuring-the-impact-of-graphify-on-claude-code-a0f82cec165d
+Author:: Frank Pizzuta
+Published:: 2026-06-02
+Read:: 2026-10-17
+Focus:: what our LSP approach should take from a code knowledge graph; what to learn from the memory and routing tools
+around it
+
+This is not a summary of the article. It keeps what is useful for PM-MCP and says where it touches our documents. The
+article is a personal measurement over one developer's sessions, without a control. It reads tool effects out of
+aggregate token figures, which it says itself it cannot attribute.
+
+The tools it measures get their own analyses:
+
+* xref:graphify-impact-graphify.adoc[Graphify]: a precomputed knowledge graph of the codebase. This is the one that
+  bears on our LSP approach.
+* xref:claude-mem.adoc[Claude-Mem]: memory across sessions.
+
+== What Is Interesting for Us
+
+=== An optimisation stack without instruments
+
+The article's real finding is not about Graphify. Graphify, Claude-Mem and the model routing `opusplan` report nothing
+about themselves, and the session totals of `ccusage` cannot say which tool caused which figure. The author had to build
+a dashboard and still cannot separate Claude-Mem's effect from Graphify's.
+
+=== Each tool leaves a fingerprint in the token data
+
+* A context tool that works shows up as a high *cache-read share*: the context comes from cache, not as fresh input.
+  The author reads 80.5 % on average as "the graph is being hit". That conclusion is weak, because a high cache share
+  comes first from the harness's own prompt caching.
+* *Cost concentrates in the strongest model*: 53 of 320 sessions used Opus and averaged $8; the rest averaged $0.67.
+  So the useful question was not "does the graph work" but "did this task need Opus".
+* A dense, stable context document (Claude-Mem's 379-line `MEMORY.md`) is cheap after its first read, because it is
+  served from cache in every later session.
+
+== Where It Touches Our Documents
+
+=== We already attribute
+
+The article lacks attribution, and we have it by construction. Every worker's usage is parsed per turn, with input,
+output, cache-read and cache-creation tokens as separate columns, and attributed to its task, role, phase and plan
+(xref:../Requirements.adoc#PM-WF-14[PM-WF-14],
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/09-completion-usage-and-spend.adoc[Model Work, Completion, Usage & Spend]).
+A plan's completion report gives the tokens per phase and per role
+(xref:../Requirements.adoc#PM-WF-21[PM-WF-21]). The article's two questions have answers in our records:
+
+* *Cache-read share per role and per task* can be derived from the columns we keep. It is not named as a figure of the
+  report today.
+* *"Did this task need the strong model?"* is what the role assignment per role, the steward's advice and role
+  qualification answer (xref:../Requirements.adoc#PM-WORK-1[PM-WORK-1],
+  xref:../Requirements.adoc#PM-WORK-6[PM-WORK-6]). `opusplan` is a two-way split by session phase; our roles split per
+  kind of work, each graded on its model.
+
+=== Prompt caching depends on a stable prefix
+
+The article's cache economics apply to our workers. A fresh worker is a new session, and its launch prompt is cached
+only if its beginning is byte-identical to an earlier launch within the cache's lifetime. Our launch prompt already has
+that order: the shim paragraph, the core conduct, the task protocol and the role skill come first and are always
+in-band; the skills of the task and the contract envelope follow
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc#job-prompt[Model Work, Launch Prompt]).
+Skills render deterministically (xref:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2]). So all fresh workers of one role
+share the prefix up to the role skill.
+
+What is not stated is the rule itself: nothing that changes per launch (an identifier, a time, the task's facts) may
+come before the role's shared prefix. Today that holds because of the order, not because it is required, so a later
+change could break caching without anyone noticing.
+
+=== The LSP approach
+
+The LSP findings are in the xref:graphify-impact-graphify.adoc#_where_it_touches_our_documents[Graphify analysis]. In
+short:
+
+* our live language servers are the right choice for writing code, and a graph is not a replacement;
+* `pm_lsp` cannot tell an index that is still being built from an empty answer;
+* it lacks the call-hierarchy and implementation operations that a graph's `calls`/`inherits` edges stand for.
+
+== Candidates for a Change
+
+What became of them is in the status below:
+
+. *The cache-read share* per role and per task as a figure of the usage report.
+. *A stable launch prefix as a stated rule* of the launch prompt: the content shared by all workers of a role comes
+  first and contains nothing that varies per launch.
+. The LSP candidates of the xref:graphify-impact-graphify.adoc#_candidates_for_a_change[Graphify analysis].
+. The memory candidates of the xref:claude-mem.adoc#_candidates_for_a_change[Claude-Mem analysis].
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, the cache-read share among the navigation figures (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+* 2, the stable launch prefix as a rule (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]).
