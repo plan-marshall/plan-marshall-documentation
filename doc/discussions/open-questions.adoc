@@ -95,7 +95,7 @@ Question:: Which credential does the runtime present to the organisation's regis
 Why it is open:: a package of the private organisation needs authentication; either a provider credential of GitHub with read access to packages, or a credential of its own.
 Options:: (1) The GitHub provider credential the machine already keeps, with the scope to read packages. (2) A credential of its own for the registry, kept in the machine's credential store.
 Recommendation:: 1, with the native binaries per platform and their digests as the release's assets; one credential less to keep.
-Blocks:: the check for updates and the upgrade of the runtime (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc[Runtime Model Specification, Startup, Recovery & Drain]).
+Blocks:: the check for updates and the upgrade of the runtime (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc[Runtime Lifecycle Specification, Startup, Recovery & Drain]).
 
 [#metrics-library]
 === The Library of the Runtime's Metrics

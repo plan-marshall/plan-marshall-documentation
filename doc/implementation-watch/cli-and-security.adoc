@@ -50,7 +50,7 @@ Source:: design review.
 === PM-WATCH-CLI-12: The installer touches only the elements it owns
 
 Anchor:: link:../specification/cli-and-security/01-cli-and-installer.adoc#client-installer[CLI & Security § Client Bundle Installer],
-link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles § Ownership & Digest Verification],
+link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Host Integration § Ownership & Digest Verification],
 link:../Requirements.adoc#PM-DIST-2[PM-DIST-2]
 Hazard:: Ownership recorded per file or per key let `client remove` delete a permission rule the user had authored
 with the same value, and let `client update` overwrite a recorded rule the user had edited.
