@@ -19,3 +19,5 @@ article's analysis. A source that several articles cite gets one analysis under 
    on clean versus messy repositories; a method for measuring skill changes.
 ** xref:clean-code-to-clean-spec-aposd-debate.adoc[APOSD vs. Clean Code] — over-decomposition, interface comments,
    TDD versus bundling, read against our pipeline.
+* xref:karpathy-ste100-output.adoc[ASD-STE100 Output] — one writing rule for every agent whose text a human reads;
+  diagrams instead of text.

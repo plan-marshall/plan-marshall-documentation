@@ -1,0 +1,148 @@
+= Ask AI Output in ASD-STE100, Not in Free Text
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » ASD-STE100 Output
+
+[horizontal]
+Source:: https://medium.com/neuralnotions/andrej-karpathys-new-suggestion-ask-ai-output-in-asd-ste100-format-and-not-in-text-format-b7b753f52f32
+Author:: Nikhil (reporting a suggestion of Andrej Karpathy)
+Published:: 2026-10-03
+Read:: 2026-10-17
+Focus:: one writing rule given to every agent whose text a human reads
+
+This is not a summary of the article. It keeps what is useful for PM-MCP and says where it touches our documents. The
+article is a short experience report, with no measurements.
+
+== What Is Interesting for Us
+
+=== The premise fits our operator
+
+As models do more of the work, the human's job moves to reviewing, supervising and understanding what was produced.
+That is the operator of PM-MCP: they read questions, outlines, re-planning proposals, chat answers and pull requests,
+and decide on them. What costs the operator time is text that rambles, varies its terms and hides the point.
+
+=== Simplified Technical English (ASD-STE100)
+
+ASD-STE100 is a controlled language from aircraft maintenance, dating from the late 1970s. The article uses its
+spirit, not the full standard:
+
+* Procedure sentences under twenty words.
+* One action per instruction.
+* One term per thing. If it is a bolt, it is always a bolt, never varied for style.
+
+The author added one directive to technical prompts: explain in the spirit of ASD-STE100, with direct sentences,
+single-action steps and no needless synonyms. The answers read like workshop manuals instead of padded prose.
+
+The full standard has more than these three rules: a dictionary of approved words with one meaning each, active voice,
+and no long noun clusters. The article uses none of that. Its point is that the spirit alone already helps.
+
+=== Not text at all
+
+The second suggestion: when the aim is understanding, text has the lowest bandwidth. The article's order of preference
+is: procedural animation, then interactive HTML pages, then structured diagrams (Mermaid, SVG), and constrained text
+last. Such artifacts are cheap to generate and are thrown away once understood.
+
+== Where It Touches Our Documents
+
+=== Who writes text a human reads
+
+In PM-MCP the texts a client shows are not model-written: every message comes from the message catalogue
+(xref:../Requirements.adoc#PM-ARCH-11[PM-ARCH-11]), and reports carry message keys with arguments
+(xref:../Requirements.adoc#PM-WF-21[PM-WF-21]). That part is already a controlled language.
+
+What models write for humans is the free text in submissions, and in the chat:
+
+* the question of a decision, its options and the rationale of its recommendation
+  (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/06-envelopes-questions-deadlines.adoc[Model Work, Envelopes, Questions & Deadlines]);
+* the clarified request and the outline, which the operator reviews
+  (xref:../Requirements.adoc#PM-WF-10[PM-WF-10], xref:../Requirements.adoc#PM-WF-11[PM-WF-11]);
+* the rationale of a re-planning action and the answers of the chat with a planning role
+  (xref:../Requirements.adoc#PM-WF-17[PM-WF-17], xref:../Requirements.adoc#PM-WF-24[PM-WF-24]);
+* the steward's recommendation and its rationale (xref:../Requirements.adoc#PM-WORK-1[PM-WORK-1]);
+* the evidence of an `infeasible` task, lesson bodies, commit messages, the pull-request body and replies to review
+  comments.
+
+Almost every role writes something here. Only the screener and the judge do not, because they submit structured
+verdicts.
+
+=== Where one writing rule would attach
+
+The operator's idea, one skill for every agent whose text a human reads, fits our skill delivery without a new
+mechanism:
+
+* *The core conduct skill already reaches every worker.* Every launch prompt carries `skill://pm/core/SKILL.md`
+  (xref:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2],
+  link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc[Model Work, Worker Launch]).
+  A writing rule there costs a few hundred tokens per worker and needs no further configuration.
+* *Or a writing skill of its own, made required by the schema.* The server computes the required skill set of every
+  task and refuses a submit whose skills were not delivered
+  (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]). If the schemas of the submit links mark their human-facing text
+  parameters, the server can require the writing skill exactly for the tasks that write such text. Then no role
+  artifact can forget it, which follows our server-side-first rule. The screener and the judge would never get it.
+* *Teams and operators can sharpen it.* An extension skill (xref:../Requirements.adoc#PM-SKILL-5[PM-SKILL-5]) can add
+  a project's own terms or house style, without a code change.
+
+The second form is the better fit: the obligation follows from what a task writes, not from which role it runs on.
+
+=== One term per thing: we already have the term list
+
+STE's "one word, one meaning" is our glossary. The domain vocabulary of the clients' glossary (_Request_, _Plan_,
+_Role_, _Harness_, …) is never translated
+(link:../specification/module-structure.adoc[Module Structure, Messages and Languages]). A writing skill can name these
+terms as the only words for their things. For a project, the extension skill adds the project's own terms.
+
+=== The model language is not always English
+
+STE is English. A model writes for the operator in the _model language_, which defaults to the interface language
+(xref:../Requirements.adoc#PM-EXT-6[PM-EXT-6]). The three rules the article uses (short sentences, one action per
+step, one term per thing) are not tied to English and work in any language; the STE word list does not carry over.
+A writing skill should state the rules language-neutral and apply the glossary in every language.
+
+In passing: the module structure says the worker launch carries the model language as an instruction to write in it,
+and links to Model Work, Worker Launch. That specification does not mention the model language. Either the launch
+specification lacks the instruction or the link is wrong. If a writing skill is added, the language instruction
+belongs in the same place.
+
+=== Measuring whether it works
+
+Changing the wording of model-facing content per client or per model needs a behavioural signal
+(xref:../Requirements.adoc#PM-TEST-6[PM-TEST-6], xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]). A writing rule
+for all roles is such a change. Two cheap measures fit it:
+
+* *Deterministic text checks* on human-facing parameters at submit: sentence length, and a glossary term replaced
+  by a known synonym. These would be advisory findings, never a refusal, because the operator judges the text.
+* *Length* of the human-facing text before and after, from the submissions we already store.
+
+=== Diagrams instead of text
+
+Our clients already show diagrams the server draws: the process of a plan and the instance diagram with its pruned
+steps (xref:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]). The article suggests the same for what a model explains:
+
+* *Diagrams as data, drawn by the client.* A chat answer, an outline or a re-planning proposal could carry a Mermaid
+  block, which the web app renders and the terminal client shows as text. The client design in `pm-mcp-clients`
+  decides how.
+* *No model-generated HTML or script in the clients.* Model output is untrusted. An interactive page from a model
+  would run its script inside our authenticated web app. That rules out the article's richest format inside PM-MCP.
+  The operator can still ask a model for such a page outside of it.
+
+== Candidates for a Change
+
+Nothing is applied. Each one is new scope for the operator to decide:
+
+. *A compiled writing skill* (STE spirit, language-neutral, glossary terms), required by the server for every task
+  whose submit link has a human-facing text parameter. This touches xref:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2]
+  (the generated skills of the worker protocol) and xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4] (the required
+  skill set). The alternative is a section of the core conduct skill.
+. *Human-facing text parameters marked in the link schemas*, so the requirement follows from the schema.
+. *Advisory text checks* at submit (sentence length, synonyms of glossary terms).
+. *Mermaid blocks in model-written text*, rendered by the web app. This is a design question for `pm-mcp-clients`.
+. *The model-language instruction in the worker launch*: fix the gap between the module structure and Model Work,
+  Worker Launch. This applies whatever happens to the other candidates.
+
+== Sources Behind the Article
+
+* Andrej Karpathy's original post (on X): not analysed.
+* The ASD-STE100 specification (https://www.asd-ste100.org/): not analysed. It would matter if the writing skill
+  should take over more than the three rules, for example the word list.
