@@ -1,0 +1,17 @@
+= Articles
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:../Requirements.adoc[Requirements] » Articles
+
+This directory holds one analysis per external article, paper or repository: what in it is useful for PM-MCP, and
+where it touches our requirements and specifications. It is not a summary of the source; the source is linked. Nothing
+here is part of the target design unless a requirement or specification adopts it. Each analysis reflects the source
+when it was read; recheck the source before relying on it.
+
+A paper or repository behind an article gets its own analysis named `<article>-<source>.adoc`, linked from the
+article's analysis. A source that several articles cite gets one analysis under its own name.
+
+* xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec] — spec-driven development, the six elements of a spec,
+  clean code as token cost for agents.
