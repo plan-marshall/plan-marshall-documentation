@@ -1,0 +1,137 @@
+= Plugin4Shell: Coding Agents Load and Run Code Behind a Pinned SHA
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » Plugin4Shell
+
+[horizontal]
+Source:: https://www.heise.de/news/Kritische-Luecke-bei-Claude-Code-OpenAI-Codex-GitHub-Copilot-und-Gemini-CLI-11459862.html
+Author:: Manuel Masiero (heise developer), reporting research by AIR Security
+Published:: 2026-09-21, updated 2026-09-29 and 2026-09-30
+Read:: 2026-10-17
+Focus:: how to prevent this class of flaw, less whether we have it
+
+This is not a summary of the article. It keeps what is useful for PM-MCP and says where it touches our documents.
+
+== The Mechanism
+
+A marketplace pins an approved plugin version by its 40-character commit SHA. The coding agent asks for that SHA, but
+after the download no agent checked whether the code it got is that commit. An attacker with access to the plugin's
+repository creates a _branch named like the pinned SHA_, fills it with malicious code and makes it the default branch.
+On the next automatic update the agent resolves the name to the branch instead of the commit, and runs the code. A
+variant: publish a harmless plugin, get it pinned, then change it.
+
+The branch trick needs a host that allows branch names shaped like a commit hash (GitHub and GitLab refuse them;
+Bitbucket and self-hosted servers do not). The fix of the vendors is the missing step: check that the checked-out code
+is the pinned commit.
+
+== What Prevents the Class
+
+Four rules. Each removes one link of the chain.
+
+. *A pin is checked against what arrived, after it arrived, every time.* Asking for a SHA is not verifying it. The
+  check compares the received content (its object id or its digest) with the pin, locally, before anything runs.
+. *A name never stands in for an identity.* The flaw is a string that can be read both as a commit and as a ref name.
+  An identifier is resolved only in the namespace it belongs to: a commit as an object id, a branch by its full ref
+  name. Ambiguity is an error, never a lookup that picks one.
+. *The pin comes from a source the attacker of the artifact does not control.* A digest published next to the
+  artifact, by the same repository or registry, only proves that the transfer was intact. Against a compromised
+  publisher, the pin needs another channel: a signature, an attestation, or the operator's own record.
+. *Executable content is not updated automatically.* The exploit fires on the next automatic update. A new version of
+  anything that runs is an act someone takes, not something that happens.
+
+== Where It Touches Our Documents
+
+=== What already follows the rules
+
+* *Verify-not-resolve.* Every host tool, build wrapper, project script and language server is enrolled with its
+  absolute path and SHA-256, and verified before every launch. A mismatch refuses the job
+  (`executable_digest_mismatch`), and nothing is looked up through `PATH`
+  (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime, Verify-Not-Resolve Execution Pipeline]).
+  That is rule 1, and the step the agents were missing.
+* *Extension skills.* They are read from local directories, validated on every read, carry no executable content, and
+  are delivered with the digest of that read (xref:../Requirements.adoc#PM-SKILL-5[PM-SKILL-5]). Nothing is fetched,
+  and nothing runs.
+* *Client bundles.* They come only from the installed release, and install no lifecycle hook, no entry command and no
+  MCP configuration (xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1]). We are not a plugin marketplace and do not
+  consume one.
+* *Upgrades of PM-MCP.* They are an operator act, never automatic (rule 4), and the runtime verifies the release
+  digest before installing (xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1]).
+
+=== Three places where a rule is not met
+
+==== The harness vouches for its own update
+
+Harnesses update themselves, so a harness executable whose digest differs from the enrolment is accepted when its own
+version probe reports a version within the supported range. The new digest is then recorded
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime, Worker Jobs]).
+That breaks rule 3: the changed binary is the only witness for itself. To report its version it has to run, and a
+replaced binary reports whatever version is wanted. Every worker then runs it with the project's checkout as its
+working directory.
+
+Prevention without giving up self-updating harnesses: accept a new digest only on evidence that does not come from
+the binary, for example a valid vendor code signature (on macOS the Developer ID and notarisation, `codesign` and
+`spctl`) or the package manager's verified provenance. Otherwise ask the operator, showing the old and new version and
+digest. The version probe stays, as a range check after that evidence, not as the evidence.
+
+==== Workers load the harness's own plugins and hooks
+
+A `writer` or `read_only` worker runs in the plan worktree, and its harness loads the project's own instructions and
+skills natively from there
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc#job-working-directory[Model Work, Working Directory]).
+We want that for instructions such as `CLAUDE.md`. But the same loading brings in what the project's and the
+operator's harness settings configure: marketplace plugins with their automatic updates, hooks, and MCP servers.
+Plugin4Shell would run inside our worker, and so would any hook a repository's settings define.
+
+Our protections reduce the damage but do not stop the code running:
+
+* the worker's tool set is exact (xref:../Requirements.adoc#PM-WORK-1[PM-WORK-1]), but hooks run without a tool call;
+* the job confinement keeps writes inside the worktree, but the worktree is what becomes the pull request. An edit a
+  hook makes there is recorded as an unplanned change, which is listed but not reviewed
+  (xref:../Requirements.adoc#PM-WF-11[PM-WF-11]).
+
+`zero_tool` workers already run with project and user settings switched off where the harness offers it. The same
+idea, narrower, fits the other classes: load the project's instruction files and skill directories, but no plugins,
+no hooks and no MCP servers from settings. Our own MCP connection comes from the launch. How to switch these off is a
+property of each harness, so it belongs in the client profile, measured like its other capabilities
+(xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]). A side effect: the legacy `plan-marshall` plugin, which an
+operator may have enabled in the same host, also stays out of PM-MCP workers.
+
+==== Git refs and commits are not resolved by a stated rule
+
+The server pins commits in many places: the entry baseline and capture snapshot, the `head_sha` of a pull request,
+the merge base, an epic's landing, the recorded `head_at_completion`. It also fetches and checks out branches,
+including the head branch of an adopted pull request. No specification states rule 2 for these: that a commit is
+resolved as an object id and a branch by its full ref name (`refs/heads/…`, `refs/pm-mcp/…`), that an ambiguous
+name is refused, and that after a fetch or checkout the resulting commit is compared with the pin. The native
+variant over JGit works with object ids naturally; the CLI variant passes strings to `git`, which is where an
+ambiguous name is resolved. The forges we support refuse hash-shaped branch names, but a remote may be self-hosted.
+
+=== The release's digest source
+
+The upgrade verifies the release digest, but the specifications do not say where the expected digest comes from. If
+it is read from the same registry as the release, it only proves an intact transfer (rule 3). An attestation of the
+build (for example GitHub's artifact attestations, which our registry's platform offers) verified on upgrade, or the
+signature the macOS build already carries, would make the pin independent of the registry.
+
+== Candidates for a Change
+
+Nothing is applied. In order of exposure:
+
+. *Workers load no harness plugins, hooks or MCP servers from settings*; only the project's instruction files and
+  skill directories. The client profile declares and verifies how each harness does this; a harness that cannot is
+  not eligible as a worker host for `writer` and `read_only`. This touches the worker launch in `pm-mcp-core` and
+  xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2].
+. *A self-updated harness is accepted on independent evidence* (vendor signature or verified provenance), else on the
+  operator's confirmation; the version probe checks the range only after that.
+. *A git identity rule*, cross-cutting: commits as object ids, refs fully qualified, ambiguity refused, the result of
+  every fetch and checkout compared with its pin. This fits an implementation watch item in
+  xref:../implementation-watch/cross-cutting.adoc[cross-cutting.adoc] even before any requirement changes.
+. *The expected digest of a release from an independent source* (a build attestation or a signature), stated in
+  xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1].
+
+== Sources Behind the Article
+
+* AIR Security's write-up of Plugin4Shell: not analysed. It would give the exact fetch commands per agent, which
+  would show how the fixed versions check the pin.

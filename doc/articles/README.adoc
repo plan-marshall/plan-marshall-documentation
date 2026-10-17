@@ -24,3 +24,5 @@ article's analysis. A source that several articles cite gets one analysis under 
 * xref:graphify-impact.adoc[Graphify Impact] — attributing token use to tools, prompt caching, model routing.
 ** xref:graphify-impact-graphify.adoc[Graphify] — a code knowledge graph read against our LSP approach.
 ** xref:graphify-impact-claude-mem.adoc[Claude-Mem] — memory across sessions read against our records and lessons.
+* xref:plugin4shell.adoc[Plugin4Shell] — preventing code behind a pinned identifier from running: worker settings,
+  self-updating harnesses, git identities, release digests.
