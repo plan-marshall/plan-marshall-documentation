@@ -78,9 +78,11 @@ mechanism:
   A writing rule there costs a few hundred tokens per worker and needs no further configuration.
 * *Or a writing skill of its own, made required by the schema.* The server computes the required skill set of every
   task and refuses a submit whose skills were not delivered
-  (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]). If the schemas of the submit links mark their human-facing text
-  parameters, the server can require the writing skill exactly for the tasks that write such text. Then no role
-  artifact can forget it, which follows our server-side-first rule. The screener and the judge would never get it.
+  (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]). Free text is visible in the schemas of the submit links: a `text`
+  parameter, or a string field of a named schema without `enum` or `pattern`. So the server can require the writing
+  skill exactly for the tasks that write such text, with no new marking. Then no role artifact can forget it, which
+  follows our server-side-first rule. The screener and the judge never get it, because a `zero_tool` worker receives
+  a fixed server prompt and no skills.
 * *Teams and operators can sharpen it.* An extension skill (xref:../Requirements.adoc#PM-SKILL-5[PM-SKILL-5]) can add
   a project's own terms or house style, without a code change.
 
@@ -100,10 +102,10 @@ STE is English. A model writes for the operator in the _model language_, which d
 step, one term per thing) are not tied to English and work in any language; the STE word list does not carry over.
 A writing skill should state the rules language-neutral and apply the glossary in every language.
 
-In passing: the module structure says the worker launch carries the model language as an instruction to write in it,
-and links to Model Work, Worker Launch. That specification does not mention the model language. Either the launch
-specification lacks the instruction or the link is wrong. If a writing skill is added, the language instruction
-belongs in the same place.
+In passing: the module structure said the worker launch carries the model language as an instruction to write in it,
+and linked to Model Work, Worker Launch, which did not mention the model language. The writing skill closes that gap:
+it is rendered with the project's effective model language, so a change of the language changes its digest and is
+delivered again to every worker.
 
 === Measuring whether it works
 
@@ -129,17 +131,21 @@ steps (xref:../Requirements.adoc#PM-IMPL-5[PM-IMPL-5]). The article suggests the
 
 == Candidates for a Change
 
-Nothing is applied. Each one is new scope for the operator to decide:
+Applied:
 
-. *A compiled writing skill* (STE spirit, language-neutral, glossary terms), required by the server for every task
-  whose submit link has a human-facing text parameter. This touches xref:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2]
-  (the generated skills of the worker protocol) and xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4] (the required
-  skill set). The alternative is a section of the core conduct skill.
-. *Human-facing text parameters marked in the link schemas*, so the requirement follows from the schema.
-. *Advisory text checks* at submit (sentence length, synonyms of glossary terms).
+. *A compiled writing skill* (STE spirit, language-neutral, glossary terms, the model language), required by the
+  server for every task that writes free text, derived from the schemas of its links:
+  xref:../Requirements.adoc#PM-SKILL-2[PM-SKILL-2], xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4], the
+  xref:../specification/mcp-tools/02-service-and-skill-tools.adoc#writing-skill[Writing Vocabulary], and in
+  `pm-mcp-core` the required skill set of
+  link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc#skill-delivery[Model Work, Skill Delivery].
+. *The model-language instruction*: it is carried by the writing skill, and the module structure links there.
+
+Open, for the operator to decide:
+
+. *Advisory text checks* at submit (sentence length, synonyms of glossary terms). With them, the rules of the writing
+  skill on sentence length and terms would move from class `guidance` to class `check`.
 . *Mermaid blocks in model-written text*, rendered by the web app. This is a design question for `pm-mcp-clients`.
-. *The model-language instruction in the worker launch*: fix the gap between the module structure and Model Work,
-  Worker Launch. This applies whatever happens to the other candidates.
 
 == Sources Behind the Article
 
