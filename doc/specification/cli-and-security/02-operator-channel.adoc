@@ -67,7 +67,7 @@ Operator acts are unreachable from every MCP tool and every model-facing link. E
 |The plan's waivers with their consumptions, and its waiver requests (`--pending`: the open requests only)
 
 |`pm-operator plan add\|pause\|start\|cancel\|abandon\|chat <plan_id> ...`, `abort plan <plan_id> --reason <text>`
-|Starting a plan, pausing it (now, after the current task, after the current phase) and starting it again (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/02-plan-pause-and-stalled-plans.adoc#plan-pause[Runtime & Interaction Model Specification, Pausing and Starting a Plan]), ending it (<<operator-abort>>), and the chat with its planning role (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue Specification, Chatting with the Planning Role]); `abort plan` is the shell form of cancel and abandon
+|Starting a plan, pausing it (now, after the current task, after the current phase) and starting it again (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/02-plan-pause-and-stalled-plans.adoc#plan-pause[Runtime Lifecycle Specification, Pausing and Starting a Plan]), ending it (<<operator-abort>>), and the chat with its planning role (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue Specification, Chatting with the Planning Role]); `abort plan` is the shell form of cancel and abandon
 
 |`pm-operator epic add\|next\|auto\|decompose\|archive\|cancel\|chat <epic_id> ...`, `abort epic <epic_id> --reason <text>`
 |Starting an epic and the acts on it (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#epic-actions[Model Work Specification, An Epic's Actions]); `abort epic` is the shell form of its cancel (<<operator-abort>>)
@@ -106,7 +106,7 @@ Operator acts are unreachable from every MCP tool and every model-facing link. E
 |The unread reports, marked read for every device (link:../runtime-model/01-processes-and-transport.adoc#reports[Runtime & Interaction Model Specification, Reports to the Operator])
 
 |`pm-operator runtime stop\|restart\|upgrade ...`
-|The runtime's lifecycle acts: stop by its drain or at once, withdraw a drain, restart, check for and install a newer release (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime & Interaction Model Specification, The Runtime's Lifecycle])
+|The runtime's lifecycle acts: stop by its drain or at once, withdraw a drain, restart, check for and install a newer release (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime Lifecycle Specification, The Runtime's Lifecycle])
 
 |`pm-operator lesson release`
 |Content-reviewed upstream release of a lesson (`PM-ARCH-2`)

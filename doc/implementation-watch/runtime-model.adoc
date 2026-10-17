@@ -87,7 +87,7 @@ Source:: design review.
 === PM-WATCH-RUN-14: The first start on a fresh machine creates its base before it locks
 
 Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_start_modes[Runtime Model § Start Modes],
-link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#_startup_sequence[Runtime Model § Startup Sequence]
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#_startup_sequence[Runtime Lifecycle § Startup Sequence]
 Hazard:: On a machine without `<PM_MCP_BASE>` the start procedure cannot take `locks/runtime-start.lock`, or creates the
 directories with the process umask, so the runtime's permission check (step 3) refuses the start with exit code `77`
 on a directory `pm-operator` created itself, or accepts a world-readable one.
@@ -102,7 +102,7 @@ Source:: design review.
 === PM-WATCH-RUN-17: The socket is private before it is announced, and no native code runs from the temporary directory
 
 Anchor:: link:../specification/runtime-model/01-processes-and-transport.adoc#_transport_endpoint[Runtime Model § Transport Endpoint],
-link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#_startup_sequence[Runtime Model § Startup Sequence],
+link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#_startup_sequence[Runtime Lifecycle § Startup Sequence],
 link:../Requirements.adoc#PM-TECH-3[PM-TECH-3]
 Hazard:: Vert.x creates the Unix socket under the process `umask`, so a runtime started from a shell with `umask 022`
 announces a `0755` socket in `runtime.json`; a native `pm-mcpd` that cannot find the Netty transport library beside

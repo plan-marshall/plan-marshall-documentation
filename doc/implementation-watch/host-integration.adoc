@@ -17,7 +17,7 @@ specification. Item format and lifecycle: link:../ImplementationWatch.adoc[Imple
 [#PM-WATCH-CLIENT-4]
 === PM-WATCH-CLIENT-4: A host started inside another host is attributed to the outer one
 
-Anchor:: link:../specification/host-integration/01-host-detection.adoc#host-integration-table[Client Profiles § Host Integration Table] (Detection precedence, Nested hosts),
+Anchor:: link:../specification/host-integration/01-host-detection.adoc#host-integration-table[Host Integration § Host Integration Table] (Detection precedence, Nested hosts),
 link:../Requirements.adoc#PM-CLIENT-3[PM-CLIENT-3]
 Hazard:: Host markers are inherited, and no host clears another's: with a fixed precedence alone, Claude Code
 started inside OpenCode is detected as `opencode`, so the refusal of an operator verb names the wrong host, and
@@ -40,7 +40,7 @@ Source:: link:../specification/evaluation.adoc#results[Evaluation Reference], Ga
 [#PM-WATCH-CLIENT-5]
 === PM-WATCH-CLIENT-5: Host-side enforcers are scope-bound; only server gates travel with every session
 
-Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_embedded_client_bundle_bundle_manifest_json_schema[Client Profiles § Embedded Client Bundle `bundle-manifest.json` Schema],
+Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_embedded_client_bundle_bundle_manifest_json_schema[Host Integration § Embedded Client Bundle `bundle-manifest.json` Schema],
 link:../Requirements.adoc#PM-DIST-2[PM-DIST-2], link:../Requirements.adoc#PM-ARCH-1[PM-ARCH-1]
 Hazard:: plan-marshall's hooks lived only in git-ignored machine-local configuration, so fresh clones and cloud
 sessions ran with zero mechanical enforcement while documents claimed the rules were enforced.
@@ -55,7 +55,7 @@ Source:: plan-marshall defect instrumentation-substrate PLAN-08 deliverable 4 an
 [#PM-WATCH-CLIENT-7]
 === PM-WATCH-CLIENT-7: A permission wildcard ends the rule
 
-Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles § Ownership & Digest Verification on Install/Update/Remove],
+Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Host Integration § Ownership & Digest Verification on Install/Update/Remove],
 link:../Requirements.adoc#PM-DIST-1[PM-DIST-1]
 Hazard:: A mid-rule `*` crossed an argument boundary and pre-approved inserted options.
 Guard:: The bundle-manifest validator rejects any rendered permission rule (every `permission_rule` element of every
@@ -69,7 +69,7 @@ Source:: plan-marshall defect truthful-signals PLAN-TRUTH-165 D1.
 [#PM-WATCH-CLIENT-9]
 === PM-WATCH-CLIENT-9: Bundle artifacts never carry a `plan-marshall` name
 
-Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Client Profiles § Ownership & Digest Verification on Install/Update/Remove] (Side-by-Side with Legacy `plan-marshall`)
+Anchor:: link:../specification/host-integration/02-bundle-manifest.adoc#_ownership_digest_verification_on_installupdateremove[Host Integration § Ownership & Digest Verification on Install/Update/Remove] (Side-by-Side with Legacy `plan-marshall`)
 Hazard:: A bundle file or skill directory named like an artifact of the `plan-marshall` plugin (`plan-marshall`,
 `plan-orchestrator`, `marshall-steward`, a `plan-marshall` skill) shadows or is shadowed by the plugin's artifact in
 a mixed installation, so the host runs the other system's instructions; a command file or agent file in a bundle
