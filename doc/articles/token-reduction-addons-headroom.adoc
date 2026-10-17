@@ -87,7 +87,7 @@ gives it a name for the report: _measured_ or _estimated_.
 
 == Candidates for a Change
 
-Nothing is applied:
+What became of them is in the status below:
 
 . *Extension isolation also covers the endpoint and environment of settings files*: a worker's model endpoint and
   environment come only from the launch, never from an `env` block or base URL of the harness's settings. The
@@ -96,3 +96,13 @@ Nothing is applied:
 . *Truncation names its retrieval route*: rule 4 of the facts rules requires, beside `truncated: true`, the resource
   where the full text is read, wherever the full text is kept.
 . *Savings reported as measured only with a holdout*, in any evaluation of a lever.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, settings endpoints and environment excluded from workers (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]).
+* 2, truncation names where the full text is read (the facts rules of the hypermedia format, rule 4).
+* 3, measured only with randomised runs, else estimated (xref:../Requirements.adoc#PM-TEST-6[PM-TEST-6]).

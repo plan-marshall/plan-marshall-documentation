@@ -84,10 +84,19 @@ short:
 
 == Candidates for a Change
 
-Nothing is applied:
+What became of them is in the status below:
 
 . *The cache-read share* per role and per task as a figure of the usage report.
 . *A stable launch prefix as a stated rule* of the launch prompt: the content shared by all workers of a role comes
   first and contains nothing that varies per launch.
 . The LSP candidates of the xref:graphify-impact-graphify.adoc#_candidates_for_a_change[Graphify analysis].
 . The memory candidates of the xref:claude-mem.adoc#_candidates_for_a_change[Claude-Mem analysis].
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, the cache-read share among the navigation figures (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+* 2, the stable launch prefix as a rule (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]).

@@ -53,8 +53,16 @@ logs of a worker can be found by the worker's job.
 
 == Candidates for a Change
 
-Nothing is applied:
+What became of them is in the status below:
 
 . *A cross-check of the usage parsing* in the profile verification or as a test: for a worker of a verified harness,
   the token figures we recorded equal the totals of the harness's own session log over the same turns, field by
   field.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, the cross-check of the usage parsing in the profile verification (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]).

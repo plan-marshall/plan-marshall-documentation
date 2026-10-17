@@ -103,9 +103,17 @@ The default observer is hosted, and cloud sync sends memories off the machine. P
 
 == Candidates for a Change
 
-Nothing is applied:
+What became of them is in the status below:
 
 . *A searchable index of lessons and decision records* for workers: short entries, a search, and full records by id,
   read-only and confined to the project.
 . *Learning from the activity records only through lessons*: if the retrospective ever mines worker activity, its
   result is a lesson with premise and sources, never memory injected unchecked.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Open:
+
+* 1, a searchable index of lessons and decisions (adds function); 2 is a rule for a feature that does not exist yet and stays a note.

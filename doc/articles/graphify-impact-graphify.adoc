@@ -117,7 +117,7 @@ is kept with it (xref:../Requirements.adoc#PM-EXT-2[PM-EXT-2]). Nothing to chang
 
 == Candidates for a Change
 
-Nothing is applied. None corrects a requirement; each is new scope:
+What became of them is in the status below. None corrects a requirement; each is new scope:
 
 . *Index readiness in `pm_lsp`*: the pool tracks the indexing of each language server through work-done progress. A
   result says whether its index was complete, or the call waits within a bound until it is. An empty answer from an
@@ -130,3 +130,16 @@ Nothing is applied. None corrects a requirement; each is new scope:
 . *Use of `pm_lsp` per role* as a measure from the activity records, beside the revisit measure.
 . *A symbol-level overview derived from the language servers* at architecture refresh. Only if measurement shows that
   navigation across modules is where the tokens go.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, index readiness in `pm_lsp` (xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2], xref:../specification/mcp-tools/02-service-and-skill-tools.adoc#lsp-index-readiness[Index Readiness]).
+* 3, the use of `pm_lsp` per role and the fallback-to-read rate (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+
+Open, because they add function:
+
+* 2 (implementation, call and type hierarchy operations), 4 (a symbol-level overview).

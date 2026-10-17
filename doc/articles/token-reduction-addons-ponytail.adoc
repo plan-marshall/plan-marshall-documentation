@@ -69,10 +69,9 @@ an installed dependency, and only then new code.
 plan-marshall's simplify pass once deleted a regression test added in the same plan, and made further wrong deletions
 that had to be reverted. PM-MCP guards the test case already
 (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/implementation-watch/phase-workflows.adoc#PM-WATCH-PHASE-61[PM-WATCH-PHASE-61],
-xref:../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-30[PM-WATCH-GEN-30]). An explicit list of what
-`simplify` may never propose to remove (validation at trust boundaries, security checks, error handling that prevents
-data loss, tests that pin behaviour, anything the request asked to keep) states the boundary in the vocabulary of the
-step, instead of only in watch items.
+xref:../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-30[PM-WATCH-GEN-30]). The vocabulary of `simplify` already
+holds such a list (behaviour-pinning tests, trust-boundary validation, security checks, data-loss error handling,
+operator-kept code); ponytail's list confirms it.
 
 === Mark deliberate corner-cuts
 
@@ -81,9 +80,21 @@ passes. For us it would be a convention of the domain skills, and a pattern the 
 
 == Candidates for a Change
 
-Nothing is applied. Their effect on behaviour is a claim to measure, not a token saving:
+What became of them is in the status below. Their effect on behaviour is a claim to measure, not a token saving:
 
 . *The ordered ladder* in the writer's domain skills and in the vocabulary of `simplify`. It replaces the "reuse before
   writing" candidate of the Clean Code analysis with a sharper form.
 . *A never-simplify list* in the vocabulary of `simplify`.
 . *A marker for deliberate corner-cuts*, as a convention of the domain skills.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, the ordered ladder in the domain standards (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]) and in the vocabulary of `simplify`; 3, the marker for deliberate shortcuts.
+
+Already in place:
+
+* 2: the vocabulary of `simplify` already holds a never-simplify list (behaviour-pinning tests, trust-boundary validation, security checks, data-loss error handling, operator-kept code); the analysis above missed it.

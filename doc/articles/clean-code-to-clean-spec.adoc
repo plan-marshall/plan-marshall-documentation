@@ -189,7 +189,7 @@ Missing:
 
 == Candidates for a Change
 
-Nothing is applied. None of these corrects an existing requirement; each one is new scope for the operator to decide.
+What became of them is in the status below. None of these corrects an existing requirement; each one is new scope for the operator to decide.
 
 . *Structured acceptance criteria and explicit out-of-scope items per deliverable* in the outline. `OutlineValidator`
   would check their presence, and `review-requirement` would judge the change against them. This would be a change of
@@ -215,3 +215,16 @@ The analyses of the sources below add further candidates.
 * xref:clean-code-to-clean-spec-aposd-debate.adoc[APOSD vs. Clean Code]: the written debate between Ousterhout and
   Martin, the source of the shallow-module argument.
 * GitClear's analysis of code churn and refactoring: not analysed.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 3, machine-legibility rules: the domain standards for an agent reader (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1], xref:../specification/mcp-tools/02-service-and-skill-tools.adoc#domain-standards[Domain Standards for an Agent Reader]).
+* 6, re-reads: revisits among the navigation figures of every task (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+
+Open, because they add function:
+
+* 1 (acceptance criteria and out-of-scope items in the outline), 2 (a named home for settled decisions), 4 (a detector for re-implementations), 5 (mutation testing).

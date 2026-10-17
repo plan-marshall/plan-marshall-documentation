@@ -109,7 +109,7 @@ their own states, separate from the writer, and the decision quorum brings in ro
 
 == Candidates for a Change
 
-Nothing is applied. These add to the candidates of the
+What became of them is in the status below. These add to the candidates of the
 xref:clean-code-to-clean-spec.adoc#_candidates_for_a_change[article's analysis]:
 
 . *Acceptance criteria in the outline as the test-first replacement* in a bundling pipeline: the same change as
@@ -118,3 +118,15 @@ xref:clean-code-to-clean-spec.adoc#_candidates_for_a_change[article's analysis]:
   pass-through methods.
 . *Interface comments required where a name cannot carry the contract*, in the domain skills, with the existing
   description-versus-body check as the counterweight.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 2, depth as the decomposition criterion, and 3, interface comments checked as claims: the domain standards (xref:../Requirements.adoc#PM-SKILL-1[PM-SKILL-1]) and the vocabulary of `simplify`.
+
+Open:
+
+* 1, acceptance criteria in the outline (adds function).

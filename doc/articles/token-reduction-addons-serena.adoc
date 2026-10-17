@@ -80,10 +80,22 @@ their harness tools, and the server applies only renames. Nothing to take.
 
 == Candidates for a Change
 
-Nothing is applied. These sharpen candidates of the
+What became of them is in the status below. These sharpen candidates of the
 xref:graphify-impact-graphify.adoc#_candidates_for_a_change[Graphify analysis]:
 
 . *Index readiness in `pm_lsp`*, now with a second, independent report of the defect.
 . *`implementation` and type hierarchy in `pm_lsp`.*
 . *The fallback-to-read rate per role* as the measure of `pm_lsp` uptake: a symbol lookup followed by a whole-file read
   of the same file within the same plan task.
+
+== Status
+
+As of 2026-10-17; the non-functional candidates are applied, the ones that add function stay open.
+
+Applied:
+
+* 1, index readiness (xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2]); 3, the fallback-to-read rate (xref:../Requirements.adoc#PM-WF-14[PM-WF-14]).
+
+Open, because it adds function:
+
+* 2, further `pm_lsp` operations.
