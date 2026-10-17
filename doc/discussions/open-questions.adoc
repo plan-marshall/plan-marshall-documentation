@@ -66,6 +66,32 @@ Options:: (1) Create the module now with an empty application shell, so that the
 Recommendation:: 2. An application shell is an empty module, which the project avoids, and the toolchain would be kept current for a year without use.
 Blocks:: the items of Milestone 1 that name `pm-web-app`; with option 2 they move to Milestone 11.
 
+== Skills and Tool Surface
+
+[#announcement-skills]
+=== Operational Announcement Skills for External Tools
+
+Question:: `PM-SKILL-2` requires minimal operational announcement skills for external tools (for example build skills) that describe the capability verbs and outcome meanings. No specification defines such a skill, its `skill://pm/` address, or the rule that puts it into a task's required skill set; the tool descriptions of `pm_build` and `pm_lsp` already announce their verbs. Does the requirement stay?
+Options:: (1) Remove the bullet; the tool schemas and descriptions announce the capability. (2) Keep it and specify the skill per tool, its address, and when a task's required skill set contains it.
+Recommendation:: 1. A second text beside the tool description would have to be kept equal to it.
+Blocks:: the wording of `PM-SKILL-2` and the skill catalogue in the MCP Tools Specification.
+
+[#machine-scope-skills]
+=== The Skill Catalogue of a Machine-Scope Worker
+
+Question:: A worker of a task of the machine scope has no project, yet it may call `pm_skills`, `pm_skill`, and `pm_skill_file` with `plan_id: "NO_PLAN"` and read `skill://pm/…` resources. The skill tools resolve `NO_PLAN` against the project's workspace scope and its enabled domains, which such a worker does not have. Which skills does it see?
+Options:: (1) The compiled worker-protocol skills (core, task protocol, role) and the machine's extension skills that name no domain; no domain skill. (2) Only the compiled worker-protocol skills.
+Recommendation:: 1, because a machine-scope role may name an extension skill as its contract.
+Blocks:: the rendering and scope rules of the skill tools and of `resources/read` in the MCP Tools Specification, and `PM-SKILL-3`.
+
+[#skill-resource-read-errors]
+=== The Error of an Unreadable Skill Resource
+
+Question:: A resource read that fails answers the JSON-RPC error `-32002` with one of two codes, `scope_not_found` and `path_traversal_rejected` (`PM-TOOL-4`). `resources/read` also serves `skill://` documents, which can become unreadable after they were listed (the skill tools answer `file_unreadable`), and a machine-scope worker is refused a `pm://` resource. Which code does the read answer?
+Options:: (1) Add `file_unreadable` and a code for the refused resource to the closed set. (2) Answer both with `scope_not_found`; the cause is in the audit record only.
+Recommendation:: 2. The set stays two codes, and a worker can do nothing different for the other cause.
+Blocks:: `PM-TOOL-4`, the resource contract of the MCP Tools Specification, and its error table.
+
 == Operations
 
 [#nightly-failures]

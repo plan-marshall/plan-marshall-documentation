@@ -67,6 +67,7 @@ _See Requirements:_
 * _See Requirement link:../Requirements.adoc#PM-WF-13[PM-WF-13: Finalize Step Ordering Bands, Verdict Currency & Pre-Merge Barrier]_
 * _See Requirement link:../Requirements.adoc#PM-WF-20[PM-WF-20: Waiting for the Operator]_
 * _See Requirement link:../Requirements.adoc#PM-WF-21[PM-WF-21: Reports to the Operator]_
+* _See Requirement link:../Requirements.adoc#PM-WF-23[PM-WF-23: Operator Acts on Plans and Epics]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-2[PM-WORK-2: Task Protocol]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-3[PM-WORK-3: Supervision & Recycling]_
 * _See Requirement link:../Requirements.adoc#PM-WORK-7[PM-WORK-7: Worker Activity & Off-Track Signals]_
