@@ -21,7 +21,7 @@ The tools it measures get their own analyses:
 
 * xref:graphify-impact-graphify.adoc[Graphify]: a precomputed knowledge graph of the codebase. This is the one that
   bears on our LSP approach.
-* xref:graphify-impact-claude-mem.adoc[Claude-Mem]: memory across sessions.
+* xref:claude-mem.adoc[Claude-Mem]: memory across sessions.
 
 == What Is Interesting for Us
 
@@ -90,4 +90,4 @@ Nothing is applied:
 . *A stable launch prefix as a stated rule* of the launch prompt: the content shared by all workers of a role comes
   first and contains nothing that varies per launch.
 . The LSP candidates of the xref:graphify-impact-graphify.adoc#_candidates_for_a_change[Graphify analysis].
-. The memory candidates of the xref:graphify-impact-claude-mem.adoc#_candidates_for_a_change[Claude-Mem analysis].
+. The memory candidates of the xref:claude-mem.adoc#_candidates_for_a_change[Claude-Mem analysis].

@@ -23,6 +23,16 @@ article's analysis. A source that several articles cite gets one analysis under 
   diagrams instead of text.
 * xref:graphify-impact.adoc[Graphify Impact] — attributing token use to tools, prompt caching, model routing.
 ** xref:graphify-impact-graphify.adoc[Graphify] — a code knowledge graph read against our LSP approach.
-** xref:graphify-impact-claude-mem.adoc[Claude-Mem] — memory across sessions read against our records and lessons.
+** xref:claude-mem.adoc[Claude-Mem] — memory across sessions read against our records and lessons (shared with
+   Token-Reduction Add-ons).
 * xref:plugin4shell.adoc[Plugin4Shell] — preventing code behind a pinned identifier from running: worker settings,
   self-updating harnesses, git identities, release digests.
+* xref:token-reduction-addons.adoc[Token-Reduction Add-ons] — plan-marshall's evaluation of token-reduction add-ons,
+  read against PM-MCP; why output is not the lever.
+** xref:token-reduction-addons-headroom.adoc[headroom] — compression proxy: elision with a retrieval route, holdout
+   measurement, settings endpoints.
+** xref:token-reduction-addons-serena.adoc[Serena] — language servers over MCP: confirms the `pm_lsp` gaps;
+   fallback-to-read rate.
+** xref:token-reduction-addons-ponytail.adoc[ponytail] — restraint ladder and never-simplify list.
+** xref:claude-mem.adoc[Claude-Mem] — see above.
+** xref:token-reduction-addons-usage-meters.adoc[Usage meters] — cross-checking our usage figures.

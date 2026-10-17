@@ -151,7 +151,7 @@ they were delivered (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]), the team
 * *Reuse before writing.* The retry-logic failure is the main risk for a writer worker with an empty context. Two
   places could counter it: the outline could name the existing facility a deliverable reuses for a cross-cutting
   concern (retry, error handling, validation), and the implementing role's skill could make looking it up a step before
-  writing.
+  writing. The ordered ladder of xref:token-reduction-addons-ponytail.adoc[ponytail] gives this a sharper form.
 * *Expect the token gain only across modules.* The study found no gain inside one function. If we measure the effect
   of a skill change, deep-lane plans across several modules are where it can show, not surgical or light-lane plans.
 

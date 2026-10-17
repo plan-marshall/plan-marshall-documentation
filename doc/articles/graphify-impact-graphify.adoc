@@ -121,7 +121,8 @@ Nothing is applied. None corrects a requirement; each is new scope:
 
 . *Index readiness in `pm_lsp`*: the pool tracks the indexing of each language server through work-done progress. A
   result says whether its index was complete, or the call waits within a bound until it is. An empty answer from an
-  incomplete index is never returned as complete. This is the one with a real defect behind it.
+  incomplete index is never returned as complete. This is the one with a real defect behind it; Serena's users
+  report the same defect (xref:token-reduction-addons-serena.adoc[Serena], issue #1858).
   It touches xref:../Requirements.adoc#PM-SVC-2[PM-SVC-2] and the `pm_lsp` specification, and is a candidate for an
   implementation watch item even before it is decided.
 . *Operations `implementation`, call hierarchy and type hierarchy* in `pm_lsp`
