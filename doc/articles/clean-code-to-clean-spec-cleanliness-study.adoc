@@ -1,0 +1,158 @@
+= Does Code Cleanliness Affect Coding Agents? A Controlled Minimal-Pair Study
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec] » Cleanliness Study
+
+[horizontal]
+Source:: https://arxiv.org/abs/2605.20049 (HTML: https://arxiv.org/html/2605.20049v1)
+Authors:: Priyansh Trivedi, Olivier Schmitt (SonarSource)
+Published:: 2026-05-19 (v1, preprint, not peer-reviewed)
+Read:: 2026-10-17
+Cited by:: xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec], as the evidence for its token figures
+
+This is not a summary of the paper. It keeps what is useful for PM-MCP and says where it touches our documents.
+
+== What the Paper Measured
+
+The design itself is the interesting part for us. It is a way to measure the footprint of an agent, which is more than
+whether the agent succeeds.
+
+* *Minimal pairs*: six pairs of repositories with the same architecture, dependencies and behaviour (same test suite,
+  same coverage) that differ only in cleanliness. Cleanliness is measured as SonarQube issues and cognitive complexity
+  per kLOC under the default quality gate. Three pairs come from clean repositories that an agent degraded (inlining,
+  duplicated logic, dead code, merged modules). The other three are public repositories (Java and Python) that an agent
+  cleaned (deduplicated literals, dead branches removed, some god methods and classes split). Three of the repositories
+  are private, so the model cannot have memorised them in training.
+* *Tasks*: 33 tasks in three tracks: 13 _cognitive hotspot_ tasks (one dense method or class), 14 _multi-module_ tasks
+  (two or more modules) and 6 calibration tasks (insensitive to cleanliness, as a control). Tasks describe behaviour
+  without naming files or functions, and hidden tests check them only at the public interface. A reference solution
+  must pass on both sides, and the untouched repository must fail.
+* *Runs*: Claude Code with Claude Sonnet 4.6, 33 tasks × 2 sides × 10 runs = 660 trials, blind to the side.
+  Haiku 4.5 was dropped because its pass rate was too low to read footprint differences. Trials more than 50 % from
+  the median of their task and side were dropped (9.7 %).
+* *Footprint measures*: input and output tokens, reasoning characters, messages, messages and characters before the
+  first edit, files read, *file revisits*, and lines edited.
+
+== Results That Matter for Us
+
+[cols="2,1,1,1,1"]
+|===
+|Cleaner vs. messier |Pass rate |Input tokens |Files read |Revisits
+
+|All tasks
+|−0.9 pp
+|−7.1 %
+|+3.2 %
+|−33.8 %
+
+|Cognitive hotspot (13)
+|+0.1 pp
+|+1.8 %
+|+11.2 %
+|−20.2 %
+
+|Multi-module (14)
+|−2.6 pp
+|−10.7 %
+|−0.6 %
+|−50.8 %
+|===
+
+* *Success is unchanged; navigation gets cheaper.* Revisits drop on every repository (−7 % to −69 %). Tokens drop
+  mainly on multi-module tasks.
+* *Splitting alone does not help a focused task.* On hotspot tasks the cleaner side opened _more_ files and used
+  slightly more tokens. Extraction spreads complexity over more places instead of removing it. This is Ousterhout's
+  shallow-module point measured (xref:clean-code-to-clean-spec-aposd-debate.adoc[APOSD vs. Clean Code]).
+* *Named helpers that a search finds are what works.* In the best case (commons-bcel, −35 % input tokens), splitting
+  god dispatchers into named helpers let the agent grep straight to the relevant code. In the worst case (genie, +8 %),
+  the restructuring added structure around logic that stayed where it was.
+* *Comments are not the driver.* Normalising comments and suppression markers did not remove the advantage of the
+  cleaner side.
+* *Variance is large.* Within the same task and side, the most expensive run often costs about 2.5× the cheapest; 72 %
+  of the groups exceed 2× on input tokens. Per-task deltas range from −47 % to +44 %. The paper reports no
+  significance tests, and says itself that single-task deltas near 10 % may be noise.
+
+The article's summary is slightly too strong. It says the token effect was concentrated almost entirely in
+multi-module tasks and that hotspot tasks showed no benefit. In fact, hotspot tasks showed a small token _increase_ and
+more files read, while revisits still dropped.
+
+== Limits to Keep in Mind
+
+* The authors are from SonarSource and measure cleanliness with their own tool. The paper is a preprint.
+* One model on one harness. Whether it transfers to other models or harnesses is open, and that matters to us, because
+  our roles run on several of both.
+* The authors chose the repositories, built the pairs and wrote the tasks, so selection bias is possible.
+* Only single tasks were measured, not effects that build up over many tasks on the same codebase. The final code was
+  not scanned again, so whether agents keep a clean codebase clean is unknown.
+* Tokens, not money: what they cost depends on caching and pricing.
+
+== Where It Touches Our Documents
+
+=== The revisit measure is already in our activity records
+
+Every worker's activity records each `tool_call` entry with its tool and target; the `repeating` off-track signal
+reads them
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/03-supervision-and-recycling.adoc[Model Work, Supervision & Recycling]).
+So a revisit (the same target read again later in the same task) can be derived from data we already keep, with no
+new collection. Together with the token columns per task
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/09-completion-usage-and-spend.adoc[Model Work, Completion, Usage & Spend]),
+we would have the paper's two strongest measures for every task of every plan.
+
+=== Our off-track thresholds and the observed variance
+
+`over_size` holds when a plan task's tokens exceed 3× its `predicted_cost_tokens`; a role artifact may lower that to
+1.5× at the least
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/01-job-budgets-and-waits.adoc#off-track-thresholds[Timeouts & Budgets, Off-track signal thresholds]).
+The paper shows a 2–2.5× spread between runs of the _same_ task on the _same_ code with the same model. So 3× sits just
+above the natural noise, and a role lowered towards 1.5× will flag ordinary runs. This supports the compiled value. It
+is also a reason to show operators the observed spread when they lower the threshold. The spec already sets the
+compiled values from the activity of real plans; the paper is an outside reference point for that calibration.
+
+=== A method for measuring skill changes
+
+The minimal-pair method carries over to our own question: does a change of a domain skill or a role skill make the
+agents better or cheaper? The paper varied the code and kept the task fixed. We would vary the skill and keep both the
+task and the code fixed:
+
+* the same tasks, run with the old and the new version of a skill;
+* several runs per side (the variance above makes single runs worthless);
+* hidden tests at the public interface for success, and tokens and revisits for footprint;
+* tasks split into focused and multi-module tracks, because the effects differ.
+
+Role qualification already grades roles against a corpus before they run
+(xref:../Requirements.adoc#PM-WORK-6[PM-WORK-6]), and the behaviour of model-facing content is tested
+(xref:../Requirements.adoc#PM-TEST-6[PM-TEST-6]). Both measure whether the result is right. Neither measures what
+the result cost.
+
+=== What the domain skills should ask for
+
+The case studies sharpen the guidance from the article
+(xref:clean-code-to-clean-spec.adoc#_steering_the_coding_agents_through_skills[Steering the coding agents through skills]):
+
+* Ask for named, single-purpose helpers that a search for the domain term finds, not for short functions as such.
+* Extraction is only worth it when it removes complexity. Spreading the same complexity over more methods costs
+  an agent more on a focused task.
+* Duplicated logic and dead code (what the degrading pipeline added) are what make the messy side expensive. They are
+  exactly what an agent tends to produce.
+
+=== The code analysis step as a cost signal
+
+Our finalize pipeline already polls the code analysis providers for new-code issues
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/phase-workflows/04-finalize-step-bands.adoc[Phase Workflows, Finalize Step Bands]).
+The paper links the measure SonarQube uses (issue density, cognitive complexity) to agent cost, though weakly and from
+the vendor. This is an argument for weighting new-code issues and cognitive complexity in agent-written code as
+future token cost, not only as style. It also covers the gap the paper names: we scan what the agent produced, which
+the study did not.
+
+== Candidates for a Change
+
+Nothing is applied. These add to the candidates of the
+xref:clean-code-to-clean-spec.adoc#_candidates_for_a_change[article's analysis]:
+
+. *Revisits as a measure derived from the activity*: per task and per project, beside the token columns. No new
+  collection is needed. This replaces candidate 6 there.
+. *Footprint in the evaluation of skill and role changes*: tokens and revisits over repeated runs, beside the
+  correctness grading of qualification.
+. *Show the natural spread when `over_size` is lowered*, so that an operator does not set it into the noise.

@@ -30,6 +30,9 @@ deliberately messy versions of behaviourally identical repositories.
 * The saving comes almost entirely from tasks that span several modules. A task inside one complex function shows no
   saving.
 
+The paper itself is a little more mixed than the article says: on single-function tasks the cleaner side used slightly
+_more_ tokens. See xref:clean-code-to-clean-spec-cleanliness-study.adoc[the analysis of the study].
+
 So structure matters to an agent as navigation cost: a name or a module boundary that lets the agent skip reading a
 body saves tokens. Readability inside one function, which is what Clean Code mostly optimises, saves nothing.
 
@@ -157,9 +160,12 @@ they were delivered (xref:../Requirements.adoc#PM-SKILL-4[PM-SKILL-4]), the team
 We already record the usage of every turn and every task and compare it with the predicted cost of the task
 (xref:../Requirements.adoc#PM-WORK-7[PM-WORK-7],
 link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/09-completion-usage-and-spend.adoc[Model Work, Completion, Usage & Spend]).
-The study's second measure, re-reading files already read, is not recorded. As a measure per project it would show
-how legible a codebase is to the agents, and whether a change of the domain skills makes it cheaper to work in. That
-would make skill tuning evidence-based, the same way role qualification works.
+The study's second measure, re-reading files already read, is not computed today. It can be derived from the
+`tool_call` entries the activity already records
+(xref:clean-code-to-clean-spec-cleanliness-study.adoc#_the_revisit_measure_is_already_in_our_activity_records[the analysis of the study]).
+As a measure per project it would show how legible a codebase is to the agents, and whether a change of the domain
+skills makes it cheaper to work in. That would make skill tuning evidence-based, the same way role qualification
+works.
 
 === Verification over reading
 
@@ -197,13 +203,15 @@ Nothing is applied. None of these corrects an existing requirement; each one is 
 . *A detector for re-implementations*: a self-review surfacer detector that compares new code of the diff against the
   existing codebase (cross-cutting concerns first).
 . *Mutation testing as an optional verification verb* of a domain, configurable like the other per-deliverable verbs.
-. *Re-reads as a usage measure* per task and per project, beside the token columns.
+. *Re-reads as a usage measure* per task and per project, beside the token columns, derived from the activity
+  records.
+
+The analyses of the sources below add further candidates.
 
 == Sources Behind the Article
 
-The following could each get a separate analysis:
-
-* arXiv:2605.20049, the controlled study of clean versus messy repositories. It is the source of the token figures and
-  the most relevant one for us.
-* The written debate between Ousterhout and Martin (`aposd-vs-clean-code`), the source of the shallow-module argument.
-* GitClear's analysis of code churn and refactoring.
+* xref:clean-code-to-clean-spec-cleanliness-study.adoc[Cleanliness study] (arXiv:2605.20049): the controlled study
+  behind the token figures.
+* xref:clean-code-to-clean-spec-aposd-debate.adoc[APOSD vs. Clean Code]: the written debate between Ousterhout and
+  Martin, the source of the shallow-module argument.
+* GitClear's analysis of code churn and refactoring: not analysed.

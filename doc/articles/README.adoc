@@ -15,3 +15,7 @@ article's analysis. A source that several articles cite gets one analysis under 
 
 * xref:clean-code-to-clean-spec.adoc[Clean Code to Clean Spec] — spec-driven development, the six elements of a spec,
   clean code as token cost for agents.
+** xref:clean-code-to-clean-spec-cleanliness-study.adoc[Cleanliness study] (arXiv:2605.20049) — measured agent footprint
+   on clean versus messy repositories; a method for measuring skill changes.
+** xref:clean-code-to-clean-spec-aposd-debate.adoc[APOSD vs. Clean Code] — over-decomposition, interface comments,
+   TDD versus bundling, read against our pipeline.
