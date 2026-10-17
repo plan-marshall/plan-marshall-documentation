@@ -61,7 +61,10 @@ Flow::
        │                             │                     ▼ accept
        │                             │                [S] chat.apply   a revision
        │                             │                through the guards of a
-       │                             │                first plan ─► chat.turn
+       │                             │                first plan ─► chat.turn;
+       │                             │                a guard that fails: the
+       │                             │                finding is shown ─►
+       │                             │                chat.turn
        │                             ▼ end
        │                        [S] chat.end        the transcript kept with
        │                                            the plan
@@ -99,7 +102,7 @@ Flow::
                                chat, settings changed, with the reason
 ----
 +
-The settings are <<UC-CTL-5>>, a decision is answered in link:03-plans.adoc#UC-PLN-2[UC-PLN-2], and a hold is resolved in <<UC-CTL-4>>; the chat is the sub-workflow of link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue, Chatting with the Planning Role: `chat`].
+Where the chat is called from another flow (a decision's answer, the sources of a start, ended work), its accepted proposal is not applied here but returned to the caller (`chat.carried`). The settings are <<UC-CTL-5>>, a decision is answered in link:03-plans.adoc#UC-PLN-2[UC-PLN-2], and a hold is resolved in <<UC-CTL-4>>; the chat is the sub-workflow of link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue, Chatting with the Planning Role: `chat`].
 Variations::
 * *An operator wait* of the plan (a decision) stays open while the plan is paused; answering it does not start the plan. A pause after the current task or phase holds at an operator wait, too, since nothing runs there.
 * *The runtime stops or the machine restarts*: a paused plan stays paused, a pausing plan holds at its point once it runs again, and a running plan runs on from its last committed state; an operator wait stays open (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/02-plan-pause-and-stalled-plans.adoc#plan-pause[Runtime & Interaction Model Specification, Pausing and Starting a Plan]).
@@ -128,9 +131,9 @@ Flow::
 [source,text]
 ----
   [S] epic.actions             the actions of the epic's state:
-       │                       running: next plan, automatic on/off,
-       │                         decompose again, findings review, watches
-       │                         review, archive, cancel, chat
+       │                       running: next plan, automatic on/off, common
+       │                         files, decompose again, findings review,
+       │                         watches review, archive, cancel, chat
        │                       waiting for the operator: those of running,
        │                         beside what it waits for (a decomposition,
        │                         a decision: UC-PLN-2)
@@ -148,6 +151,9 @@ Flow::
        │                                       told in its events; on: it
        │                                       starts what is launchable
        │                                       now ─► epic.next-work
+       ├── common files ─────► the most files a launchable plan may share with
+       │                       a running one, changed like the mode; written
+       │                       to the epic's header ─► epic.next-work
        ├── decompose again ──► ↳ decomposition (UC-STA-6), with the
        │                         operator's instruction
        ├── next plan ────────► [S] epic.next-work   the next launchable row in
@@ -158,7 +164,9 @@ Flow::
        │                             │                       dependency, a lock,
        │                             │                       the scope full, an
        │                             │                       overlap with a
-       │                             │                       running plan)
+       │                             │                       running plan, a
+       │                             │                       stale row, a held
+       │                             │                       item)
        │                             ├── scope full ──► [O] epic.raise-scope
        │                             │                  raise the scope by one
        │                             │                  ─► epic.next-work, or
@@ -170,7 +178,14 @@ Flow::
        ├── archive ──────────► [M] epic.review-completion   first, only
        │                             │                  when it has not run
        │                             │                  yet (automatic off)
-       │                             ▼
+       │                             ├── continue ──► the completion review
+       │                             │                staged new rows: the
+       │                             │                epic is not through, the
+       │                             │                request is answered with
+       │                             │                them ─► epic.active
+       │                             ├── infeasible, lost ──► epic.active, the
+       │                             │                completion review held
+       │                             ▼ complete
        │                        [S] epic.archive-check   tests that it is
        │                             │                  through: no plan
        │                             │                  running or paused, every
@@ -185,9 +200,10 @@ Flow::
        │                             │                   leading to it
        │                             ▼ through
        │                        [S] epic.archive    the ledger, its kept
-       │                                            findings and watches with
-       │                                            it, moved to the archive
-       │                                            and landed
+       │                             │              findings and watches with
+       │                             │              it, moved to the archive
+       │                             ▼              and landed
+       │                        epic.archived       (completed)
        ├── cancel ───────────► [O] epic.confirm-cancel   its running and paused
        │                             │                   plans: cancel them too,
        │                             │                   or let them run on
@@ -195,15 +211,18 @@ Flow::
        │                             │                   reason
        │                             ▼
        │                        [S] epic.cancel     its tasks withdrawn, its
-       │                                            plans as chosen, its ledger
-       │                                            archived as cancelled
-       ▼
+       │                             │              plans as chosen, its ledger
+       │                             │              archived as cancelled
+       │                             ▼
+       │                        epic.aborted        (cancelled)
+       ▼ every other action
   epic.active                  the epic rests between its events
 ----
 +
 The chat is the one of <<UC-CTL-1>> (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue, Chatting with the Planning Role: `chat`]), the decomposition link:05-starting-work.adoc#UC-STA-6[UC-STA-6], the review <<UC-CTL-3>>, a hold <<UC-CTL-4>>.
 Variations::
 * *Automatic on* (the project's `epic.auto_start`, machine default on): the epic starts its plans itself, as many as its `parallelization_scope` admits (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#server-started-plans[Server-Started Plans]), whenever a place frees or a row becomes launchable; _next plan_ is the operator starting the next one now. *Automatic off*: the epic starts nothing by itself; when a plan becomes launchable the operator gets a report of it, leading to the epic and its _next plan_ (link:03-plans.adoc#UC-PLN-6[UC-PLN-6]), and starts each plan with _next plan_; everything else the epic does still runs. The operator switches it at any time; the epic's events say so (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/08-epic-coordination.adoc#epic-auto[Model Work Specification, An Epic Runs by Itself]).
+* *What a row waits for* is shown in the epic's view as well (link:03-plans.adoc#UC-PLN-5[UC-PLN-5]); _next plan_ names the reason per row from the same list.
 * *No pause of the epic*: an epic is not paused as a whole; its plans are paused one by one (<<UC-CTL-1>>), and a pausing or paused plan keeps its place in the `parallelization_scope`, so the epic starts no plan in its stead; to stop new starts, the operator switches automatic off.
 * *How many plans run at once*: the `parallelization_scope` is the upper limit of the epic's running plans. It is never asked at the start: it is the project's `epic.parallelization_scope`, whose machine default is 1. The operator raises it here, where _next plan_ with the scope full says so and offers to raise it by one, or in the project's settings.
 * *Too many common changes*: a launchable plan starts beside the running ones only while its declared surface shares no more files than the epic allows (by default none; the project's setting, which the operator changes on the epic like the automatic mode) with what each running plan declared and has changed. Over that, it waits (_waits: overlap with_ the plan) until that plan has ended; it is never started beside it, by the epic or by _next plan_. Two running plans whose changes come to overlap beyond it are reported and the epic is told; neither is stopped, and the one that lands second is re-planned or rebased onto the first.
@@ -292,7 +311,9 @@ Flow::
        │                         item's disposition or rewrite ─► review.item
        ▼ finish
   [S] review.commit            the dispositions written to the epic's ledger
-                               and landed; a promoted item is a staged row
+                               and committed in the epic's worktree, not
+                               pushed (the epic's landing lands them); a
+                               promoted item is a staged row
 ----
 +
 The chat is the one of <<UC-CTL-1>> (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue.adoc#chat[State Catalogue, Chatting with the Planning Role: `chat`]).
@@ -310,7 +331,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
 Goal:: see why a plan, an epic, or a project's landing does not go on, when no decision is asked, and resolve it.
-Trigger:: Running Work marks a hold (link:../specification/runtime-model/01-processes-and-transport.adoc#needs-operator[Runtime & Interaction Model Specification, What Needs the Operator, at a Glance]), one of the kinds `stalled` (a plan stalled), `condition` (a condition that needs an operator act), `integrity_pause`, `held` (an item of an epic held), and `landing_failed` (a failed landing of an epic or of a move).
+Trigger:: Running Work marks a hold (link:../specification/runtime-model/01-processes-and-transport.adoc#needs-operator[Runtime & Interaction Model Specification, What Needs the Operator, at a Glance]), one of the kinds `stalled` (a plan stalled), `condition` (a condition that needs an operator act), `integrity_pause`, `held` (an item of an epic held), and `landing_failed` (a failed landing of an epic, of a moved source, or of a placed workflow unit).
 Flow::
 +
 [source,text]
@@ -320,8 +341,9 @@ Flow::
        │                       acts that resolve it:
        │                       • stalled: retry now, recycle the worker
        │                       • condition: the act it names (grant access,
-       │                         add a credential, raise a budget), each as
-       │                         a dialogue of the clients
+       │                         add a credential, raise a budget, commit or
+       │                         restore a configuration file), each as a
+       │                         dialogue of the clients
        │                       • integrity_pause: the tampered file with
        │                         its recorded and current size and digest;
        │                         accept it
@@ -394,7 +416,7 @@ Variations::
 * *Set where first needed*: a value the plan asks where it first needs it (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/state-catalogue/09-bootstrap-and-lessons.adoc#options-when-needed[State Catalogue, Asked When Needed]) is the same plan value; this use case changes it later, or sets it before it is asked, so that it is not asked.
 * *A running plan* goes on while its settings change; what runs keeps the value it started with, and the new value applies from where the plan next reads it (a task started after it, the call site of an axis not yet reached).
 * *Too late*: a change whose new version would not contain the plan's current state and its call stack (the landing variant while the plan lands, for example) is refused with the reason; what has already run is not run again.
-* *Changed in two clients at once*: the first change wins; a later one made against an older value is refused with `conflict`, the current value shown, and the operator may apply theirs again on top of it (link:../specification/cli-and-security/01-cli-and-installer.adoc#concurrent-changes[CLI, Coordination & Security Specification, Concurrent Changes of a Setting]).
+* *Changed in two clients at once* is refused against an older value with `conflict`, the current value shown, as in link:01-onboarding.adoc#UC-ONB-10[UC-ONB-10] (link:../specification/cli-and-security/01-cli-and-installer.adoc#concurrent-changes[CLI, Coordination & Security Specification, Concurrent Changes of a Setting]).
 * *Refused values*: a landing variant that cannot run for the project (`landing.pull-request` without a provider, `landing.main` on a protected base branch) or for the plan (`landing.files` for a plan from local changes, link:05-starting-work.adoc#UC-STA-9[UC-STA-9]) is refused with the reason; so is a harness, model, or provider the machine does not allow.
 Outcome:: the plan has its own value of the aspect, a new instance version shows it, the change is audited, and its epic knows.
 Requirements:: link:../requirements/02-workflow.adoc#PM-WF-25[PM-WF-25] (a plan's own values, validated, audited, a new instance version), link:../requirements/14-implementation.adoc#PM-IMPL-5[PM-IMPL-5] (the plan instance, composed again for a change), link:../requirements/02-workflow.adoc#PM-WF-14[PM-WF-14] (a worker's harness, model, and effort from its role, the plan's override included), link:../requirements/02-workflow.adoc#PM-WF-15[PM-WF-15] (the epic told `settings_changed`); a plan's own values are specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/workflow-dsl/09-plan-instance.adoc#plan-overrides[Plan Overrides] and link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/14-plan-instance-waivers-questions.adoc#plan-overrides-store[Plan Overrides (`overrides.json`)], the plan instance in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/workflow-dsl/09-plan-instance.adoc#plan-instance[Plan Instance], the harness of a role in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc#harness-selection[Harness Selection].

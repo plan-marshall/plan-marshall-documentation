@@ -90,12 +90,18 @@ Flow::
        │                             │                and its digest verified
        │                             ├── failed ──► the reason; nothing
        │                             │              changed ─► runtime.actions
+       │                             ├── withdraw ──► runtime.actions, nothing
+       │                             │                changed
        │                             ▼
        │                        [S] runtime.install    unpacked into a new
        │                             │                versioned directory,
        │                             │                the PATH links switched
+       │                             ├── withdraw, before the links are
+       │                             │   switched ──► runtime.actions
        │                             ▼
        │                        runtime.draining ─► runtime.stopped
+       │                             (stop now shortens the drain; the
+       │                              upgrade can no longer be withdrawn)
        │                             │
        │                             ▼
        │                        [S] runtime.start      on the new version
@@ -126,7 +132,7 @@ Variations::
 * *Versions apart*: after an upgrade, the relays of open host sessions are still the old binaries and forward normally; the mismatch is told to the operator only (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#_drain_stop_upgrade[Drain, Stop & Upgrade]). An open terminal client of the old version says that it is older than the runtime and asks to be restarted; the web app loads the new version when it reconnects.
 Outcome:: the runtime is stopped, runs again, or runs on the new version, as the operator chose; the work that ran resumes, nothing is lost, and every client knows.
 Requirements:: link:../requirements/01-architecture.adoc#PM-ARCH-7[PM-ARCH-7] (stop by drain or at once, withdraw, restart, upgrade and its undo), link:../requirements/10-distribution.adoc#PM-DIST-1[PM-DIST-1] (the upgrade by the runtime from the organisation's registry), link:../requirements/08-security.adoc#PM-SEC-8[PM-SEC-8] (the consent `check_updates`), link:../requirements/01-architecture.adoc#PM-ARCH-2[PM-ARCH-2] (nothing sent beyond the check); the lifecycle is specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#runtime-lifecycle-operations[Runtime & Interaction Model Specification, The Runtime's Lifecycle], the start in link:../specification/runtime-model/01-processes-and-transport.adoc#_start_modes[Start Modes], the installation in link:../specification/cli-and-security/01-cli-and-installer.adoc#installation-layout[Installation Layout], the drain timeout in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/02-runtime-leases-operator-web.adoc#drain-timeout[Drain Timeout].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/implemented/web-system.adoc[`web-system`]
 
 [#UC-SYS-2]
 == UC-SYS-2: See What the Runtime Is Doing
@@ -152,7 +158,7 @@ Variations::
 * *The draining runtime* shows its state, and what still runs counts down.
 Outcome:: the operator knows how the runtime is, what it does, and the tokens the models use, and has reached what a figure counts.
 Requirements:: link:../requirements/01-architecture.adoc#PM-ARCH-9[PM-ARCH-9] (the runtime's metrics), link:../requirements/02-workflow.adoc#PM-WF-14[PM-WF-14] (the usage of every task, from the harness's own output, tokens only), link:../requirements/08-security.adoc#PM-SEC-7[PM-SEC-7] (the dependable view of every plan, epic, worker, and task); the metrics are specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/03-runtime-metrics.adoc#runtime-metrics[Runtime & Interaction Model Specification, The Runtime's Metrics], the usage of a task in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/09-completion-usage-and-spend.adoc#job-result-schema[Worker Result & Usage Parsing], the rows in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/05-metrics-and-quality-report.adoc#metrics-store[Metrics Store].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/system.adoc[System]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/25-system.adoc[Terminal Client, System]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/implemented/web-system.adoc[`web-system`]
 
 [#UC-SYS-3]
 == UC-SYS-3: Clean Up
@@ -223,4 +229,4 @@ Variations::
 * *A stop during the delete*: the delete goes on after the next start; what was deleted stays deleted.
 Outcome:: what the operator chose is deleted, postponed, or kept, the deletion audited; nothing of work history went without the operator's word.
 Requirements:: link:../requirements/01-architecture.adoc#PM-ARCH-10[PM-ARCH-10] (one cleanup of work history, residue removed by itself), link:../requirements/02-workflow.adoc#PM-WF-13[PM-WF-13] (archived records readable until the cleanup deletes them), link:../requirements/02-workflow.adoc#PM-WF-21[PM-WF-21] (the report `system.cleanup_due`), link:../requirements/06-execution.adoc#PM-EXEC-2[PM-EXEC-2] (unenrolment and `sweep`); the cleanup is specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/timeouts/03-retention-host-config.adoc#cleanup[Timeouts & Budgets Specification, One Cleanup], its journal in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/12-machine-stores.adoc#cleanup-journal[Cleanup Journal], the tombstones in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/filesystem-layout/03-project-store.adoc#archives[Archives], the residue in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/runtime-lifecycle/01-startup-recovery-drain.adoc#periodic-sweep[Periodic Sweep] and link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/13-leases-integrity-testing.adoc#evidence-based-removal-sweeps[Evidence-Based Removal Sweeps].
-Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/cleanup.adoc[Cleanup]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/26-cleanup.adoc[Terminal Client, Cleanup]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/web-system.adoc[`web-system`]
+Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/cleanup.adoc[Cleanup]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/26-cleanup.adoc[Terminal Client, Cleanup]; the web app: no design document yet; designed by its package link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/plans/implemented/web-system.adoc[`web-system`]

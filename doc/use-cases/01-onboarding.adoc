@@ -39,7 +39,7 @@ The closed list of the consent kinds, for every use case that asks one (link:htt
 |`check_credential_store` |write, read, and delete one test entry in the chosen OS credential store (the keychain) |`store.consent` (<<UC-ONB-7>>) |yes, for the machine |stays
 |`scan_providers` |look for the CLI tools of the providers and the credentials already stored |`providers.consent` (<<UC-ONB-8>>) |yes, for the machine |stays
 |`verify_providers` |call each chosen provider with its credential, and run its CLI tool |`providers.verify-consent` (<<UC-ONB-8>>, <<UC-ONB-10>>) |yes, for the machine |stays
-|the automatic run |every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only |`auto.consent` (<<UC-ONB-2>>) |never |back to `onboard.mode`
+|`auto_run` |every consent of <<UC-ONB-4>> to <<UC-ONB-8>> that the run needs, listed in full, for this run only |`auto.consent` (<<UC-ONB-2>>) |never |back to `onboard.mode`
 |`inspect_checkout` |read a project's checkout (git configuration, build wrappers, host tools, language servers, scripts) and run the host tools' version probes from the absolute directories of the login `PATH`; changes nothing |`project.consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |stays
 |`run_checkout_scripts` |run the named scripts of a project's checkout, each with its arguments, confined like a job |`project.run-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project and the digest of each script, in `consents.json` (never in the enrolment) |goes on, what needs the scripts unknown
 |`model_cost` |a role task whose expected tokens are shown first: the qualification of the roles, the description of the modules |`setup.qualify-consent`, `setup.enrich-consent` (link:04-projects.adoc#UC-PRJ-1[UC-PRJ-1]) |yes, for the project |goes on without: the step is skipped with its reason and can be run later
@@ -121,7 +121,10 @@ Flow::
        ▼
   [O] auto.result              everything that was decided, per step, with
        │                       the reason and a link to change it there
-       ▼
+       ├── change <aspect> ──► ↳ the aspect's sub-workflow (UC-ONB-3 to
+       │                         UC-ONB-9) as a later run, its current
+       │                         values the proposal ─► auto.result
+       ▼ done
   onboard.completed
 ----
 Variations:: a step whose proposal fails its check stops the run in that step's own state, which names the failure and the fix; the run continues after it. The consent kinds the run covers are those of <<consents>>.
@@ -185,8 +188,9 @@ Flow::
        │                            │                offers to add another
        │                            │ recheck ──► harness.scan
        │                            │ add another ──► harness.add
-       │                            │ later ──► the onboarding rests here; its
-       │                            │           next run resumes here
+       │                            (the operator may leave here, as at every
+       │                             operator state: the onboarding rests and
+       │                             its next run resumes here)
        ▼ found one or more
   [O] harness.icons-consent    may the server fetch the makers' icons of the
        │                       found harnesses? (consent kind fetch_icons)
@@ -380,12 +384,30 @@ Flow::
   [S] store.check              writes, reads and deletes a test entry;
        │                       each ✓ or ✗ with its cause
        ├── fails ───────────► store.unavailable
-       ▼ passes
+       ├── passes, another store is recorded ──► [O] store.confirm-move
+       │                            │                (also where an earlier
+       │                            │                move was interrupted)
+       │                            │                the count of the entries to
+       │                            │                move to the new store
+       │                            │ back ──► store.choose
+       │                            ▼ move
+       │                       [S] store.move      every entry copied and read
+       │                            │                back, the enrolment
+       │                            │                integrity key last, its
+       │                            │                HMAC sidecars verified under
+       │                            │                it in the new store; the
+       │                            │                recorded store switched;
+       │                            │                only then the old entries
+       │                            │                deleted
+       │                            ├── fails ───► store.unavailable   the old
+       │                            │                store stays the recorded one
+       │                            ▼ moved
+       ▼ passes, no store recorded yet
   [S] store.record             the chosen store, as a machine setting
        ▼
   store.done
 ----
-Variations:: a later run that changes the store moves every entry to the new store after the operator confirmed the count, deletes each from the old one only once it reads back from the new one, and records the new store last; the enrolment integrity key moves last of all, once the HMAC sidecars verify under it in the new store; an interrupted move is resumed by the next run, so a secret is never in both stores after a completed move and never in neither.
+Variations:: a later run that changes the store moves every entry to the new store after the operator confirmed the count (`store.confirm-move`, `store.move`): each entry is copied and read back from the new store, the enrolment integrity key is copied last and the HMAC sidecars verified under it in the new store, the recorded store is switched in one write, and only then is every entry deleted from the old store; a failure before the switch leaves the old store intact and the copies are deleted from the new one. An interrupted move is resumed by the next run from its record, so a secret is never in neither store and, once the move completes, in one only (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/credentials-and-enrolment/01-provider-credentials.adoc#credential-store-move[The Store Move]).
 Outcome:: the machine's credential store is recorded; every credential and the enrolment integrity key are kept there.
 Requirements:: link:../requirements/07-credentials.adoc#PM-CRED-2[PM-CRED-2] (the store the operator chose, never another, the move), link:../requirements/07-credentials.adoc#PM-CRED-3[PM-CRED-3] (the file store when chosen), link:../requirements/08-security.adoc#PM-SEC-8[PM-SEC-8] (the check of an OS store on consent); specified in link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/credentials-and-enrolment/01-provider-credentials.adoc#credential-store-choice[Credential Store as an Operator Choice], link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/credentials-and-enrolment/01-provider-credentials.adoc#os-keyring-backends[Credential Stores], link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/store-schemas/12-machine-stores.adoc#machine-config[Machine Configuration Store] (`credentials.store`).
 Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/shared/consents.adoc#pattern[Consents, The Consent State]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/terminal-client/07-transcripts-steps-4-7.adoc#t-credentials[Terminal Client, Credential Store]; link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/design/web-app/onboarding-steps-4-7.adoc#credential-store[Web App, Onboarding]
@@ -465,9 +487,16 @@ Flow::
        │                                   | commit on the base branch
        │                                   (landing.main) | files only
        │                                   (landing.files)
-       │                       • method    test first (TDD) | tests after
-       │                       • asking    at every phase | at the key points
-       │                                   (outline, merge) | only questions
+       │                       • method    test first (TDD) (method.test-first)
+       │                                   | tests after (method.tests-after)
+       │                       • asking    at every phase (ask.every-phase)
+       │                                   | at the key points (outline,
+       │                                   merge; ask.key-points) | only
+       │                                   questions (ask.questions-only)
+       │                       • posture   only in a later run, from the
+       │                                   machine settings: minimal | standard
+       │                                   | full, unset by default, so that a
+       │                                   plan asks it while no level sets it
        │                       each with what it means; accept, or change a line
        ▼
   [S] defaults.validate        what the machine itself provides for each
@@ -490,7 +519,7 @@ Design:: link:https://github.com/plan-marshall/pm-mcp-clients/blob/main/doc/desi
 
 Status:: `AGREED`
 Actor:: the operator, in the web app or in the terminal client.
-Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, a credential, the cleanup's durations, or the paired devices.
+Goal:: change later what the onboarding recorded for the machine: one aspect, a remembered consent, the default of how documents are taken, a credential, the cleanup's durations, or the paired devices; or have the providers checked again.
 Trigger:: the operator opens the machine settings of either client; or a credential has expired or is about to (reported by the status, or a plan held by it, link:06-controlling-work.adoc#UC-CTL-4[UC-CTL-4]).
 Preconditions:: the onboarding has completed once (<<UC-ONB-1>>, resting in `onboard.completed`).
 Flow::
@@ -523,7 +552,14 @@ Flow::
        │                         [S] settings.record   the durations of
        │                                               UC-SYS-3, audited
        │                                               ─► settings.choose
-       ├── paired devices ───────► ↳ devices (UC-ENT-2) ─► settings.choose
+       ├── paired devices ───────► the devices, acted on through their own
+       │                              endpoints (UC-ENT-2), no workflow
+       │                              unit ─► settings.choose
+       ├── check the providers ──► [S] settings.verify-providers   every
+       │                              chosen provider, as in UC-ONB-8 (the
+       │                              consent verify_providers first) ─►
+       │                              settings.choose
+       ├── done ─────────────────► onboard.completed
        ▼ a credential
   [O] settings.credential      rotate (a new secret for the entry, its other
        │                       fields kept) or replace (a new entry, another
@@ -532,6 +568,8 @@ Flow::
        ▼
   [S] settings.store-credential  into the recorded store; every token
        │                         derived from the old secret dropped
+       ├── the recorded store not available ──► settings.choose, refused
+       │                         with credential_store_unavailable
        ▼
   [O] providers.verify-consent as in UC-ONB-8 (verify_providers)
        ▼
