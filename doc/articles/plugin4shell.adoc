@@ -115,21 +115,29 @@ it is read from the same registry as the release, it only proves an intact trans
 build (for example GitHub's artifact attestations, which our registry's platform offers) verified on upgrade, or the
 signature the macOS build already carries, would make the pin independent of the registry.
 
-== Candidates for a Change
+== Applied
 
-Nothing is applied. In order of exposure:
+All four candidates are applied:
 
-. *Workers load no harness plugins, hooks or MCP servers from settings*; only the project's instruction files and
-  skill directories. The client profile declares and verifies how each harness does this; a harness that cannot is
-  not eligible as a worker host for `writer` and `read_only`. This touches the worker launch in `pm-mcp-core` and
-  xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2].
-. *A self-updated harness is accepted on independent evidence* (vendor signature or verified provenance), else on the
-  operator's confirmation; the version probe checks the range only after that.
-. *A git identity rule*, cross-cutting: commits as object ids, refs fully qualified, ambiguity refused, the result of
-  every fetch and checkout compared with its pin. This fits an implementation watch item in
-  xref:../implementation-watch/cross-cutting.adoc[cross-cutting.adoc] even before any requirement changes.
-. *The expected digest of a release from an independent source* (a build attestation or a signature), stated in
-  xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1].
+. *Workers load no harness plugins, hooks or MCP servers from settings*, only the project's instruction files and
+  skill directories, measured as `extension_isolation` by the profile verification; a harness without it, or without
+  an exclusive MCP configuration, runs no `writer` or `read_only` worker
+  (xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]; in `pm-mcp-core` the Role Classes and the `isolation` stage of
+  the client profiles and the working directory of the worker launch). Antigravity, whose MCP configuration is not
+  exclusive, thereby runs no worker class.
+. *A self-updated harness is accepted on independent evidence*: the profile's update evidence (`code_signature`,
+  `package_provenance`, or `none`) is checked before the changed file runs; without it the launch is refused
+  `harness_update_unverified` until the operator enrols the harness again
+  (xref:../Requirements.adoc#PM-EXEC-1[PM-EXEC-1], xref:../Requirements.adoc#PM-CLIENT-2[PM-CLIENT-2]). A shipped
+  profile declares a method only where the release has checked it, so until then every self-update waits for the
+  operator.
+. *A git identity rule* in both variants: commits as object ids, refs by full name, ambiguity refused, the commit
+  reached after every fetch, checkout, reset, or worktree creation compared with its pin
+  (xref:../Requirements.adoc#PM-EXEC-5[PM-EXEC-5], guarded by
+  xref:../implementation-watch/cross-cutting.adoc#PM-WATCH-GEN-59[PM-WATCH-GEN-59]).
+. *The release is verified against its build attestation*, never against a digest the registry states
+  (xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1]); a release without a valid attestation is refused
+  `release_unattested`.
 
 == Sources Behind the Article
 
