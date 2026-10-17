@@ -1,0 +1,142 @@
+= Breaking Claude Code Opus 5 Auto Mode
+:toc: left
+:toclevels: 2
+:nofooter:
+
+xref:README.adoc[Articles] » Breaking Auto Mode
+
+[horizontal]
+Source:: https://embracethered.com/blog/posts/2026/breaking-claude-code-opus-5-and-automode/
+Author:: Johann Rehberger (Embrace The Red)
+Published:: 2026-08-26
+Read:: 2026-10-17
+Focus:: what PM-MCP should learn from it, not how Claude Code should be fixed
+
+This is not a summary of the article. It keeps what is useful for PM-MCP and says where it touches our documents. The
+success rates come from five runs per variant; the author calls them representative of a motivated attack, not a
+measurement.
+
+== The Attack Chain
+
+The user asks for a summary of a website. Each step looks reasonable on its own:
+
+. The server answers `WebFetch` with `415 Unsupported Media Type`. The model switches to `curl` in the shell by
+  itself; nothing told it to.
+. A redirect leads to a ZIP archive: plausible catalogue records in Base85 and zlib, a native `decoder-darwin`
+  binary, and a file named `struct.py`.
+. The model correctly refuses to run the binary, and writes its own Python decoder instead.
+. It runs that decoder _inside the extracted archive_ (`cd …; python3 -c 'import base64, …'`). Python puts the
+  current directory on its module path; `base64` imports `struct`, and the archive's `struct.py` shadows the standard
+  module.
+. The poisoned module starts a child in a new session that downloads and runs a remote stage. The machine joins a
+  command-and-control server, and the detached process outlives the conversation.
+
+A variant has the poisoned module start a second Claude Code headless (`claude -p`), which runs reconnaissance and
+writes outside the workspace. Success: 3 to 4 out of 5 runs.
+
+What the run showed besides:
+
+* *The safe decision was the exploit.* Refusing the obvious payload pushed the model to the path the attacker had
+  prepared.
+* *The attack never told the model what to do.* It shaped the environment so that the malicious path was the
+  reasonable one. There was no injected instruction for a filter to find.
+* *The classifier allowed the compromise and blocked the cleanup.* When the model noticed and tried to kill the
+  process, Auto Mode denied the command.
+* *0.00 % on a benchmark and a working exploit are both true.* The vendor's evaluation used 72 fixed scenarios; this
+  chain was not among them.
+* The vendor's own answer: Auto Mode is a best-effort classifier; the boundary is OS isolation and network egress
+  control.
+
+== Where It Touches Our Documents
+
+PM-MCP already follows the main lesson in its design: no model decision is a security boundary. Workers act only
+along server-offered links, the server checks everything they submit, and the screener of external text is "defence
+in depth, never the boundary"
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/07-untrusted-text-screening.adoc[Model Work, Untrusted Text Screening]).
+The questions are where the actual boundary, the OS confinement of the job, still leaves room for this chain.
+
+=== Workers have a shell and the whole network
+
+A `writer` or `read_only` worker gets its harness's shell tool
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/model-work/04-worker-launch.adoc[Model Work, Worker Launch]).
+Web tools are never in a tool set, but the shell reaches the network: Landlock does not restrict network access, and
+"a worker needs the network for its harness's model provider; this is a declared exception of the job confinement"
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/02-confinement-and-environment.adoc[Job Runtime, Confinement and Environment]).
+So step 1 of the chain, `curl` to anywhere, and step 5, the download and the callback, are open to every worker.
+
+The exception is wider than the reason for it. A worker needs its model provider, and its builds run as separate jobs
+through `pm_build`. The egress a worker needs is the endpoint its client profile names. Everything else could be
+denied, for example by running the worker's network through an egress proxy of the runtime that admits only those
+hosts.
+
+=== Untrusted text is screened; an untrusted environment is not
+
+Our two-level guard screens external _text_ before a model reads it: issue and pull-request bodies, review comments,
+analysis messages (xref:../Requirements.adoc#PM-SEC-1[PM-SEC-1]). The chain carries no text to screen. Its attack is a
+status code, a redirect, a binary and a file name. A worker meets such an environment in the repository it works on
+(a pull request adopted from a contributor, a dependency's sources, a test fixture) and in anything its shell
+downloads. Screening cannot cover that; only confinement and egress control can. It also says something to the
+writer: the article lists what the model did when it resisted (it analysed the archive statically, ran Python with
+`-I`, ran its decoder from a safe parent directory, recognised the shadowing). That is guidance a domain skill can
+give, of class `guidance`, never in place of the boundary.
+
+=== A descendant in a new session survives the job
+
+When a job ends, the runtime signals the job's process group, escalating to `SIGKILL` for every process left in the
+group (link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/job-runtime/01-pipeline-and-subprocesses.adoc[Job Runtime, Process Termination & Cancellation Protocol]).
+The payload started its child "in a new session", which leaves the process group. Such a descendant survives the end
+of the worker, with the worker's confinement (Landlock is inherited) but with the network, and nobody sees it.
+
+The article's other point applies here in reverse: our cleanup is done by the server, unconditionally, never by the
+model, so no safety layer can block it, as Auto Mode blocked the model's. It just does not reach everything. On Linux
+the launcher can register as child subreaper, so that every orphaned descendant reparents to it and is ended with the
+job; a descendant that outlives its job is then something to report, not something unseen.
+
+=== A worker can start another agent
+
+The `claude -p` variant is a second agent outside supervision: no task, no tool set, no usage attributed, the
+operator's login. A worker's shell can start the enrolled harness executable the same way. On Linux the nested agent
+inherits the worker's confinement and process group; on a platform without confinement it inherits nothing. The
+bundle denies the operator binary `pm-operator` to the model as defence in depth
+(xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1]); nothing says the same for the harness executables, and nothing
+detects it. The worker's activity records see the shell command
+(xref:../Requirements.adoc#PM-WORK-7[PM-WORK-7]), so an off-track signal for "a worker started a harness executable
+or the operator binary", with the action to end the worker, would make it visible and stop it.
+
+=== macOS has no confinement
+
+Our documents accept as a residual risk "the absence of equivalent unprivileged sandboxing on macOS"
+(xref:../Requirements.adoc#PM-SEC-5[PM-SEC-5]). The article's conclusion is that the OS sandbox is the only boundary
+that held. On macOS a worker that runs this chain has the operator's whole user account. The profile verification
+makes a harness eligible as a worker host only "on a platform with a confinement"
+(link:https://github.com/plan-marshall/pm-mcp-core/blob/main/doc/specification/client-profiles/01-profile-schema.adoc[Client Profiles, Profile Verification]),
+which would leave macOS without workers, yet the macOS release is a first-class target
+(xref:../Requirements.adoc#PM-DIST-1[PM-DIST-1]). The documents should say one thing. If workers run on macOS, they
+need a confinement there; the platform offers one (the sandbox profiles of `sandbox-exec`, which the harnesses'
+own sandboxes use), or a dedicated user or a virtual machine.
+
+=== A pass rate on a fixed corpus is no security claim
+
+The screener and the roles are graded against a corpus before they run
+(xref:../Requirements.adoc#PM-WORK-6[PM-WORK-6]). A high score there is the article's 0.00 %: true for that corpus,
+silent about the next chain. Two things follow. The qualification records of the screener should never be presented
+as a security figure. And its corpus should hold what the article shows works: multi-step chains of benign-looking
+steps and environments that shape the path, not only texts that contain instructions.
+
+== Candidates for a Change
+
+Nothing is applied. In order of exposure:
+
+. *Worker egress limited to the model endpoints of its profile*, through an egress proxy of the runtime; every other
+  destination is refused. Builds keep their own network through `pm_build`. This narrows the declared exception of
+  the job confinement (xref:../Requirements.adoc#PM-SEC-5[PM-SEC-5]).
+. *A worker's descendants end with it*: the launcher is child subreaper on Linux and ends every descendant at the
+  job's end, not only its process group; a descendant that survived is an audited `security` record.
+. *Settle macOS*: either workers are not eligible there, said plainly in the requirements and the user documentation,
+  or macOS gets a confinement of its own.
+. *Starting a harness executable or the operator binary from a worker is an off-track signal* with the action to end
+  the worker and an audit record.
+. *Guidance in the domain skills for untrusted files*: no code fetched or extracted by the task is run; interpreters
+  run isolated (`python3 -I`) and never with an untrusted directory as their working directory.
+. *The screener's corpus gets environment-shaped and multi-step cases*, and its qualification is never reported as a
+  security measure.
